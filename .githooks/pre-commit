@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Block dangerous/sensitive file classes before they ever leave the host.
+forbidden='(^|/)(\.env($|\.)|.*\.tfstate($|\.)|.*\.tfplan$|id_rsa($|\.)|id_ed25519($|\.)|.*\.pem$|.*\.p12$|.*\.pfx$|\.vault_pass$|vault-password.*$)'
+
+bad_files="$(git diff --cached --name-only | grep -E "$forbidden" || true)"
+if [[ -n "$bad_files" ]]; then
+  echo "Commit blocked: sensitive/state files are staged:" >&2
+  echo "$bad_files" >&2
+  exit 1
+fi
+
+# Catch a small set of common high-risk token assignments. This is a guardrail,
+# not a replacement for secret rotation or dedicated scanners.
+if git diff --cached --no-color | grep -E '^\+.*(TAILSCALE_AUTH_KEY|OPENAI_API_KEY|CLOUDFLARE_API_TOKEN|GITHUB_TOKEN|AWS_SECRET_ACCESS_KEY)[[:space:]]*=' >/dev/null; then
+  echo "Commit blocked: possible plaintext secret assignment detected." >&2
+  exit 1
+fi

@@ -1,0 +1,66 @@
+name: Repository Validation
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  safety-and-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reject tracked secret/state file classes
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad="$(git ls-files | grep -E '(^|/)(\.env($|\.)|.*\.tfstate($|\.)|.*\.tfplan$|id_rsa($|\.)|id_ed25519($|\.)|.*\.pem$|.*\.p12$|.*\.pfx$)' || true)"
+          if [[ -n "$bad" ]]; then
+            echo "Forbidden files are tracked:"
+            echo "$bad"
+            exit 1
+          fi
+
+      - name: Validate shell syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            bash -n "$file"
+          done < <(find scripts .githooks -type f -print0 2>/dev/null || true)
+
+  opentofu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+      - name: OpenTofu format and validate when configuration exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find tofu -type f -name '*.tf' -print -quit | grep -q .; then
+            tofu -chdir=tofu fmt -check -recursive
+            tofu -chdir=tofu init -backend=false
+            tofu -chdir=tofu validate
+          else
+            echo "No OpenTofu .tf files yet; skipping."
+          fi
+
+  ansible:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint Ansible when playbooks/roles exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find ansible -type f \( -name '*.yml' -o -name '*.yaml' \) -print -quit | grep -q .; then
+            python -m pip install --disable-pip-version-check ansible ansible-lint
+            ansible-lint ansible/
+          else
+            echo "No Ansible YAML files yet; skipping."
+          fi

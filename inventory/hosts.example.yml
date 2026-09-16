@@ -1,0 +1,17 @@
+all:
+  children:
+    management:
+      hosts:
+        ubuntu-monitoring:
+          ansible_host: 10.10.10.10
+    clients:
+      hosts:
+        ubuntu-client:
+          ansible_host: 10.10.20.10
+    applications:
+      hosts:
+        windows-app:
+          ansible_host: 10.10.30.10
+
+# Example only. Do not treat these addresses as deployed until verified.
+# Never place plaintext passwords or private keys in this file.

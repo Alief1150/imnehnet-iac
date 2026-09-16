@@ -1,0 +1,43 @@
+# Secrets / environment
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+
+# OpenTofu / Terraform state and cache
+.terraform/
+.tofu/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+.terraform.lock.hcl.backup
+
+# Ansible runtime secrets
+ansible/.vault_pass
+ansible/vault-password*
+
+# Local Hermes overrides / memories
+AGENTS.override.md
+.hermes-local.md
+.hermes/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Logs/cache
+*.log
+.cache/
