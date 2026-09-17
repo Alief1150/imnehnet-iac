@@ -150,3 +150,28 @@ If an event cannot be attributed to a Tailscale machine, display:
 UNKNOWN / LOCAL
 
 Do not modify or delete audit logs unless explicitly authorized.
+
+## IMNEHNET Audit Log
+
+The IMNEHNET host maintains a local infrastructure audit trail.
+
+Actor identity is determined from the unique SSH public-key fingerprint.
+Machine identity is obtained from Tailscale.
+File and command activity is correlated using the Linux audit session ID.
+
+When the operator asks things such as:
+
+- "show log"
+- "show audit"
+- "siapa yang login"
+- "siapa yang ngedit"
+- "siapa yang terakhir ngubah"
+- "aktivitas tim"
+- "aktivitas server"
+- "log perubahan"
+- "audit hari ini"
+
+use the compact audit report:
+
+```bash
+sudo -n /usr/local/sbin/imnehnet-audit-report --today

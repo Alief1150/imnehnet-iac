@@ -1,0 +1,346 @@
+#!/usr/bin/env python3
+
+import argparse
+import json
+import os
+import re
+import subprocess
+from datetime import datetime
+
+PROJECT_ROOT = "/home/imnehnet/imnehnet-iac"
+
+AUDIT_KEYS = {
+    "imnehnet_project": "EDIT",
+    "imnehnet_iac": "EDIT",
+    "imnehnet_libvirt": "EDIT",
+    "imnehnet_firewall": "EDIT",
+    "imnehnet_systemd": "EDIT",
+    "imnehnet_ssh": "EDIT",
+    "imnehnet_auditconfig": "EDIT",
+    "imnehnet_admincmd": "EXEC",
+}
+
+
+def run(cmd):
+    result = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    return result.stdout
+
+
+def get_field(line, field):
+    match = re.search(
+        rf'\b{re.escape(field)}=(?:"([^"]*)"|(\S+))',
+        line,
+    )
+
+    if not match:
+        return None
+
+    return match.group(1) if match.group(1) is not None else match.group(2)
+
+
+def short(value, length):
+    value = str(value)
+
+    if len(value) <= length:
+        return value
+
+    return value[: length - 1] + "…"
+
+
+def load_sessions():
+    sessions = {}
+
+    output = run([
+        "/usr/bin/journalctl",
+        "-t",
+        "imnehnet-session",
+        "--since",
+        "today",
+        "-o",
+        "cat",
+        "--no-pager",
+    ])
+
+    for line in output.splitlines():
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+
+        if data.get("event") != "ssh_login":
+            continue
+
+        session = str(data.get("session", ""))
+
+        if not session:
+            continue
+
+        sessions[session] = data
+
+    return sessions
+
+
+def audit_time(block):
+    match = re.search(
+        r'msg=audit\((\d+(?:\.\d+)?):\d+\)',
+        block,
+    )
+
+    if not match:
+        return None
+
+    return datetime.fromtimestamp(
+        float(match.group(1))
+    ).astimezone()
+
+def audit_target(block, action):
+    syscall = next(
+        (line for line in block.splitlines()
+         if line.startswith("type=SYSCALL")),
+        "",
+    )
+
+    comm = get_field(syscall, "comm") or "unknown"
+
+    if action == "EXEC":
+        return comm
+
+    cwd_line = next(
+        (line for line in block.splitlines()
+         if line.startswith("type=CWD")),
+        "",
+    )
+
+    cwd = get_field(cwd_line, "cwd") or ""
+
+    candidates = []
+
+    for line in block.splitlines():
+        if not line.startswith("type=PATH"):
+            continue
+
+        name = get_field(line, "name")
+
+        if not name:
+            continue
+
+        if name in {"(null)", "null"}:
+            continue
+
+        base = os.path.basename(name)
+
+        if base.isdigit():
+            continue
+
+        if name.endswith("~"):
+            continue
+
+        if os.path.isabs(name):
+            full = os.path.normpath(name)
+        else:
+            full = os.path.normpath(os.path.join(cwd, name))
+
+        if full == cwd:
+            continue
+
+        if os.path.isdir(full):
+            continue
+
+        if full.startswith(PROJECT_ROOT + os.sep):
+            full = os.path.relpath(full, PROJECT_ROOT)
+
+        candidates.append(full)
+
+    if candidates:
+        return candidates[0]
+
+    return comm
+
+
+def load_audit_events(sessions):
+    events = []
+    seen = set()
+
+    for audit_key, action in AUDIT_KEYS.items():
+
+        output = run([
+            "/usr/sbin/ausearch",
+            "-k",
+            audit_key,
+            "--start",
+            "today",
+        ])
+
+        if "<no matches>" in output:
+            continue
+
+        blocks = re.split(r"\n----\n", output.strip())
+
+        for block in blocks:
+
+            syscall = next(
+                (line for line in block.splitlines()
+                 if line.startswith("type=SYSCALL")),
+                None,
+            )
+
+            if not syscall:
+                continue
+
+            if "success=yes" not in syscall:
+                continue
+
+            session_match = re.search(r"\bses=(\d+)", syscall)
+
+            if not session_match:
+                continue
+
+            session = session_match.group(1)
+
+            timestamp = audit_time(block)
+
+            if not timestamp:
+                continue
+
+            target = audit_target(block, action)
+
+            session_data = sessions.get(session, {})
+
+            actor = session_data.get("actor", "Unknown")
+            machine = session_data.get("machine", "unknown")
+
+            if not actor or actor == "unknown":
+                actor = "Unknown"
+
+            dedupe = (
+                session,
+                action,
+                target,
+                timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            )
+
+            if dedupe in seen:
+                continue
+
+            seen.add(dedupe)
+
+            events.append({
+                "time": timestamp,
+                "session": session,
+                "actor": actor,
+                "machine": machine,
+                "action": action,
+                "target": target,
+            })
+
+    return events
+
+
+def login_events(sessions):
+    events = []
+
+    for session, data in sessions.items():
+
+        try:
+            timestamp = datetime.fromisoformat(data["time"])
+        except Exception:
+            continue
+
+        actor = data.get("actor", "Unknown")
+
+        if not actor or actor == "unknown":
+            actor = "Unknown"
+
+        machine = data.get("machine", "unknown")
+
+        events.append({
+            "time": timestamp,
+            "session": session,
+            "actor": actor,
+            "machine": machine,
+            "action": "LOGIN",
+            "target": machine,
+        })
+
+    return events
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--today",
+        action="store_true",
+        help="Tampilkan aktivitas hari ini",
+    )
+
+    parser.add_argument(
+        "--detail",
+        action="store_true",
+        help="Tampilkan detail lengkap",
+    )
+
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="Jumlah event maksimum",
+    )
+
+    args = parser.parse_args()
+
+    sessions = load_sessions()
+
+    events = login_events(sessions)
+    events += load_audit_events(sessions)
+
+    events.sort(
+        key=lambda event: event["time"],
+        reverse=True,
+    )
+
+    events = events[:max(1, args.limit)]
+
+    print()
+    print(
+        "IMNEHNET AUDIT — "
+        + datetime.now().strftime("%d %b %Y")
+    )
+    print()
+
+    if not events:
+        print("Belum ada aktivitas.")
+        return
+
+    if args.detail:
+        for event in events:
+            print(
+                f"[{event['time']:%H:%M}] "
+                f"{event['actor']} — {event['action']}"
+            )
+            print(f"Machine : {event['machine']}")
+            print(f"Session : {event['session']}")
+            print(f"Target  : {event['target']}")
+            print()
+
+        return
+
+    print(f"{'TIME':<5} {'WHO':<6} {'ACT':<5} TARGET")
+    print(f"{'-' * 5} {'-' * 6} {'-' * 5} {'-' * 22}")
+
+    for event in events:
+        print(
+            f"{event['time']:%H:%M} "
+            f"{short(event['actor'], 6):<6} "
+            f"{short(event['action'], 5):<5} "
+            f"{short(event['target'], 22)}"
+        )
+
+
+if __name__ == "__main__":
+    main()
