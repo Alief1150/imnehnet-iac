@@ -22,9 +22,15 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
-# Basic syntax checks for versioned shell scripts/hooks.
+# Basic syntax checks for versioned shell scripts/hooks. Files implemented in
+# Python or another language may also live under scripts/, so only pass files
+# with a shell extension or shell shebang to bash -n.
 while IFS= read -r -d '' f; do
-  bash -n "$f"
+  first_line=""
+  IFS= read -r first_line < "$f" || true
+  if [[ "$f" == *.sh || "$first_line" =~ ^\#!.*[[:space:]/](ba|da|k|z)?sh([[:space:]]|$) ]]; then
+    bash -n "$f"
+  fi
 done < <(find scripts .githooks -type f -print0 2>/dev/null || true)
 
 git commit -m "$msg"

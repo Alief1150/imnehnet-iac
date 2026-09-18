@@ -52,3 +52,34 @@ Before live changes:
 6. Verify health.
 7. Update `docs/status.md` and, if needed, `docs/decisions.md`.
 8. Commit and push repository changes.
+
+## Telegram daily welcome
+
+Hermes uses the `imnehnet-welcome` plugin to prepend a greeting to the first Telegram
+response for each authorized user, at most once per day in `Asia/Jakarta`.
+
+Updates are read from IMNEHNET Git commits. The plugin does not present commit history as
+verified runtime state and does not invoke F5-TTS automatically.
+
+Validate:
+
+```bash
+hermes plugins list --plain --no-bundled
+hermes plugins doctor imnehnet-welcome
+systemctl --user is-active hermes-gateway.service
+```
+
+Rate-limit state is stored locally with mode `0600` at:
+
+```text
+~/.hermes/state/imnehnet-welcome.json
+```
+
+Rollback without deleting rate-limit state:
+
+```bash
+hermes plugins disable imnehnet-welcome
+hermes gateway restart
+```
+
+The tracked plugin source is in `hermes/plugins/imnehnet-welcome/`.
