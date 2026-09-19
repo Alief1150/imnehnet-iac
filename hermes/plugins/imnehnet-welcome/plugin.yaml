@@ -1,5 +1,5 @@
 name: imnehnet-welcome
-version: 1.0.0
+version: 1.1.0
 description: Daily Telegram welcome with verified IMNEHNET Git updates
 entry_point: __init__.py
 hooks:

@@ -31,10 +31,12 @@ Target stack is Incus management over KVM/QEMU, with OpenTofu and Ansible automa
 
 ## Hermes integration
 
-Verified on 2026-09-18:
+Verified on 2026-09-19:
 
-- User plugin `imnehnet-welcome` version `1.0.0` is installed and enabled in the active default Hermes profile.
+- User plugin `imnehnet-welcome` version `1.1.0` is installed and enabled in the active default Hermes profile.
 - Plugin doctor passed runtime discovery, manifest parsing, import, and registration with zero tools and two observer hooks: `pre_llm_call` and `post_llm_call`.
-- The Telegram welcome policy is once per authorized user per day in `Asia/Jakarta`.
+- The Telegram welcome policy is once per authorized user for each daily period beginning at 05:00 WIB.
+- Every greeting includes up to five latest Git commits; shared repository updates are visible to every authorized user without exposing private session content.
 - Update content is bounded to Git commit metadata; it is not presented as live infrastructure status.
-- The gateway remained active with the same PID after a non-disruptive systemd reload.
+- Cron job `IMNEHNET daily welcome 05:00 WIB` is scheduled at `0 5 * * *` for the explicitly registered Telegram DM target; a live manual delivery completed successfully on 2026-09-19.
+- The gateway remained active after a non-disruptive systemd reload.

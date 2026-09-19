@@ -1,14 +1,14 @@
 # IMNEHNET Telegram Welcome Plugin
 
 Plugin Hermes ini menyisipkan sambutan pada respons Telegram pertama setiap pengguna
-yang sudah lolos otorisasi, maksimal sekali per hari menurut zona waktu
-`Asia/Jakarta`.
+yang sudah lolos otorisasi. Periode harian dimulai pukul `05.00 Asia/Jakarta`.
 
 Update diambil secara read-only dari commit Git repository IMNEHNET:
 
-- kunjungan pertama: maksimal lima commit terbaru;
-- kunjungan berikutnya: maksimal lima commit sejak sambutan terakhir;
-- jika tidak ada commit baru, plugin menyatakannya secara eksplisit.
+- setiap sambutan menampilkan maksimal lima commit terbaru;
+- commit yang dibuat melalui pekerjaan pengguna lain ikut terlihat setelah masuk ke
+  repository bersama;
+- isi percakapan privat tidak pernah dijadikan update bersama.
 
 State lokal disimpan dengan mode `0600` di:
 
@@ -47,3 +47,14 @@ Variabel opsional:
 
 - `IMNEHNET_WELCOME_REPO`: lokasi repository (default `~/imnehnet-iac`);
 - `IMNEHNET_WELCOME_TIMEZONE`: zona waktu rate limit (default `Asia/Jakarta`).
+
+## Briefing pukul 05.00 WIB
+
+Selain hook saat pengguna mulai berinteraksi, cron job
+`IMNEHNET daily welcome 05:00 WIB` mengirim briefing ke target DM Telegram
+yang terdaftar dengan jadwal `0 5 * * *`.
+
+Briefing selalu mengambil maksimal lima commit terbaru. Delivery ke pengguna
+Telegram lain tetap bergantung pada chat tersebut sudah terhubung ke gateway;
+bot Telegram tidak dapat memulai percakapan dengan pengguna yang belum pernah
+memulai bot.

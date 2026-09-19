@@ -56,10 +56,12 @@ Before live changes:
 ## Telegram daily welcome
 
 Hermes uses the `imnehnet-welcome` plugin to prepend a greeting to the first Telegram
-response for each authorized user, at most once per day in `Asia/Jakarta`.
+response for each authorized user in each daily period beginning at 05:00 WIB.
 
-Updates are read from IMNEHNET Git commits. The plugin does not present commit history as
-verified runtime state and does not invoke F5-TTS automatically.
+Each greeting includes up to five latest IMNEHNET Git commits. Commits are shared
+updates for every authorized user; private session content is never included. The
+plugin does not present commit history as verified runtime state and does not invoke
+F5-TTS automatically.
 
 Validate:
 
@@ -83,3 +85,12 @@ hermes gateway restart
 ```
 
 The tracked plugin source is in `hermes/plugins/imnehnet-welcome/`.
+
+A durable cron job named `IMNEHNET daily welcome 05:00 WIB` sends the daily
+briefing at `0 5 * * *` to the explicitly registered Telegram DM target. The
+generic `deliver=all` target is not used because no home-channel mapping resolved
+during the live delivery test. Verify it with:
+
+```bash
+hermes cron list
+```
