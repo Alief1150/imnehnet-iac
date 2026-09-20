@@ -54,6 +54,10 @@ Selain hook saat pengguna mulai berinteraksi, cron job
 `IMNEHNET daily welcome 05:00 WIB` mengirim briefing ke target DM Telegram
 yang terdaftar dengan jadwal `0 5 * * *`.
 
+Job `Sync IMNEHNET Telegram DM targets` berjalan pada `55 4 * * *`. Script
+`~/.hermes/scripts/sync-welcome-dm-targets.py` membaca tabel routing Hermes
+secara read-only, memilih hanya DM Telegram, dan memperbarui target briefing.
+
 Briefing selalu mengambil maksimal lima commit terbaru. Delivery ke pengguna
 Telegram lain tetap bergantung pada chat tersebut sudah terhubung ke gateway;
 bot Telegram tidak dapat memulai percakapan dengan pengguna yang belum pernah

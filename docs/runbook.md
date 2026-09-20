@@ -87,10 +87,16 @@ hermes gateway restart
 The tracked plugin source is in `hermes/plugins/imnehnet-welcome/`.
 
 A durable cron job named `IMNEHNET daily welcome 05:00 WIB` sends the daily
-briefing at `0 5 * * *` to the explicitly registered Telegram DM target. The
+briefing at `0 5 * * *` to registered Telegram DM targets. The
 generic `deliver=all` target is not used because no home-channel mapping resolved
 during the live delivery test. Verify it with:
 
 ```bash
 hermes cron list
 ```
+
+At `55 4 * * *`, the no-agent job `Sync IMNEHNET Telegram DM targets` runs
+`sync-welcome-dm-targets.py`. It reads only the `gateway_routing` table, selects
+Telegram routes whose chat type is `dm` and whose chat ID equals the user ID,
+deduplicates them, and updates the 05:00 job. It preserves existing targets if no
+DM route is available. Groups and topics are not broadcast targets.
