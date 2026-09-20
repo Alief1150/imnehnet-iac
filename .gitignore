@@ -41,3 +41,5 @@ Thumbs.db
 # Logs/cache
 *.log
 .cache/
+__pycache__/
+*.py[cod]
