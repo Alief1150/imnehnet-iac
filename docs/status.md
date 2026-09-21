@@ -75,6 +75,14 @@ Also verified on 2026-09-21:
 - A fresh one-shot Hermes session successfully loaded `mantis-threat-model` through `skill_view` and returned `MANTIS_RUNTIME_OK`.
 - Mantis is a defensive source-code security-review workflow. Its reproduction and patch stages can execute untrusted code or modify a repository when explicitly invoked; they require isolation, review, and the normal IMNEHNET approval and credential safeguards.
 
+Also verified on 2026-09-21:
+
+- Third-party static skill `Agents365-ai/drawio-skill` version `3.4.0` is installed and enabled under `~/.hermes/skills/creative/drawio-skill/`, based on release commit `7aa92f73819766eb914fffac66762cf2adb5d828`.
+- The upstream test suite passed `218` tests with `7` optional tests skipped. The installed package's 79 tracked files match the audited release checkout.
+- Hermes scanning reports `CAUTION`, not `SAFE`, because the skill contains reviewed subprocess wrappers, optional dependency guidance, live-infrastructure import recipes, a large compressed shape index, and an optional MCP server. The operator explicitly approved installation after disclosure.
+- No MCP server was registered, no system dependency was installed, no live infrastructure was queried, and no icon CDN was contacted during installation. Python-only Diagram IR generation is available; native export and automatic Graphviz layout remain unavailable because `drawio` and `dot` are not installed.
+- A smoke test built a two-node `.drawio` artifact and validation returned zero errors and zero warnings. A fresh Hermes session loaded `drawio-skill` and returned `DRAWIO_SKILL_RUNTIME_OK`.
+
 ## Project document database
 
 Verified on 2026-09-21:

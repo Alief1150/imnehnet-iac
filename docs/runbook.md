@@ -178,3 +178,45 @@ hermes skills uninstall mantis-threat-model
 
 After any removal, start a fresh Hermes process and verify that the removed
 skill is no longer discoverable before deleting any retained audit checkout.
+
+## Hermes draw.io skill
+
+The active default Hermes profile contains `Agents365-ai/drawio-skill` version
+`3.4.0`, audited against release commit
+`7aa92f73819766eb914fffac66762cf2adb5d828`. Use it when the requested artifact
+must remain editable in draw.io/diagrams.net, or when converting code, IaC,
+schemas, or API definitions into an editable architecture model. Continue to
+prefer simpler diagram-as-code or SVG workflows when editability in draw.io is
+not required.
+
+The package has an accepted `CAUTION` scanner verdict. It can launch explicit
+local binaries, read source or sanitized live-state JSON, write diagram output,
+and optionally fetch allowlisted icons. Do not register its MCP server, install
+dependencies, invoke live Terraform/Docker/Kubernetes capture, or contact icon
+CDNs unless the operator explicitly requests that separate capability. Never
+embed credentials, state secrets, Secret payloads, or environment values in
+diagram nodes or provenance.
+
+Validate discovery and the Python-only core:
+
+```bash
+hermes skills audit drawio-skill --deep
+python3 ~/.hermes/skills/creative/drawio-skill/scripts/diagramctl.py doctor
+```
+
+Current expected capability state is Python/XML/Diagram IR available, while
+native export and Graphviz auto-layout are unavailable until `drawio` and `dot`
+are separately reviewed and installed. Do not treat a diagram inferred from
+configuration as verified deployed state.
+
+Upstream updates require a new source review, test run, scanner review, and
+recursive hash comparison. Do not update solely because a new version appears.
+
+Rollback/removal, only when explicitly requested:
+
+```bash
+hermes skills uninstall drawio-skill
+```
+
+Verify removal with a fresh Hermes process before deleting any user-created
+`.drawio`, PNG, SVG, PDF, HTML, or Diagram IR artifacts.
