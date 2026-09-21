@@ -220,3 +220,39 @@ hermes skills uninstall drawio-skill
 
 Verify removal with a fresh Hermes process before deleting any user-created
 `.drawio`, PNG, SVG, PDF, HTML, or Diagram IR artifacts.
+
+## Hermes delegation fleet setup skill
+
+The active default Hermes profile contains only the `delegate-setup` utility
+from `amElnagdy/delegate-skills` version `0.5.0`, audited against commit
+`6826b363085dcc80875372315fe7d208c4bf733f`. It discovers compatible coding-agent
+CLIs and can author a lane map after explicit approval; it never dispatches work
+itself.
+
+The repository's 17 `*-delegate` relay skills are intentionally not installed.
+At verification time none of their target CLIs were present, and several relay
+write modes use broad permissions or lack an OS-enforced sandbox. Continue using
+Hermes `delegate_task` and the existing reviewed coding-agent skills unless a
+specific CLI relay is separately requested and audited.
+
+Read-only validation:
+
+```bash
+hermes skills audit delegate-setup --deep
+node ~/.hermes/skills/autonomous-ai-agents/delegate-setup/scripts/discover.mjs
+node ~/.hermes/skills/autonomous-ai-agents/delegate-setup/scripts/config.mjs \
+  load --cwd ~/imnehnet-iac
+```
+
+Do not use `discover.mjs --usage` without telling the operator first; it reads
+session counts and mtimes, although it does not open conversation content. Do
+not write a global or project lane map until the complete JSON and scope have
+been shown and explicitly approved. Authentication for future implementer CLIs
+must be completed outside chat and credentials must never be copied into a
+brief, config, repository, or relay output.
+
+Rollback/removal, only when explicitly requested:
+
+```bash
+hermes skills uninstall delegate-setup
+```

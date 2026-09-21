@@ -83,6 +83,14 @@ Also verified on 2026-09-21:
 - No MCP server was registered, no system dependency was installed, no live infrastructure was queried, and no icon CDN was contacted during installation. Python-only Diagram IR generation is available; native export and automatic Graphviz layout remain unavailable because `drawio` and `dot` are not installed.
 - A smoke test built a two-node `.drawio` artifact and validation returned zero errors and zero warnings. A fresh Hermes session loaded `drawio-skill` and returned `DRAWIO_SKILL_RUNTIME_OK`.
 
+Also verified on 2026-09-21:
+
+- Static skill `delegate-setup` version `0.5.0` from `amElnagdy/delegate-skills` is installed and enabled under `~/.hermes/skills/autonomous-ai-agents/delegate-setup/`, based on upstream commit `6826b363085dcc80875372315fe7d208c4bf733f`.
+- Hermes scanning returned `SAFE`; all four upstream CI-equivalent gates completed successfully, including the full relay smoke suite. The installed package's 7 tracked files match the audited checkout with zero missing, mismatched, or extra files.
+- Discovery found zero installed implementer CLIs and 17 missing CLIs. Therefore none of the 17 `*-delegate` relay skills were installed; this avoids inactive triggers and write-capable or unsandboxed relay modes that currently cannot execute.
+- No global or project delegation config exists, no lane was written, and no coding task was dispatched. A fresh Hermes session loaded the skill and returned `DELEGATE_SETUP_RUNTIME_OK`.
+- Hermes's native `delegate_task` and the existing dedicated coding-agent skills remain the active delegation mechanisms. Installing a future relay requires its implementer CLI, separate source/runtime review, authentication outside chat, and explicit approval for its write/sandbox posture.
+
 ## Project document database
 
 Verified on 2026-09-21:
