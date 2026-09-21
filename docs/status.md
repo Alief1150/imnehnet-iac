@@ -67,3 +67,4 @@ Verified on 2026-09-21:
 - Proposal PDF `documents/proposals/2026-kelompok-5-proposal-pbl-imnehnet.pdf` is stored locally and catalogued in `documents/index.json`.
 - The PDF has 20 pages, size 825395 bytes, and SHA-256 `8922074ca418d818b0493d60ad33f11a8d5283961884fb0974d6be37ca9d6e27`.
 - The proposal is classified as a reference document, not as proof of deployment or an automatic replacement for the authoritative architecture and decision records.
+- Final source archive `documents/proposals/2026-09-21-kelompok-5-proposal-final.zip` is stored intact and catalogued; it contains one PDF and one DOCX, with no encrypted entries, path traversal, or symlinks detected.

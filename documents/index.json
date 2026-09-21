@@ -20,6 +20,35 @@
       "received_at": "2026-09-21T07:38:44+07:00",
       "source": "telegram-upload",
       "notes": "Dokumen proposal menjadi referensi akademik. Isinya tidak otomatis membuktikan status deployment dan tidak menggantikan docs/status.md, docs/architecture.md, atau docs/decisions.md."
+    },
+    {
+      "id": "imnehnet-proposal-kelompok-5-2026-final-archive",
+      "title": "Kelompok 5 Proposal PBL IMNEHNET — Final Archive",
+      "document_type": "proposal-source-archive",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "reference",
+      "authority": "proposal-not-runtime-state",
+      "path": "documents/proposals/2026-09-21-kelompok-5-proposal-final.zip",
+      "original_filename": "21-09-2026_Final.zip",
+      "media_type": "application/zip",
+      "size_bytes": 10056145,
+      "sha256": "c1b5b2d6ba413184bdb5c52bd07d81330e7b287c9174ad25d8104042928fe338",
+      "received_at": "2026-09-21T14:52:58+07:00",
+      "source": "telegram-upload",
+      "archive": {
+        "file_count": 2,
+        "directory_count": 1,
+        "total_uncompressed_bytes": 10333817,
+        "encrypted": false,
+        "members": [
+          "21-09-2026_Final/gdocs_Kelompok 5 Proposal PBL_IMNEHNET_TMJ5A.pdf",
+          "21-09-2026_Final/Kelompok_5_Proposal_PBL_IMNEHNET_FINAL.docx"
+        ]
+      },
+      "notes": "Arsip final disimpan utuh tanpa ekstraksi. Pemeriksaan nama/path tidak menemukan path traversal, symlink, entry terenkripsi, atau pola nama kredensial. Isinya tetap diklasifikasikan sebagai referensi proposal, bukan status deployment."
     }
   ]
 }
