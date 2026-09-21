@@ -49,6 +49,25 @@
         ]
       },
       "notes": "Arsip final disimpan utuh tanpa ekstraksi. Pemeriksaan nama/path tidak menemukan path traversal, symlink, entry terenkripsi, atau pola nama kredensial. Isinya tetap diklasifikasikan sebagai referensi proposal, bukan status deployment."
+    },
+    {
+      "id": "imnehnet-hermes-audit-log-final-setup-2026",
+      "title": "Dokumentasi Final Setup Hermes Audit Log — IMNEHNET",
+      "document_type": "audit-setup-documentation",
+      "project": "IMNEHNET",
+      "year": 2026,
+      "language": "id",
+      "status": "reference",
+      "authority": "operational-reference-not-raw-audit-log",
+      "path": "documents/audit/2026-imnehnet-hermes-audit-log-final-setup.pdf",
+      "original_filename": "IMNEHNET_Hermes_Audit_Log_Final_Setup.pdf",
+      "media_type": "application/pdf",
+      "page_count": 3,
+      "size_bytes": 10414,
+      "sha256": "301eec07fdfce6f34b5e50636d4681de3e0d5ece29ec06b8b43cffe4b3e79102",
+      "received_at": "2026-09-21T17:39:21+07:00",
+      "source": "telegram-upload",
+      "notes": "Dokumentasi setup dan troubleshooting audit. Pemeriksaan teks tidak menemukan kredensial aktual; contoh identitas memakai placeholder. Raw audit log, alamat IP, SSH fingerprint, token, dan mapping identitas aktual tetap dilarang masuk repository."
     }
   ]
 }
