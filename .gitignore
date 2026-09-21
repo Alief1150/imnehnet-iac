@@ -1,4 +1,4 @@
-# Secrets / environment
+g Secrets / environment
 .env
 .env.*
 !.env.example
@@ -43,3 +43,13 @@ Thumbs.db
 .cache/
 __pycache__/
 *.py[cod]
+
+# Ansible runtime/local files
+ansible/inventory/hosts.ini
+*.retry
+.ansible/
+
+# Secrets / private keys
+*.pem
+*.key
+vault_password*
