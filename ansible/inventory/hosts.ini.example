@@ -1,0 +1,26 @@
+# ==========================================
+# IMNEHNET Ansible Inventory Template
+# ==========================================
+
+[controller]
+iaas-mgmt ansible_connection=local
+
+# LAB-ENV akan diaktifkan setelah VM tersedia.
+#
+# [lab_env]
+# lab-env ansible_host=<LAB_ENV_MANAGEMENT_IP>
+
+# Container mahasiswa akan ditambahkan
+# setelah provisioning Incus tersedia.
+#
+# [student_labs]
+# lab-user01 ansible_host=10.20.0.21
+# lab-user02 ansible_host=10.20.0.22
+
+# [lab_env:vars]
+# ansible_user=<REMOTE_USER>
+# ansible_ssh_private_key_file=/home/iaas/.ssh/imnehnet_ansible
+
+# [student_labs:vars]
+# ansible_user=<REMOTE_USER>
+# ansible_ssh_private_key_file=/home/iaas/.ssh/imnehnet_ansible

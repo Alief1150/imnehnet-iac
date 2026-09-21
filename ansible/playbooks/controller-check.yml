@@ -1,0 +1,29 @@
+---
+- name: Check IAAS-MGMT Ansible Controller
+  hosts: controller
+  gather_facts: true
+
+  tasks:
+    - name: Display hostname
+      ansible.builtin.debug:
+        var: ansible_hostname
+
+    - name: Display distribution
+      ansible.builtin.debug:
+        msg: >
+          {{ ansible_distribution }}
+          {{ ansible_distribution_version }}
+
+    - name: Display IP information
+      ansible.builtin.debug:
+        var: ansible_default_ipv4.address
+
+    - name: Verify Python
+      ansible.builtin.command:
+        cmd: python3 --version
+      register: python_version
+      changed_when: false
+
+    - name: Display Python version
+      ansible.builtin.debug:
+        var: python_version.stdout
