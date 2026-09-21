@@ -136,3 +136,45 @@ Removal, if explicitly requested after rollback verification:
 ```bash
 hermes plugins remove superpowers
 ```
+
+## Hermes Mantis security-review skills
+
+The active default Hermes profile contains 19 core skills from `google/mantis`,
+audited against upstream commit
+`6f523a39ccb535b4f5411310f31e872fab954e07`. They support threat modelling,
+source review, finding deduplication and validation, reproduction planning,
+patch review, and reporting.
+
+Only the static skill packages are installed. `mantis-configure`,
+`mantis-launch`, and the repository's Python ADK/reference harness are excluded.
+Do not run generated reproducers, patches, Docker/QEMU workloads, cloud setup, or
+other Mantis-produced code directly on the infrastructure host. Use an isolated
+disposable environment, inspect the exact command and diff first, and retain the
+approval requirements in `AGENTS.md`.
+
+Validate discovery and re-scan an individual skill:
+
+```bash
+hermes skills list --enabled-only
+hermes skills audit mantis-threat-model --deep
+```
+
+For runtime acceptance, a fresh Hermes process must be able to invoke
+`skill_view` for `mantis-threat-model`. The expected marker used during the
+installation test was `MANTIS_RUNTIME_OK`.
+
+Do not run `hermes skills update` for these skills without auditing the proposed
+upstream commit and comparing it with the currently pinned commit. The two
+skills that were absent from the `skills.sh` index at installation time,
+`mantis-pipeline-adapter` and `mantis-structural-index`, were installed directly
+from the same audited checkout.
+
+Rollback/removal is destructive to the local skill copies and therefore must be
+explicitly requested. Remove one package with:
+
+```bash
+hermes skills uninstall mantis-threat-model
+```
+
+After any removal, start a fresh Hermes process and verify that the removed
+skill is no longer discoverable before deleting any retained audit checkout.

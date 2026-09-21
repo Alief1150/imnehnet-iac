@@ -1,6 +1,6 @@
 # Current Verified Status
 
-Last update: 2026-09-19
+Last update: 2026-09-21
 
 This file records only facts that have been observed or explicitly confirmed. Planned architecture belongs in `architecture.md` or `networking.md`.
 
@@ -66,6 +66,14 @@ Verified on 2026-09-21:
 - Upstream Hermes tests passed `19/19`; Hermes manifest validation and plugin doctor passed with zero tools and one `pre_llm_call` hook. A fresh one-shot Hermes session successfully loaded `superpowers:verification-before-completion` through `skill_view`.
 - Local hardening prevents the systematic-debugging example from printing the value of `IDENTITY` and disables optional visual-companion telemetry. These local changes must be reviewed and reapplied after any upstream update.
 - The plugin was not granted built-in tool override capability. Project `AGENTS.md`, explicit operator approval gates, credential rules, and live-infrastructure safety policy remain authoritative over plugin workflows.
+
+Also verified on 2026-09-21:
+
+- Nineteen core security-review skills from `google/mantis` are installed under `~/.hermes/skills/security/` in the active default Hermes profile. The audited source is upstream commit `6f523a39ccb535b4f5411310f31e872fab954e07`; the repository had no release or tag at verification time.
+- The installed set excludes `mantis-configure`, `mantis-launch`, and the Python ADK/reference harness. No Mantis installer, cloud setup, container, reproducer, patcher, or generated code was executed during installation.
+- Hash comparison against the audited checkout found 19/19 expected skill directories with zero missing, mismatched, or extra files. Hermes security scanning returned `SAFE` for all 19 installed skills.
+- A fresh one-shot Hermes session successfully loaded `mantis-threat-model` through `skill_view` and returned `MANTIS_RUNTIME_OK`.
+- Mantis is a defensive source-code security-review workflow. Its reproduction and patch stages can execute untrusted code or modify a repository when explicitly invoked; they require isolation, review, and the normal IMNEHNET approval and credential safeguards.
 
 ## Project document database
 
