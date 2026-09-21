@@ -14,7 +14,7 @@ This repository is intentionally private. It is the shared knowledge base for:
 
 GitHub is the authoritative project memory. Hermes automatically loads `AGENTS.md` when started from this repository. ChatGPT should read the latest repository state before making architecture or operational recommendations.
 
-The repository stores documentation, IaC, Ansible, inventory templates, runbooks, and change history. It must never contain credentials, API keys, Tailscale auth keys, private keys, `.env` files, or OpenTofu state.
+The repository stores documentation, IaC, Ansible, inventory templates, runbooks, change history, and a checksum-indexed project document database under `documents/`. It must never contain credentials, API keys, Tailscale auth keys, private keys, `.env` files, or OpenTofu state.
 
 ## Quick start on the IMNEHNET host
 

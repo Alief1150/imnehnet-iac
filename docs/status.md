@@ -59,3 +59,11 @@ Verified on 2026-09-19:
 - Cron job `IMNEHNET daily welcome 05:00 WIB` is scheduled at `0 5 * * *` for all registered Telegram DM routes; four existing DM routes were synchronized on 2026-09-20.
 - No-agent job `Sync IMNEHNET Telegram DM targets` runs at `55 4 * * *` to refresh the target list from the Hermes routing database before each briefing. Groups and topics are excluded.
 - The gateway remained active after a non-disruptive systemd reload.
+
+## Project document database
+
+Verified on 2026-09-21:
+
+- Proposal PDF `documents/proposals/2026-kelompok-5-proposal-pbl-imnehnet.pdf` is stored locally and catalogued in `documents/index.json`.
+- The PDF has 20 pages, size 825395 bytes, and SHA-256 `8922074ca418d818b0493d60ad33f11a8d5283961884fb0974d6be37ca9d6e27`.
+- The proposal is classified as a reference document, not as proof of deployment or an automatic replacement for the authoritative architecture and decision records.

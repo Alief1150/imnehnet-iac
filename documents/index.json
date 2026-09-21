@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "documents": [
+    {
+      "id": "imnehnet-proposal-kelompok-5-2026-v1",
+      "title": "Rancang Bangun Model IaaS Berbasis Micro-Segmentation untuk Meningkatkan Keamanan dan Skalabilitas Praktikum Keamanan Siber",
+      "document_type": "proposal",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "reference",
+      "authority": "proposal-not-runtime-state",
+      "path": "documents/proposals/2026-kelompok-5-proposal-pbl-imnehnet.pdf",
+      "original_filename": "Kelompok 5 Proposal PBL_IMNEHNET_TMJ5A-1.pdf",
+      "media_type": "application/pdf",
+      "page_count": 20,
+      "size_bytes": 825395,
+      "sha256": "8922074ca418d818b0493d60ad33f11a8d5283961884fb0974d6be37ca9d6e27",
+      "received_at": "2026-09-21T07:38:44+07:00",
+      "source": "telegram-upload",
+      "notes": "Dokumen proposal menjadi referensi akademik. Isinya tidak otomatis membuktikan status deployment dan tidak menggantikan docs/status.md, docs/architecture.md, atau docs/decisions.md."
+    }
+  ]
+}
