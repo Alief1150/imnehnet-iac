@@ -256,3 +256,70 @@ Rollback/removal, only when explicitly requested:
 ```bash
 hermes skills uninstall delegate-setup
 ```
+
+## Hermes avoid-ai-writing skill
+
+The active default Hermes profile contains `conorbronsdon/avoid-ai-writing`
+version `3.35.0`, pinned to release commit
+`fc979c6489ec0ac81a77236782ba496da81b24cb`. The standalone package lives at
+`~/.hermes/skills/creative/avoid-ai-writing/` and contains its rules, detector,
+preservation validator, quote normalizer, style checker, examples, and reference
+catalog. It does not require an API, MCP server, or globally installed npm
+package.
+
+Use it for one of three explicit modes:
+
+- `detect`: report AI-associated writing patterns without modifying text;
+- `rewrite`: rewrite prose while preserving supported facts and the source's
+  level of certainty;
+- `edit`: make targeted changes to a named prose file and verify preservation.
+
+Treat detector output as a writing-quality signal, never as proof of authorship
+or as the sole basis for academic, hiring, or disciplinary decisions. Do not run
+edit mode on source code, configuration, generated data, OpenTofu state, or
+credential-bearing files. Quotations, code blocks, tables, URLs, paths,
+identifiers, frontmatter, and attributed text remain protected unless the
+operator explicitly requests a narrow change.
+
+Read-only validation:
+
+```bash
+hermes skills list
+node ~/.hermes/skills/creative/avoid-ai-writing/detector/validate.js \
+  /tmp/original.md /tmp/rewritten.md
+```
+
+For a detector smoke test, import `detector/patterns.js` from a reviewed local
+Node harness and call `analyzeText()`. Do not pipe untrusted content into a shell
+or interpreter. `hermes skills audit avoid-ai-writing --deep` currently refuses
+manual local installs as non-hub-managed, so retain the pinned checkout, run the
+upstream tests, perform static review, and compare recursive file hashes during
+every update.
+
+The installed skill overlaps with the built-in `humanizer`. Prefer
+`avoid-ai-writing` for detect-only audits, source-fidelity-sensitive rewrites,
+and file edits that need deterministic preservation checks. Never combine
+conflicting rewrite instructions or allow either skill to invent facts,
+experiences, opinions, measurements, or citations.
+
+Update procedure:
+
+1. Fetch the proposed release into a temporary checkout and record its immutable
+   commit.
+2. Review `SKILL.md`, references, scripts, detector code, symlinks, executable
+   bits, network access, process execution, environment access, and write paths.
+3. Run the complete upstream test suite without installing dependencies.
+4. Compare the standalone package against the installed directory and show the
+   diff before replacing any files.
+5. After approval, replace the package, compare recursive hashes, run detector
+   and preservation smoke tests, and verify loading in a fresh Hermes session.
+
+Rollback/removal, only when explicitly requested:
+
+```bash
+rm -rf ~/.hermes/skills/creative/avoid-ai-writing
+```
+
+Restart or open a fresh Hermes session and verify that `avoid-ai-writing` no
+longer appears in `hermes skills list`. Removing the skill must not delete prose
+files previously reviewed or edited with it.

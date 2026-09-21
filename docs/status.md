@@ -91,6 +91,15 @@ Also verified on 2026-09-21:
 - No global or project delegation config exists, no lane was written, and no coding task was dispatched. A fresh Hermes session loaded the skill and returned `DELEGATE_SETUP_RUNTIME_OK`.
 - Hermes's native `delegate_task` and the existing dedicated coding-agent skills remain the active delegation mechanisms. Installing a future relay requires its implementer CLI, separate source/runtime review, authentication outside chat, and explicit approval for its write/sandbox posture.
 
+Also verified on 2026-09-21:
+
+- Third-party static skill `conorbronsdon/avoid-ai-writing` version `3.35.0` is installed and enabled under `~/.hermes/skills/creative/avoid-ai-writing/`, pinned to release commit `fc979c6489ec0ac81a77236782ba496da81b24cb` under the MIT license.
+- Only the 12-file standalone skill package was installed. No MCP server, npm package, Git hook, external model, credential, telemetry, or network-enabled corpus/evaluation utility was installed or configured.
+- All 20 upstream test groups passed. Recursive SHA-256 comparison found all 12 installed files identical to the reviewed release package, with zero missing, extra, or mismatched files.
+- A detector smoke test returned score `36`, label `Moderate AI signals`, and 9 findings across five categories. The preservation validator correctly rejected removal of protected inline code, and a fresh Hermes session completed detect mode with `AVOID_AI_WRITING_RUNTIME_OK`.
+- Hermes's deep-audit command cannot assign a scanner verdict to manually installed local skills because they are not hub-managed. Manual static review found no credential access, network call, subprocess invocation, installer, telemetry, symlink, or executable file in the installed package.
+- The skill is a writing-quality aid, not proof of AI authorship. It overlaps with the built-in `humanizer`; prefer `avoid-ai-writing` when source fidelity, detect-only operation, protected-content handling, or deterministic preservation checks are required.
+
 ## Project document database
 
 Verified on 2026-09-21:
