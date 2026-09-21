@@ -60,6 +60,13 @@ Verified on 2026-09-19:
 - No-agent job `Sync IMNEHNET Telegram DM targets` runs at `55 4 * * *` to refresh the target list from the Hermes routing database before each briefing. Groups and topics are excluded.
 - The gateway remained active after a non-disruptive systemd reload.
 
+Verified on 2026-09-21:
+
+- Third-party plugin `obra/superpowers` version `6.4.1` is installed and enabled in the active default Hermes profile, pinned to upstream commit `5bf4e78011075bcfc0dc295f0724994cd123ee71`.
+- Upstream Hermes tests passed `19/19`; Hermes manifest validation and plugin doctor passed with zero tools and one `pre_llm_call` hook. A fresh one-shot Hermes session successfully loaded `superpowers:verification-before-completion` through `skill_view`.
+- Local hardening prevents the systematic-debugging example from printing the value of `IDENTITY` and disables optional visual-companion telemetry. These local changes must be reviewed and reapplied after any upstream update.
+- The plugin was not granted built-in tool override capability. Project `AGENTS.md`, explicit operator approval gates, credential rules, and live-infrastructure safety policy remain authoritative over plugin workflows.
+
 ## Project document database
 
 Verified on 2026-09-21:

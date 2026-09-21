@@ -100,3 +100,39 @@ At `55 4 * * *`, the no-agent job `Sync IMNEHNET Telegram DM targets` runs
 Telegram routes whose chat type is `dm` and whose chat ID equals the user ID,
 deduplicates them, and updates the 05:00 job. It preserves existing targets if no
 DM route is available. Groups and topics are not broadcast targets.
+
+## Hermes Superpowers plugin
+
+The default Hermes profile has `obra/superpowers` version `6.4.1`, based on
+immutable upstream commit `5bf4e78011075bcfc0dc295f0724994cd123ee71`. It adds
+software-engineering workflows such as brainstorming, implementation planning,
+TDD, systematic debugging, code review, worktrees, and verification before
+completion. It does not grant infrastructure access by itself; all IMNEHNET
+approval gates in `AGENTS.md` still apply.
+
+Validate the installed runtime:
+
+```bash
+hermes plugins list --plain --no-bundled
+hermes plugins show superpowers
+hermes plugins doctor superpowers
+hermes plugins capabilities superpowers
+```
+
+The installed checkout is under `~/.hermes/plugins/superpowers/`. It contains two
+local hardening changes: secret-presence diagnostics report only `SET`/`UNSET`,
+and optional visual-companion telemetry is disabled. Do not run
+`hermes plugins update superpowers` until the new upstream commit has been audited;
+an update can overwrite both changes.
+
+Rollback without deleting the installed checkout:
+
+```bash
+hermes plugins disable superpowers
+```
+
+Removal, if explicitly requested after rollback verification:
+
+```bash
+hermes plugins remove superpowers
+```
