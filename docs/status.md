@@ -45,7 +45,16 @@ Observed on the physical host on 2026-09-19:
 - The absence of Ansible on the physical host does not determine the state of a separate approved Ansible controller.
 - Zabbix Server and Wazuh control commands were not found on the physical host; these workloads belong in the management VM in the target architecture.
 
-Incus/OpenTofu deployment remains unverified and must not be inferred from the existing QEMU/libvirt installation.
+The statement above reflects the 2026-09-19 host-only check. The following prototype deployment was verified directly on 2026-09-22 and supersedes the earlier unverified Incus/OpenTofu note without changing the separate target architecture:
+
+- The libvirt VMs `IAAS-MGMT` and `LAB-ENV` were both running.
+- `IAAS-MGMT` was reachable at `192.168.100.10/24`; its Ansible inventory defines `iaas-mgmt` and `lab-env`, and `ansible.builtin.ping` returned `SUCCESS` with `changed: false` for both hosts.
+- `IAAS-MGMT` has Ansible Core 2.16.3, OpenTofu 1.12.6 and the Incus 6.0.0 client.
+- The trusted Incus remote `lab-env` points to `https://192.168.100.20:8443`; the authenticated API reported server name `lab-env` and Incus server version 6.0.0.
+- The managed bridge `incusbr0` exists on `LAB-ENV` with `10.20.0.1/24`, IPv4 NAT enabled and IPv6 disabled.
+- Containers `lab-test` (`10.20.0.31`) and `lab-tofu-test` (`10.20.0.202`) were both `RUNNING` on `incusbr0`.
+- The OpenTofu configuration and state both require `registry.opentofu.org/lxc/incus`; the configuration pins the provider to `~> 1.2`. State contents and credentials were not inspected or recorded.
+- The observed running `lab-tofu-test` instance and provider binding corroborate the operator-confirmed OpenTofu provisioning test. Microsegmentation enforcement, portal/MySQL integration, monitoring deployment and end-to-end lifecycle behavior remain pending verification.
 
 ## Hermes integration
 
