@@ -118,3 +118,7 @@ Verified on 2026-09-21:
 - The proposal is classified as a reference document, not as proof of deployment or an automatic replacement for the authoritative architecture and decision records.
 - Final source archive `documents/proposals/2026-09-21-kelompok-5-proposal-final.zip` is stored intact and catalogued; it contains one PDF and one DOCX, with no encrypted entries, path traversal, or symlinks detected.
 - Sanitized audit setup reference `documents/audit/2026-imnehnet-hermes-audit-log-final-setup.pdf` is stored locally and catalogued. It contains placeholders rather than actual identity mappings and is not a raw audit log.
+
+Verified on 2026-09-22:
+
+- Editable presentation `documents/presentations/2026-kelompok-5-pbl-imnehnet-implementasi-terkini.pptx` is stored and catalogued as the current PBL deliverable. It contains 14 slides, has SHA-256 `7413b73e4ce0be856695fd27d4baf9035214eb3ea382d2baf5a84d4c99eb345e`, and distinguishes the verified prototype status from pending implementation work.

@@ -68,6 +68,26 @@
       "received_at": "2026-09-21T17:39:21+07:00",
       "source": "telegram-upload",
       "notes": "Dokumentasi setup dan troubleshooting audit. Pemeriksaan teks tidak menemukan kredensial aktual; contoh identitas memakai placeholder. Raw audit log, alamat IP, SSH fingerprint, token, dan mapping identitas aktual tetap dilarang masuk repository."
+    },
+    {
+      "id": "imnehnet-pbl-presentation-implementation-2026-v1",
+      "title": "PBL IMNEHNET — Analisis Kebutuhan dan Progress Implementasi",
+      "document_type": "presentation",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "current-deliverable",
+      "authority": "presentation-of-current-prototype-plus-planned-work",
+      "path": "documents/presentations/2026-kelompok-5-pbl-imnehnet-implementasi-terkini.pptx",
+      "original_filename": "IMNEHNET_PBL_Implementasi_Terkini.pptx",
+      "media_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "slide_count": 14,
+      "size_bytes": 1589395,
+      "sha256": "7413b73e4ce0be856695fd27d4baf9035214eb3ea382d2baf5a84d4c99eb345e",
+      "received_at": "2026-09-22T20:12:05+07:00",
+      "source": "locally-generated",
+      "notes": "Presentasi editable berbasis visual Dashi theme03. Status prototype pada slide progress didasarkan pada verifikasi read-only 2026-09-22; item tahap berikutnya tidak dinyatakan sebagai deployment selesai."
     }
   ]
 }
