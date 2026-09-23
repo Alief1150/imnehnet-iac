@@ -8,6 +8,7 @@ import subprocess
 from datetime import datetime
 
 PROJECT_ROOT = "/home/imnehnet/imnehnet-iac"
+NODE = "server-imnehnet"
 
 AUDIT_KEYS = {
     "imnehnet_project": "EDIT",
@@ -231,9 +232,14 @@ def load_audit_events(sessions):
 
             events.append({
                 "time": timestamp,
+                "node": NODE,
                 "session": session,
                 "actor": actor,
                 "machine": machine,
+                "fingerprint": session_data.get("fingerprint", "unknown"),
+                "source_ip": session_data.get("source_ip", "unknown"),
+                "tailnet_user": session_data.get("tailnet_user", "unknown"),
+                "linux_user": session_data.get("linux_user", "unknown"),
                 "action": action,
                 "target": target,
             })
@@ -260,9 +266,14 @@ def login_events(sessions):
 
         events.append({
             "time": timestamp,
+            "node": NODE,
             "session": session,
             "actor": actor,
             "machine": machine,
+            "fingerprint": data.get("fingerprint", "unknown"),
+            "source_ip": data.get("source_ip", "unknown"),
+            "tailnet_user": data.get("tailnet_user", "unknown"),
+            "linux_user": data.get("linux_user", "unknown"),
             "action": "LOGIN",
             "target": machine,
         })
@@ -292,6 +303,12 @@ def main():
         help="Jumlah event maksimum",
     )
 
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Tampilkan event sebagai JSON untuk agregasi",
+    )
+
     args = parser.parse_args()
 
     sessions = load_sessions()
@@ -305,6 +322,14 @@ def main():
     )
 
     events = events[:max(1, args.limit)]
+
+    if args.json:
+        serializable = [
+            {**event, "time": event["time"].isoformat()}
+            for event in events
+        ]
+        print(json.dumps(serializable, ensure_ascii=False))
+        return
 
     print()
     print(

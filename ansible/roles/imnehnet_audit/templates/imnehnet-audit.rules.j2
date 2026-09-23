@@ -1,0 +1,13 @@
+# Managed by Ansible role imnehnet_audit
+-w /etc/ssh -p wa -k imnehnet_ssh
+-w /etc/audit -p wa -k imnehnet_auditconfig
+-w /etc/systemd/system -p wa -k imnehnet_systemd
+-w /etc/sudoers -p wa -k imnehnet_auditconfig
+-w /etc/sudoers.d -p wa -k imnehnet_auditconfig
+{% if imnehnet_audit_project_stat.stat.exists %}
+-w {{ imnehnet_audit_project_root }} -p wa -k imnehnet_project
+{% else %}
+# imnehnet_project omitted: {{ imnehnet_audit_project_root }} does not exist on this node.
+{% endif %}
+-a always,exit -F arch=b64 -S execve -F euid=0 -k imnehnet_admincmd
+-a always,exit -F arch=b32 -S execve -F euid=0 -k imnehnet_admincmd

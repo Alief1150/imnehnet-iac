@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -u
+
+[ -z "${SSH_CONNECTION:-}" ] && exit 0
+
+keys=/etc/imnehnet-audit/keys.tsv
+client_ip="${SSH_CONNECTION%% *}"
+session_id="$(cat /proc/self/sessionid 2>/dev/null || printf unknown)"
+fingerprint=unknown
+actor=unknown
+machine=unknown
+device=unknown
+tailnet_user=unknown
+
+if [ -n "${SSH_USER_AUTH:-}" ] && [ -r "${SSH_USER_AUTH}" ]; then
+    candidate="$(grep -Eo 'SHA256:[A-Za-z0-9+/=]+' "${SSH_USER_AUTH}" 2>/dev/null | tail -n 1 || true)"
+    if [ -z "${candidate}" ]; then
+        auth_line="$(head -n 1 "${SSH_USER_AUTH}" 2>/dev/null || true)"
+        key_line="${auth_line#publickey }"
+        candidate="$(printf '%s\n' "${key_line}" | ssh-keygen -lf - 2>/dev/null | awk '{print $2; exit}' || true)"
+    fi
+    [ -n "${candidate}" ] && fingerprint="${candidate}"
+fi
+
+if [ -r "${keys}" ]; then
+    candidate="$(awk -v fp="${fingerprint}" '$1 == fp {$1=""; sub(/^\t? */, ""); print; exit}' "${keys}" 2>/dev/null)"
+    [ -n "${candidate}" ] && actor="${candidate}"
+fi
+
+case "${client_ip}" in
+    100.*|fd7a:*)
+        info="$(tailscale whois --json "${client_ip}" 2>/dev/null || true)"
+        machine="$(printf '%s' "${info}" | jq -r '.Node.ComputedName // .Node.Name // "unknown"' 2>/dev/null)"
+        device="$(printf '%s' "${info}" | jq -r '.Node.Hostinfo.Hostname // "unknown"' 2>/dev/null)"
+        tailnet_user="$(printf '%s' "${info}" | jq -r '.UserProfile.LoginName // "unknown"' 2>/dev/null)"
+        machine="${machine%.}"
+        ;;
+esac
+
+jq -nc \
+    --arg event ssh_login \
+    --arg time "$(date -Is)" \
+    --arg session "${session_id}" \
+    --arg actor "${actor}" \
+    --arg fingerprint "${fingerprint}" \
+    --arg machine "${machine}" \
+    --arg device "${device}" \
+    --arg source_ip "${client_ip}" \
+    --arg linux_user "${USER:-unknown}" \
+    --arg tailnet_user "${tailnet_user}" \
+    --arg node "{{ imnehnet_audit_node_name }}" \
+    '{event:$event,time:$time,session:$session,actor:$actor,fingerprint:$fingerprint,machine:$machine,device:$device,source_ip:$source_ip,linux_user:$linux_user,tailnet_user:$tailnet_user,node:$node}' \
+    | logger -t imnehnet-session

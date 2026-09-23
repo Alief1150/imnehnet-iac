@@ -1,0 +1,139 @@
+---
+- name: Repair the Tailscale APT keyring on LAB-ENV
+  hosts: lab-env
+  become: true
+  gather_facts: false
+  vars:
+    tailscale_keyring_path: /usr/share/keyrings/tailscale-archive-keyring.gpg
+    tailscale_keyring_backup_dir: /var/backups/imnehnet-prereq
+    tailscale_keyring_backup_path: /var/backups/imnehnet-prereq/tailscale-archive-keyring.gpg.pre-repair
+    tailscale_keyring_source: /tmp/tailscale-noble.noarmor.gpg
+    tailscale_keyring_sha256: 3e03dacf222698c60b8e2f990b809ca1b3e104de127767864284e6c228f1fb39
+    tailscale_keyring_fingerprint: 2596A99EAAB33821893C0A79458CA832957F5868
+  tasks:
+    - name: Inspect verified keyring source on the controller
+      ansible.builtin.stat:
+        path: "{{ tailscale_keyring_source }}"
+        checksum_algorithm: sha256
+      delegate_to: localhost
+      become: false
+      register: tailscale_controller_keyring
+
+    - name: Require the pinned official keyring source
+      ansible.builtin.assert:
+        that:
+          - tailscale_controller_keyring.stat.exists
+          - tailscale_controller_keyring.stat.isreg
+          - tailscale_controller_keyring.stat.size > 0
+          - tailscale_controller_keyring.stat.checksum == tailscale_keyring_sha256
+        fail_msg: "The controller keyring is missing or does not match the pinned SHA-256."
+      delegate_to: localhost
+      become: false
+
+    - name: Inspect current target keyring
+      ansible.builtin.stat:
+        path: "{{ tailscale_keyring_path }}"
+      register: tailscale_target_keyring
+
+    - name: Require an existing target keyring for reversible repair
+      ansible.builtin.assert:
+        that:
+          - tailscale_target_keyring.stat.exists
+          - tailscale_target_keyring.stat.isreg
+
+    - name: Inspect current target key fingerprint
+      ansible.builtin.command:
+        argv:
+          - gpg
+          - --batch
+          - --show-keys
+          - --with-colons
+          - "{{ tailscale_keyring_path }}"
+      register: tailscale_current_key_metadata
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Decide whether repair is required
+      ansible.builtin.set_fact:
+        tailscale_keyring_needs_repair: "{{ tailscale_keyring_fingerprint not in tailscale_current_key_metadata.stdout }}"
+
+    - name: Inspect fixed rollback backup
+      ansible.builtin.stat:
+        path: "{{ tailscale_keyring_backup_path }}"
+      register: tailscale_keyring_backup
+
+    - name: Create restricted prerequisite backup directory
+      ansible.builtin.file:
+        path: "{{ tailscale_keyring_backup_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+      when: tailscale_keyring_needs_repair
+
+    - name: Preserve original keyring exactly once
+      ansible.builtin.copy:
+        src: "{{ tailscale_keyring_path }}"
+        dest: "{{ tailscale_keyring_backup_path }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0600"
+      when:
+        - tailscale_keyring_needs_repair
+        - not tailscale_keyring_backup.stat.exists
+        - not ansible_check_mode
+
+    - name: Explain deferred original-keyring backup during dry-run
+      ansible.builtin.debug:
+        msg: "The original keyring will be backed up before replacement during apply."
+      when:
+        - tailscale_keyring_needs_repair
+        - ansible_check_mode
+
+    - name: Install pinned official Tailscale keyring
+      ansible.builtin.copy:
+        src: "{{ tailscale_keyring_source }}"
+        dest: "{{ tailscale_keyring_path }}"
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      when: tailscale_keyring_needs_repair
+
+    - name: Validate repository trust and refresh APT metadata
+      when: not ansible_check_mode
+      block:
+        - name: Verify installed Tailscale key fingerprint
+          ansible.builtin.command:
+            argv:
+              - gpg
+              - --batch
+              - --show-keys
+              - --with-colons
+              - "{{ tailscale_keyring_path }}"
+          register: tailscale_installed_key_metadata
+          changed_when: false
+          failed_when: tailscale_keyring_fingerprint not in tailscale_installed_key_metadata.stdout
+
+        - name: Refresh signed APT metadata
+          ansible.builtin.apt:
+            update_cache: true
+            cache_valid_time: 3600
+      rescue:
+        - name: Restore original keyring after failed validation
+          ansible.builtin.copy:
+            src: "{{ tailscale_keyring_backup_path }}"
+            dest: "{{ tailscale_keyring_path }}"
+            remote_src: true
+            owner: root
+            group: root
+            mode: "0644"
+          when:
+            - tailscale_keyring_needs_repair
+            - tailscale_keyring_backup.stat.exists or not ansible_check_mode
+
+        - name: Stop after restoring the previous keyring
+          ansible.builtin.fail:
+            msg: "Tailscale keyring validation or apt update failed; the previous keyring was restored."

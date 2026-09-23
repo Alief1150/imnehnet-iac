@@ -1,6 +1,6 @@
 # Current Verified Status
 
-Last update: 2026-09-21
+Last update: 2026-09-24
 
 This file records only facts that have been observed or explicitly confirmed. Planned architecture belongs in `architecture.md` or `networking.md`.
 
@@ -55,6 +55,19 @@ The statement above reflects the 2026-09-19 host-only check. The following proto
 - Containers `lab-test` (`10.20.0.31`) and `lab-tofu-test` (`10.20.0.202`) were both `RUNNING` on `incusbr0`.
 - The OpenTofu configuration and state both require `registry.opentofu.org/lxc/incus`; the configuration pins the provider to `~> 1.2`. State contents and credentials were not inspected or recorded.
 - The observed running `lab-tofu-test` instance and provider binding corroborate the operator-confirmed OpenTofu provisioning test. Microsegmentation enforcement, portal/MySQL integration, monitoring deployment and end-to-end lifecycle behavior remain pending verification.
+
+## Distributed infrastructure audit
+
+Verified on 2026-09-23/24 WIB:
+
+- `auditd`, a node-local SSH session hook, JSON-capable reporter, audit rules, and a narrow reporter-only sudoers rule are deployed on `IAAS-MGMT` and `LAB-ENV`; SSH remained active and was reloaded rather than restarted.
+- Fresh physical-host logins were attributed by key fingerprint as `Hermes / server-imnehnet` on both VMs. A fresh controller login to `LAB-ENV` was attributed as `Ansible / iaas-mgmt`.
+- The observed management paths use LAN sources `192.168.100.1` and `192.168.100.10`; therefore their Tailscale machine and tailnet-user fields correctly remain unknown rather than being inferred.
+- The physical-host reporter retains its original compact output and now also supports `--json` with node, actor, source IP, fingerprint, Tailscale identity, Linux user, action, and target fields.
+- User-level aggregator `~/.local/bin/imnehnet-audit-report-all` pulls all three reporters using a dedicated verified `known_hosts` file, normalizes timestamps to `Asia/Jakarta`, and emits `NOACTIVITY` for a reachable node with no event on the current WIB date.
+- End-to-end aggregation returned all three nodes with zero transport/report errors and zero missing required fields. The actor map and private collector identity remain outside version control; only the public-key fingerprints are used on target nodes.
+- `LAB-ENV` had an empty Tailscale APT keyring that blocked package installation. It was backed up and replaced with the official 2288-byte keyring, SHA-256 `3e03dacf222698c60b8e2f990b809ca1b3e104de127767864284e6c228f1fb39`, fingerprint `2596A99EAAB33821893C0A79458CA832957F5868`; signed APT metadata refresh then succeeded.
+- Tailscale on `LAB-ENV` is installed through Snap and remained online at `100.111.217.109`; absence of a `tailscaled.service` system unit is expected for this installation method.
 
 ## Hermes integration
 

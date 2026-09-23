@@ -323,3 +323,63 @@ rm -rf ~/.hermes/skills/creative/avoid-ai-writing
 Restart or open a fresh Hermes session and verify that `avoid-ai-writing` no
 longer appears in `hermes skills list`. Removing the skill must not delete prose
 files previously reviewed or edited with it.
+
+## Distributed login and infrastructure audit
+
+Run the current-WIB-day report from the physical host:
+
+```bash
+~/.local/bin/imnehnet-audit-report-all
+```
+
+Machine-readable and diagnostic variants:
+
+```bash
+~/.local/bin/imnehnet-audit-report-all --json
+~/.local/bin/imnehnet-audit-report-all --all-returned --json
+sudo -n /usr/local/sbin/imnehnet-audit-report --today --json
+```
+
+The aggregator reads `~/.config/imnehnet-audit/nodes.json`, uses the collector
+identity only by local path, and verifies both VM host keys with
+`~/.ssh/known_hosts_imnehnet_audit`. Never copy the collector private key to a
+VM or commit the node config, actor mapping, raw audit output, or credentials.
+`UNKNOWN / LOCAL` is expected for LAN, console, or unresolvable source IPs.
+
+Deploy or reconcile one VM at a time because become passwords may differ:
+
+```bash
+export ANSIBLE_ROLES_PATH=/tmp/imnehnet-audit-bundle/ansible/roles
+ansible-playbook -i inventory/hosts.ini \
+  /tmp/imnehnet-audit-bundle/ansible/playbooks/imnehnet-audit.yml \
+  --limit <iaas-mgmt-or-lab-env> --check --diff --ask-become-pass \
+  -e @/tmp/<node-specific-audit-vars>.yml
+```
+
+Review the diff, remove `--check --diff`, apply, then verify a fresh SSH login,
+`systemctl is-active auditd`, reporter JSON, expected actor, and source IP. The
+temporary vars file contains the actor map and must not enter version control.
+
+Conservative rollback removes only managed audit files and SSH hook/drop-in;
+it deliberately leaves installed packages in place:
+
+```bash
+ansible-playbook -i inventory/hosts.ini \
+  /tmp/imnehnet-audit-bundle/ansible/playbooks/imnehnet-audit-rollback.yml \
+  --limit <node> --check --diff --ask-become-pass \
+  -e @/tmp/<node-specific-audit-vars>.yml
+```
+
+For the verified LAB-ENV Tailscale keyring failure, use the reviewed repair only
+after confirming the target keyring is empty and the controller source matches
+the pinned SHA-256/fingerprint:
+
+```bash
+ansible-playbook -i inventory/hosts.ini \
+  /tmp/repair-tailscale-apt-keyring.yml \
+  --limit lab-env --check --diff --ask-become-pass
+```
+
+The corresponding exact-file rollback is
+`/tmp/rollback-tailscale-apt-keyring.yml`. It restores the broken pre-repair
+keyring and therefore should be used only when explicitly required.

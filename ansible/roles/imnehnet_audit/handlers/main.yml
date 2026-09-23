@@ -1,0 +1,18 @@
+---
+- name: Validate sshd configuration before reload
+  become: true
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false
+  listen: Validate and reload ssh
+
+- name: Reload ssh without interrupting existing sessions
+  become: true
+  ansible.builtin.service:
+    name: ssh
+    state: reloaded
+  listen: Validate and reload ssh
+
+- name: Load audit rules
+  become: true
+  ansible.builtin.command: /sbin/augenrules --load
+  changed_when: true

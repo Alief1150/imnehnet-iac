@@ -117,61 +117,37 @@ If reality differs from documentation, verify the live system first, then update
 
 Use concise Indonesian unless the user asks otherwise. For commands, explain what will change and what the rollback is. Distinguish clearly between observed state, planned state, and assumptions.
 
-## IMNEHNET Infrastructure Audit
+## IMNEHNET Distributed Audit
 
-The IMNEHNET host maintains a local infrastructure audit trail.
+The physical host, `IAAS-MGMT`, and `LAB-ENV` maintain node-local audit trails.
+The physical host pulls their machine-readable reports over verified SSH and
+normalizes the result to `Asia/Jakarta`.
 
-When the operator asks:
+When the operator asks for login, activity, change, or audit information such
+as "show audit", "siapa yang login", "siapa yang ngedit", "aktivitas server",
+or "audit hari ini", run:
 
-- "show log"
-- "show audit"
-- "siapa yang ngedit"
-- "siapa yang mengubah server"
-- "perubahan terakhir"
-- "audit server"
+```bash
+~/.local/bin/imnehnet-audit-report-all
+```
 
-run:
+Use `--json` for machine-readable output and `--all-returned` only for
+cross-timezone diagnostics. The default report represents the current WIB
+calendar date and emits `NOACTIVITY` when a reachable node has no events.
 
-sudo /usr/local/sbin/imnehnet-audit-report
+Present the result as a table containing timestamp, destination node, actor,
+source IP, Tailscale machine, Tailscale user, Linux user, action, and affected
+resource. Actor identity comes from the accepted SSH public-key fingerprint;
+Tailscale machine/user attribution comes only from a valid `tailscale whois`
+mapping of the recorded source IP. LAN, console, local, or unresolvable sources
+must remain `UNKNOWN / LOCAL`; never infer a person from a Linux username or
+device label.
 
-Present the result as a table containing:
-
-- timestamp
-- Tailscale machine name
-- Tailscale user
-- Linux user
-- action
-- affected resource
-
-Never invent missing audit information.
-
-If an event cannot be attributed to a Tailscale machine, display:
-
-UNKNOWN / LOCAL
-
-Do not modify or delete audit logs unless explicitly authorized.
-
-## IMNEHNET Audit Log
-
-The IMNEHNET host maintains a local infrastructure audit trail.
-
-Actor identity is determined from the unique SSH public-key fingerprint.
-Machine identity is obtained from Tailscale.
-File and command activity is correlated using the Linux audit session ID.
-
-When the operator asks things such as:
-
-- "show log"
-- "show audit"
-- "siapa yang login"
-- "siapa yang ngedit"
-- "siapa yang terakhir ngubah"
-- "aktivitas tim"
-- "aktivitas server"
-- "log perubahan"
-- "audit hari ini"
-
-use the compact audit report:
+If the aggregator itself is unavailable, use the physical-host fallback:
 
 ```bash
 sudo -n /usr/local/sbin/imnehnet-audit-report --today
+```
+
+Never invent missing information. Do not modify or delete audit logs unless
+explicitly authorized.

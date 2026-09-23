@@ -1,0 +1,11 @@
+---
+- name: Roll back IMNEHNET audit reporting
+  hosts: all
+  become: true
+  gather_facts: true
+  serial: 1
+  tasks:
+    - name: Run conservative audit rollback
+      ansible.builtin.include_role:
+        name: imnehnet_audit
+        tasks_from: rollback

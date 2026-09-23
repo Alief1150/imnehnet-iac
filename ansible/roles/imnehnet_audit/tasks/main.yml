@@ -1,0 +1,179 @@
+---
+- name: Require a Debian-family target
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == "Debian"
+    fail_msg: "The IMNEHNET audit role currently supports Debian/Ubuntu targets only."
+
+- name: Install audit runtime packages
+  ansible.builtin.apt:
+    name: "{{ imnehnet_audit_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create durable backup directory
+  ansible.builtin.file:
+    path: "{{ imnehnet_audit_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Create audit configuration directory
+  ansible.builtin.file:
+    path: /etc/imnehnet-audit
+    state: directory
+    owner: root
+    group: "{{ imnehnet_audit_linux_user }}"
+    mode: "0750"
+
+- name: Check whether the project root exists
+  ansible.builtin.stat:
+    path: "{{ imnehnet_audit_project_root }}"
+  register: imnehnet_audit_project_stat
+
+- name: Record node metadata
+  ansible.builtin.copy:
+    dest: /etc/imnehnet-audit/node.json
+    owner: root
+    group: root
+    mode: "0640"
+    backup: true
+    content: |
+      {{ {'node': imnehnet_audit_node_name, 'project_root': imnehnet_audit_project_root, 'linux_user': imnehnet_audit_linux_user} | to_nice_json }}
+
+- name: Install SSH-key fingerprint actor mapping
+  ansible.builtin.copy:
+    dest: /etc/imnehnet-audit/keys.tsv
+    owner: root
+    group: "{{ imnehnet_audit_linux_user }}"
+    mode: "0640"
+    backup: true
+    content: |
+      {% for fingerprint, actor in imnehnet_audit_key_actors | dictsort %}
+      {{ fingerprint }}	{{ actor }}
+      {% endfor %}
+
+- name: Install session audit hook
+  ansible.builtin.template:
+    src: imnehnet-session-audit.j2
+    dest: /usr/local/sbin/imnehnet-session-audit
+    owner: root
+    group: root
+    mode: "0755"
+    backup: true
+
+- name: Install audit reporter
+  ansible.builtin.template:
+    src: imnehnet-audit-report.py.j2
+    dest: /usr/local/sbin/imnehnet-audit-report
+    owner: root
+    group: root
+    mode: "0755"
+    backup: true
+
+- name: Add the session hook to system SSH rc
+  ansible.builtin.blockinfile:
+    path: /etc/ssh/sshrc
+    create: true
+    owner: root
+    group: root
+    mode: "0755"
+    backup: true
+    marker: "# {mark} IMNEHNET AUDIT"
+    block: |
+      /usr/local/sbin/imnehnet-session-audit
+
+- name: Install SSH auth-info drop-in with rollback on validation failure
+  block:
+    - name: Write SSH audit drop-in
+      ansible.builtin.template:
+        src: imnehnet-audit-sshd.conf.j2
+        dest: /etc/ssh/sshd_config.d/90-imnehnet-audit.conf
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      register: imnehnet_audit_ssh_dropin
+      notify: Validate and reload ssh
+
+    - name: Validate complete SSH configuration with sshd -t
+      ansible.builtin.command: /usr/sbin/sshd -t
+      changed_when: false
+  rescue:
+    - name: Restore previous SSH audit drop-in
+      ansible.builtin.copy:
+        src: "{{ imnehnet_audit_ssh_dropin.backup_file }}"
+        dest: /etc/ssh/sshd_config.d/90-imnehnet-audit.conf
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      when: imnehnet_audit_ssh_dropin.backup_file is defined
+
+    - name: Remove new invalid SSH audit drop-in
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config.d/90-imnehnet-audit.conf
+        state: absent
+      when: imnehnet_audit_ssh_dropin.backup_file is not defined
+
+    - name: Stop after restoring SSH configuration
+      ansible.builtin.fail:
+        msg: "sshd validation failed; the prior configuration was restored."
+
+- name: Install audit rules
+  ansible.builtin.template:
+    src: imnehnet-audit.rules.j2
+    dest: /etc/audit/rules.d/90-imnehnet.rules
+    owner: root
+    group: root
+    mode: "0640"
+    backup: true
+  notify: Load audit rules
+
+- name: Install narrow sudoers rule for the reporter
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/imnehnet-audit-report
+    owner: root
+    group: root
+    mode: "0440"
+    backup: true
+    validate: /usr/sbin/visudo -cf %s
+    content: |
+      {{ imnehnet_audit_linux_user }} ALL=(root) NOPASSWD: /usr/local/sbin/imnehnet-audit-report
+
+- name: Validate sudoers configuration with visudo -cf
+  ansible.builtin.command: /usr/sbin/visudo -cf /etc/sudoers.d/imnehnet-audit-report
+  changed_when: false
+
+- name: Enable and start auditd
+  ansible.builtin.service:
+    name: auditd
+    enabled: true
+    state: started
+  when: not ansible_check_mode
+
+- name: Explain deferred auditd activation during dry-run
+  ansible.builtin.debug:
+    msg: "auditd activation is deferred until apply because the package is not installed during check mode."
+  when: ansible_check_mode
+
+- name: Apply validated handlers now
+  ansible.builtin.meta: flush_handlers
+
+- name: Validate reporter syntax
+  ansible.builtin.command: python3 -m py_compile /usr/local/sbin/imnehnet-audit-report
+  changed_when: false
+
+- name: Verify machine-readable report
+  ansible.builtin.command: /usr/local/sbin/imnehnet-audit-report --today --json
+  changed_when: false
+  register: imnehnet_audit_report_check
+  when: not ansible_check_mode
+
+- name: Confirm report verification
+  ansible.builtin.assert:
+    that:
+      - imnehnet_audit_report_check.rc == 0
+  when: not ansible_check_mode

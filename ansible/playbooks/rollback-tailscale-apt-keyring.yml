@@ -1,0 +1,29 @@
+---
+- name: Roll back the Tailscale APT keyring repair on LAB-ENV
+  hosts: lab-env
+  become: true
+  gather_facts: false
+  vars:
+    tailscale_keyring_path: /usr/share/keyrings/tailscale-archive-keyring.gpg
+    tailscale_keyring_backup_path: /var/backups/imnehnet-prereq/tailscale-archive-keyring.gpg.pre-repair
+  tasks:
+    - name: Inspect fixed rollback backup
+      ansible.builtin.stat:
+        path: "{{ tailscale_keyring_backup_path }}"
+      register: tailscale_keyring_backup
+
+    - name: Require the pre-repair backup
+      ansible.builtin.assert:
+        that:
+          - tailscale_keyring_backup.stat.exists
+          - tailscale_keyring_backup.stat.isreg
+
+    - name: Restore pre-repair Tailscale keyring
+      ansible.builtin.copy:
+        src: "{{ tailscale_keyring_backup_path }}"
+        dest: "{{ tailscale_keyring_path }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true

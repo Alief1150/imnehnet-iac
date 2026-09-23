@@ -1,0 +1,10 @@
+---
+imnehnet_audit_node_name: "{{ ansible_hostname }}"
+imnehnet_audit_linux_user: "{{ ansible_env.SUDO_USER | default(ansible_user | default(ansible_user_id)) }}"
+imnehnet_audit_project_root: "/home/{{ imnehnet_audit_linux_user }}/imnehnet-iac"
+imnehnet_audit_backup_dir: /var/backups/imnehnet-audit
+imnehnet_audit_key_actors: {}
+imnehnet_audit_packages:
+  - auditd
+  - audispd-plugins
+  - jq

@@ -1,0 +1,8 @@
+---
+- name: Install IMNEHNET audit reporting
+  hosts: all
+  become: true
+  gather_facts: true
+  serial: 1
+  roles:
+    - role: imnehnet_audit

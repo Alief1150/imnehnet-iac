@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import re
+import subprocess
+from datetime import datetime
+
+NODE = {{ imnehnet_audit_node_name | to_json }}
+PROJECT_ROOT = {{ imnehnet_audit_project_root | to_json }}
+AUDIT_KEYS = {
+    "imnehnet_project": "EDIT",
+    "imnehnet_ssh": "EDIT",
+    "imnehnet_auditconfig": "EDIT",
+    "imnehnet_systemd": "EDIT",
+    "imnehnet_admincmd": "EXEC",
+}
+
+
+def run(cmd):
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True).stdout
+
+
+def field(line, name):
+    match = re.search(rf'\b{re.escape(name)}=(?:"([^"]*)"|(\S+))', line)
+    return (match.group(1) if match and match.group(1) is not None else match.group(2)) if match else None
+
+
+def load_sessions():
+    sessions = {}
+    output = run(["/usr/bin/journalctl", "-t", "imnehnet-session", "--since", "today", "-o", "cat", "--no-pager"])
+    for line in output.splitlines():
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if data.get("event") == "ssh_login" and data.get("session"):
+            sessions[str(data["session"])] = data
+    return sessions
+
+
+def event_time(block):
+    match = re.search(r'msg=audit\((\d+(?:\.\d+)?):\d+\)', block)
+    return datetime.fromtimestamp(float(match.group(1))).astimezone() if match else None
+
+
+def event_target(block, action):
+    syscall = next((line for line in block.splitlines() if line.startswith("type=SYSCALL")), "")
+    command = field(syscall, "comm") or "unknown"
+    if action == "EXEC":
+        return command
+    cwd_line = next((line for line in block.splitlines() if line.startswith("type=CWD")), "")
+    cwd = field(cwd_line, "cwd") or ""
+    for line in block.splitlines():
+        if not line.startswith("type=PATH"):
+            continue
+        name = field(line, "name")
+        if not name or name in {"(null)", "null"} or name.endswith("~"):
+            continue
+        full = os.path.normpath(name if os.path.isabs(name) else os.path.join(cwd, name))
+        if full.startswith(PROJECT_ROOT + os.sep):
+            return os.path.relpath(full, PROJECT_ROOT)
+        return full
+    return command
+
+
+def login_events(sessions):
+    events = []
+    for session, data in sessions.items():
+        try:
+            stamp = datetime.fromisoformat(data["time"])
+        except (KeyError, ValueError, TypeError):
+            continue
+        events.append({
+            "time": stamp,
+            "node": NODE,
+            "session": session,
+            "actor": data.get("actor") or "Unknown",
+            "machine": data.get("machine") or "UNKNOWN / LOCAL",
+            "fingerprint": data.get("fingerprint") or "unknown",
+            "source_ip": data.get("source_ip") or "unknown",
+            "tailnet_user": data.get("tailnet_user") or "UNKNOWN / LOCAL",
+            "linux_user": data.get("linux_user") or "unknown",
+            "action": "LOGIN",
+            "target": NODE,
+        })
+    return events
+
+
+def audit_events(sessions):
+    events, seen = [], set()
+    for key, action in AUDIT_KEYS.items():
+        output = run(["/usr/sbin/ausearch", "-k", key, "--start", "today"])
+        for block in re.split(r"\n----\n", output.strip()):
+            syscall = next((line for line in block.splitlines() if line.startswith("type=SYSCALL")), None)
+            if not syscall or "success=yes" not in syscall:
+                continue
+            session_match = re.search(r"\bses=(\d+)", syscall)
+            stamp = event_time(block)
+            if not session_match or not stamp:
+                continue
+            session = session_match.group(1)
+            target = event_target(block, action)
+            dedupe = (session, action, target, stamp.isoformat())
+            if dedupe in seen:
+                continue
+            seen.add(dedupe)
+            data = sessions.get(session, {})
+            events.append({
+                "time": stamp,
+                "node": NODE,
+                "session": session,
+                "actor": data.get("actor") or "Unknown",
+                "machine": data.get("machine") or "UNKNOWN / LOCAL",
+                "fingerprint": data.get("fingerprint") or "unknown",
+                "source_ip": data.get("source_ip") or "unknown",
+                "tailnet_user": data.get("tailnet_user") or "UNKNOWN / LOCAL",
+                "linux_user": data.get("linux_user") or "unknown",
+                "action": action,
+                "target": target,
+            })
+    return events
+
+
+def serializable(event):
+    return {**event, "time": event["time"].isoformat()}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--today", action="store_true")
+    parser.add_argument("--detail", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    parser.add_argument("--limit", type=int, default=50)
+    args = parser.parse_args()
+
+    sessions = load_sessions()
+    events = login_events(sessions) + audit_events(sessions)
+    events.sort(key=lambda item: item["time"], reverse=True)
+    events = events[:max(1, args.limit)]
+
+    if args.json:
+        print(json.dumps([serializable(event) for event in events], ensure_ascii=False))
+        return
+
+    print(f"IMNEHNET AUDIT — {NODE} — {datetime.now():%d %b %Y}")
+    if not events:
+        print("Belum ada aktivitas.")
+        return
+    print(f"{'TIME':<5} {'WHO':<12} {'ACT':<5} TARGET")
+    print(f"{'-' * 5} {'-' * 12} {'-' * 5} {'-' * 28}")
+    for event in events:
+        actor = str(event['actor'])[:12]
+        target = str(event['target'])[:28]
+        print(f"{event['time']:%H:%M} {actor:<12} {event['action']:<5} {target}")
+
+
+if __name__ == "__main__":
+    main()
