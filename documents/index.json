@@ -88,6 +88,26 @@
       "received_at": "2026-09-22T20:12:05+07:00",
       "source": "locally-generated",
       "notes": "Presentasi editable berbasis visual Dashi theme03. Status prototype pada slide progress didasarkan pada verifikasi read-only 2026-09-22; item tahap berikutnya tidak dinyatakan sebagai deployment selesai."
+    },
+    {
+      "id": "imnehnet-proposal-kelompok-5-2026-final-v2",
+      "title": "Rancang Bangun Model IaaS Berbasis Micro-Segmentation untuk Meningkatkan Keamanan dan Skalabilitas Praktikum Keamanan Siber",
+      "document_type": "proposal",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "final-reference",
+      "authority": "proposal-not-runtime-state",
+      "path": "documents/proposals/2026-kelompok-5-proposal-pbl-imnehnet-final.pdf",
+      "original_filename": "Latest_Kelompok_5_Proposal_PBL_IMNEHNET_FINAL.pdf",
+      "media_type": "application/pdf",
+      "page_count": 20,
+      "size_bytes": 1002523,
+      "sha256": "166f2e685b47f883fd16939ef2598119180234d7238b0e23b032aa77bcbc0e8b",
+      "received_at": "2026-09-24T00:50:51+07:00",
+      "source": "telegram-upload",
+      "notes": "Versi final hasil finishing dan review pembimbing menurut pengirim. Dokumen disimpan sebagai referensi akademik final; klaim di dalamnya tidak otomatis membuktikan status deployment dan tidak menggantikan docs/status.md."
     }
   ]
 }
