@@ -133,7 +133,9 @@ or "audit hari ini", run:
 
 Use `--json` for machine-readable output and `--all-returned` only for
 cross-timezone diagnostics. The default report represents the current WIB
-calendar date and emits `NOACTIVITY` when a reachable node has no events.
+calendar date and emits `NOACTIVITY` when a reachable node has no events. Node
+polls run in parallel with a bounded timeout; report an `ERROR` row instead of
+waiting indefinitely when a node does not respond.
 
 Present the result as a table containing timestamp, destination node, actor,
 source IP, Tailscale machine, Tailscale user, Linux user, action, and affected

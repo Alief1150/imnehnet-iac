@@ -337,8 +337,14 @@ Machine-readable and diagnostic variants:
 ```bash
 ~/.local/bin/imnehnet-audit-report-all --json
 ~/.local/bin/imnehnet-audit-report-all --all-returned --json
+~/.local/bin/imnehnet-audit-report-all --node-timeout 12 --workers 3
 sudo -n /usr/local/sbin/imnehnet-audit-report --today --json
 ```
+
+Node reporters are polled in parallel. The default end-to-end subprocess timeout
+is 12 seconds per node; a timeout produces an `ERROR` row and does not block the
+other nodes. Use a larger `--node-timeout` only for diagnosed slow links, not as
+a substitute for troubleshooting connectivity.
 
 The aggregator reads `~/.config/imnehnet-audit/nodes.json`, uses the collector
 identity only by local path, and verifies both VM host keys with
