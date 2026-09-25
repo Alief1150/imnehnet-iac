@@ -1,6 +1,6 @@
 # Current Verified Status
 
-Last update: 2026-09-24
+Last update: 2026-09-25
 
 This file records only facts that have been observed or explicitly confirmed. Planned architecture belongs in `architecture.md` or `networking.md`.
 
@@ -55,6 +55,21 @@ The statement above reflects the 2026-09-19 host-only check. The following proto
 - Containers `lab-test` (`10.20.0.31`) and `lab-tofu-test` (`10.20.0.202`) were both `RUNNING` on `incusbr0`.
 - The OpenTofu configuration and state both require `registry.opentofu.org/lxc/incus`; the configuration pins the provider to `~> 1.2`. State contents and credentials were not inspected or recorded.
 - The observed running `lab-tofu-test` instance and provider binding corroborate the operator-confirmed OpenTofu provisioning test. Microsegmentation enforcement, portal/MySQL integration, monitoring deployment and end-to-end lifecycle behavior remain pending verification.
+
+## Backend automation breakpoint
+
+Verified read-only on 2026-09-25:
+
+- On `IAAS-MGMT`, OpenTofu workspace `default` contains `incus_instance.student_lab`; non-sensitive outputs report `container_name=lab-tofu-test`, `container_ipv4=10.20.0.202`, and `container_status=Running`.
+- Ansible from `IAAS-MGMT` reached `lab-env` with `SUCCESS`, `changed: false`, and `ping: pong` after the noninteractive locale was normalized to `C.UTF-8`.
+- The constrained `/usr/local/sbin/imnehnet-incus` wrapper ran through `sudo -n` on `LAB-ENV` without a password prompt and listed `lab-test` (`10.20.0.31`) and `lab-tofu-test` (`10.20.0.202`) as `RUNNING`.
+- `/home/iaas/projects/webportal-iaas` exists but is empty. There is no `artisan`, `composer.json`, `package.json`, `.env`, Laravel/Filament source, or deployed `/admin` application.
+- PHP 8.3, PHP-FPM, Apache, MySQL and Git are available on `IAAS-MGMT`. Composer and Node.js/npm were not available in `PATH`. Apache port 80 still served the Ubuntu default page; port 3000 was Grafana.
+- MySQL correctly refused an unauthenticated query as user `iaas`. No credential or MySQL option file was read to force documentation verification.
+
+The operator-provided breakpoint evidence for 2026-09-25 records the most recent successful `student-bootstrap.yml` run as `ok=7 changed=0 unreachable=0 failed=0`, and records `imnehnet.lab_environments` row `lab-tofu-test` as `status=READY`, `runtime_status=Running`, workspace `default`, and internal IP `10.20.0.202`. Those two facts were not recreated with a mutating playbook or an unauthorized database query during this documentation pass.
+
+This remains a single-environment proof of concept. Laravel/Filament, multi-user OpenTofu state strategy, lifecycle REST API, web terminal, and end-to-end micro-segmentation enforcement remain pending.
 
 ## Distributed infrastructure audit
 
@@ -135,3 +150,8 @@ Verified on 2026-09-21:
 Verified on 2026-09-22:
 
 - Editable presentation `documents/presentations/2026-kelompok-5-pbl-imnehnet-implementasi-terkini.pptx` is stored and catalogued as the current PBL deliverable. It contains 14 slides, has SHA-256 `7413b73e4ce0be856695fd27d4baf9035214eb3ea382d2baf5a84d4c99eb345e`, and distinguishes the verified prototype status from pending implementation work.
+
+Verified on 2026-09-25:
+
+- The backend automation breakpoint is archived in Markdown and PDF under `documents/handoffs/`, with a separate compact Hermes context note.
+- The handoff is a sanitized implementation snapshot. It does not contain passwords, private keys, `.env`, OpenTofu state contents, raw audit logs, or runtime identity mappings.

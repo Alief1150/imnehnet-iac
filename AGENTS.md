@@ -9,53 +9,53 @@ Project title: **Rancang Bangun Model IaaS Berbasis Micro-segmentation untuk Men
 ## Target architecture
 
 - One physical host.
-- CPU currently known only as Intel Core i5 4th generation; exact model/core count must be verified before capacity claims.
-- RAM target/current plan: 16 GB; verify the actual installed amount before sizing.
+- CPU verified as Intel Core i5-4460, 4 cores/4 threads.
+- Installed RAM is approximately 15.52 GiB usable; sizing must remain conservative.
 - Host OS currently used for prototype: Linux Mint.
-- Virtualization: KVM/QEMU.
-- Management layer: Incus.
-- Infrastructure as Code: OpenTofu.
-- Guest configuration: Ansible.
-- Infrastructure monitoring: Zabbix.
+- VM boundary: KVM/QEMU + libvirt.
+- IAAS-MGMT: OpenTofu, Ansible, MySQL, and the planned Laravel/Filament backend.
+- LAB-ENV: Incus host for isolated per-student system containers.
+- Infrastructure as Code: OpenTofu with the Incus provider.
+- Container/guest configuration: Ansible after provisioning.
+- Infrastructure monitoring: Prometheus + Grafana.
 - Security monitoring/SIEM: Wazuh.
 - Remote management: Tailscale + MagicDNS.
 - Host outbound connectivity workaround when required: Cloudflare WARP.
 - GUI remote access for the current host: x11vnc over Tailscale.
 
-## Planned VM roles
+## VM and workload roles
 
-1. Ubuntu Server VM — Zabbix + Wazuh management/monitoring.
-2. Ubuntu Desktop VM — client environment for students/lecturers.
-3. Windows Server VM — PWA/application workload; optional/on-demand when host resources are constrained.
+1. `IAAS-MGMT` Ubuntu Server VM — management/controller plane, automation, database, and planned portal/backend.
+2. `LAB-ENV` Ubuntu Server VM — compute/lab plane running Incus system containers for student environments.
 
-No lightweight container design is part of the current plan unless the user explicitly changes that decision.
+The 2026-09-25 architecture decision supersedes the earlier VM-per-workload/no-container design. KVM/QEMU still provides the two primary security boundaries; Incus system containers provide resource-efficient student environments inside `LAB-ENV`.
 
-## Planned network model
+## Network model
 
-Default planned segments, not yet proof of deployment:
+Target and prototype-aligned networks:
 
-- MGMT: `10.10.10.0/24`
-- CLIENT: `10.10.20.0/24`
-- APP: `10.10.30.0/24`
+- Management network: `192.168.100.0/24`.
+- `IAAS-MGMT`: `192.168.100.10`.
+- `LAB-ENV`: `192.168.100.20`.
+- Incus internal network: `incusbr0`, `10.20.0.0/24`; bridge address `10.20.0.1`.
 
 Microsegmentation principle: **deny by default, allow only required flows**.
 
 Expected policy direction:
 
-- MGMT -> CLIENT/APP: allow only required administration/monitoring.
-- CLIENT -> MGMT: deny by default; allow required telemetry only.
-- CLIENT -> APP: allow only application ports required by the lab.
-- APP -> MGMT: deny by default; allow required telemetry/log delivery only.
-- East-west lab traffic: deny by default unless the exercise explicitly requires it.
+- IAAS-MGMT -> LAB-ENV/containers: allow only provisioning, configuration, lifecycle, monitoring, and administration flows.
+- Student container -> IAAS-MGMT: deny by default; allow only explicitly required application/telemetry flows.
+- Container east-west traffic: deny by default unless an exercise explicitly requires it.
+- External student access: publish only assigned SSH/web/terminal paths; do not expose the Incus API/socket or the entire internal subnet.
 
 Never present planned addresses or policies as deployed facts unless `docs/status.md` confirms deployment.
 
 ## Tool responsibilities
 
-- OpenTofu creates/changes infrastructure objects: VM definitions, networks, NIC attachment, resource allocation, profiles, ACLs where supported.
-- Ansible configures operating systems and applications after the infrastructure exists.
-- Incus manages VM/network/storage abstractions.
-- KVM/QEMU executes the virtual machines.
+- OpenTofu creates/changes Incus objects: system containers, profiles, limits, NIC attachment, and lifecycle state.
+- Ansible configures operating systems, users, packages, and applications after a container exists.
+- Incus on `LAB-ENV` manages container, network, profile, ACL, image, and storage abstractions.
+- KVM/QEMU + libvirt execute and isolate the `IAAS-MGMT` and `LAB-ENV` virtual machines.
 
 Do not blur these responsibilities in documentation or automation.
 

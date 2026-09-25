@@ -1,17 +1,18 @@
 all:
   children:
-    management:
+    controller:
       hosts:
-        ubuntu-monitoring:
-          ansible_host: 10.10.10.10
-    clients:
+        iaas-mgmt:
+          ansible_host: 192.168.100.10
+          ansible_user: iaas
+    lab_env:
       hosts:
-        ubuntu-client:
-          ansible_host: 10.10.20.10
-    applications:
-      hosts:
-        windows-app:
-          ansible_host: 10.10.30.10
+        lab-env:
+          ansible_host: 192.168.100.20
+          ansible_user: lab
 
-# Example only. Do not treat these addresses as deployed until verified.
-# Never place plaintext passwords or private keys in this file.
+# Example aligned with the current two-VM architecture. Confirm addresses against
+# docs/status.md and the live management network before use.
+# Student containers are dynamic Incus resources and do not belong in this static
+# host inventory by default.
+# Never place plaintext passwords, private keys, tokens, or state in this file.

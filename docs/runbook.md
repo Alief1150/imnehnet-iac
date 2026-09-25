@@ -389,3 +389,45 @@ ansible-playbook -i inventory/hosts.ini \
 The corresponding exact-file rollback is
 `/tmp/rollback-tailscale-apt-keyring.yml`. It restores the broken pre-repair
 keyring and therefore should be used only when explicitly required.
+
+## Backend automation breakpoint checks
+
+The 2026-09-25 handoff is stored at:
+
+```text
+documents/handoffs/2026-09-25-imnehnet-backend-automation-breakpoint.md
+documents/handoffs/2026-09-25-imnehnet-backend-automation-breakpoint.pdf
+```
+
+Run read-only checks from `IAAS-MGMT` before resuming backend work:
+
+```bash
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+
+cd ~/imnehnet-iac/tofu
+tofu workspace show
+tofu state list
+tofu output -json
+
+cd ~/imnehnet-iac
+ansible lab_env -i ansible/inventory/hosts.ini -m ansible.builtin.ping
+ansible lab_env -i ansible/inventory/hosts.ini \
+  -m ansible.builtin.command \
+  -a 'sudo -n /usr/local/sbin/imnehnet-incus list --format json'
+```
+
+These commands do not apply infrastructure. Do not use `tofu state show` or copy
+state contents into chat/repository just to prove that a resource exists. Never
+read `.env`, MySQL option files, private keys, or passwords for documentation.
+
+Before backend implementation:
+
+1. Confirm `/home/iaas/projects/webportal-iaas` is still the canonical path.
+2. Decide the multi-user OpenTofu state/resource strategy and append the decision.
+3. Review a plan/diff before any `tofu apply` or mutating Ansible playbook.
+4. Bootstrap Laravel/Filament with MySQL only after dependency and rollback review.
+5. Keep OpenTofu as the Incus lifecycle owner and Ansible as the post-provisioning
+   configuration owner; the Laravel queue orchestrates both.
+6. Verify CREATE/START/STOP/RESET/DELETE and status reconciliation one operation at
+   a time before exposing lifecycle controls to students.
