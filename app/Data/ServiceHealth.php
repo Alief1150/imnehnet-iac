@@ -15,6 +15,7 @@ final readonly class ServiceHealth
         public DateTimeInterface $checkedAt,
         public ?int $latencyMs = null,
         public ?string $version = null,
+        public string $group = 'infrastructure',
     ) {}
 
     /** @return array<string, mixed> */
@@ -26,6 +27,7 @@ final readonly class ServiceHealth
             'status' => $this->status,
             'summary' => $this->summary,
             'source' => $this->source,
+            'group' => $this->group,
             'checked_at' => $this->checkedAt->format(DateTimeInterface::ATOM),
             'latency_ms' => $this->latencyMs,
             'version' => $this->version,

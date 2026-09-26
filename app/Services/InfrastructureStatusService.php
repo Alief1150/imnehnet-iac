@@ -7,7 +7,6 @@ use App\Infrastructure\Health\CommandRunner;
 use App\Infrastructure\Health\HttpHealthProvider;
 use App\Infrastructure\Health\IncusHealthProvider;
 use App\Infrastructure\Health\LocalServiceHealthProvider;
-use App\Infrastructure\Health\UnavailableHealthProvider;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -18,7 +17,9 @@ final class InfrastructureStatusService
 {
     public function __construct(private readonly CommandRunner $commands) {}
 
-    /** @return array<string, array<string, mixed>> */
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public function summary(): array
     {
         return Cache::remember(
@@ -28,63 +29,50 @@ final class InfrastructureStatusService
         );
     }
 
-    /** @return array<string, array<string, mixed>> */
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     private function probeSummary(): array
     {
         $timeout = (int) config('infrastructure.probe_timeout_seconds', 3);
 
-        $incus = (new IncusHealthProvider(
-            $this->commands,
-            (string) config('infrastructure.incus_remote', 'lab-env:'),
-        ))->check();
-        $prometheus = (new HttpHealthProvider(
-            'prometheus',
-            'Prometheus',
-            config('infrastructure.prometheus_health_url'),
-            $timeout,
-            fn (Response $response): bool => trim($response->body()) === 'Prometheus Server is Healthy.',
-        ))->check();
-        $grafana = (new HttpHealthProvider(
-            'grafana',
-            'Grafana',
-            config('infrastructure.grafana_health_url'),
-            $timeout,
-            fn (Response $response): bool => $response->json('database') === 'ok',
-        ))->check();
-        $blackbox = (new HttpHealthProvider(
-            'blackbox',
-            'Blackbox Exporter',
-            config('infrastructure.blackbox_health_url'),
-            $timeout,
-            fn (Response $response): bool => str_contains(strtolower($response->body()), 'healthy'),
-        ))->check();
-        $tofu = (new LocalServiceHealthProvider(
-            $this->commands,
-            'opentofu',
-            'OpenTofu',
-            ['tofu', 'version'],
-        ))->check();
-        $ansible = (new LocalServiceHealthProvider(
-            $this->commands,
-            'ansible',
-            'Ansible',
-            ['ansible', '--version'],
-        ))->check();
-        $wazuh = (new UnavailableHealthProvider(
-            'wazuh',
-            'Wazuh',
-            'not_connected',
-            'Authenticated Wazuh API integration is not connected.',
-        ))->check();
-
         $services = [
-            $incus,
+            // Management plane and compute plane are reported separately so the
+            // dashboard can distinguish "the portal is down" from "the lab host
+            // is down", which is what an operator actually needs to know.
+            $this->managementPlane($timeout),
+            $this->computePlane($timeout),
+            (new IncusHealthProvider(
+                $this->commands,
+                (string) config('infrastructure.incus_remote', 'lab-env:'),
+            ))->check(),
             $this->databaseHealth(),
-            $prometheus,
-            $grafana,
-            $blackbox,
-            $this->automationHealth($tofu, $ansible),
-            $wazuh,
+            (new HttpHealthProvider(
+                'prometheus',
+                'Prometheus',
+                config('infrastructure.prometheus_health_url'),
+                $timeout,
+                fn (Response $response): bool => trim($response->body()) === 'Prometheus Server is Healthy.',
+                group: 'monitoring',
+            ))->check(),
+            (new HttpHealthProvider(
+                'grafana',
+                'Grafana',
+                config('infrastructure.grafana_health_url'),
+                $timeout,
+                fn (Response $response): bool => $response->json('database') === 'ok',
+                group: 'monitoring',
+            ))->check(),
+            (new HttpHealthProvider(
+                'blackbox',
+                'Blackbox Exporter',
+                config('infrastructure.blackbox_health_url'),
+                $timeout,
+                fn (Response $response): bool => str_contains(strtolower($response->body()), 'healthy'),
+                group: 'monitoring',
+            ))->check(),
+            $this->automationHealth($timeout),
+            $this->securityHealth(),
         ];
 
         $summary = [];
@@ -94,6 +82,60 @@ final class InfrastructureStatusService
         }
 
         return $summary;
+    }
+
+    private function managementPlane(int $timeout): ServiceHealth
+    {
+        $url = (string) config('infrastructure.iaas_health_url', 'http://127.0.0.1:8000/up');
+
+        $health = (new HttpHealthProvider(
+            'iaas_mgmt',
+            'IAAS-MGMT',
+            $url,
+            $timeout,
+            group: 'management_plane',
+        ))->check();
+
+        return new ServiceHealth(
+            key: $health->key,
+            label: $health->label,
+            status: $health->status,
+            summary: $health->status === 'healthy'
+                ? 'Management plane is serving the portal.'
+                : $health->summary,
+            source: $health->source,
+            checkedAt: $health->checkedAt,
+            latencyMs: $health->latencyMs,
+            group: 'management_plane',
+        );
+    }
+
+    private function computePlane(int $timeout): ServiceHealth
+    {
+        $url = config('infrastructure.lab_env_api_url');
+
+        $health = (new HttpHealthProvider(
+            'lab_env',
+            'LAB-ENV',
+            is_string($url) ? $url : null,
+            $timeout,
+            fn (Response $response): bool => $response->json('status') === 'Success',
+            verifyTls: false,
+            group: 'compute_plane',
+        ))->check();
+
+        return new ServiceHealth(
+            key: $health->key,
+            label: $health->label,
+            status: $health->status,
+            summary: $health->status === 'healthy'
+                ? 'Compute plane is reachable and running Incus.'
+                : $health->summary,
+            source: $health->source,
+            checkedAt: $health->checkedAt,
+            latencyMs: $health->latencyMs,
+            group: 'compute_plane',
+        );
     }
 
     private function databaseHealth(): ServiceHealth
@@ -125,8 +167,22 @@ final class InfrastructureStatusService
         }
     }
 
-    private function automationHealth(ServiceHealth $tofu, ServiceHealth $ansible): ServiceHealth
+    private function automationHealth(int $timeout): ServiceHealth
     {
+        $tofu = (new LocalServiceHealthProvider(
+            $this->commands,
+            'opentofu',
+            'OpenTofu',
+            ['tofu', 'version'],
+        ))->check();
+
+        $ansible = (new LocalServiceHealthProvider(
+            $this->commands,
+            'ansible',
+            'Ansible',
+            ['ansible', '--version'],
+        ))->check();
+
         $available = $tofu->status === 'healthy' && $ansible->status === 'healthy';
 
         return new ServiceHealth(
@@ -134,12 +190,30 @@ final class InfrastructureStatusService
             label: 'Automation',
             status: $available ? 'degraded' : 'unknown',
             summary: $available
-                ? 'OpenTofu and Ansible are available; live mutation remains disabled in Milestone 1.'
+                ? 'OpenTofu and Ansible are available; lab mutation still runs through the unavailable provider.'
                 : 'OpenTofu or Ansible availability could not be verified.',
             source: 'tofu version; ansible --version',
             checkedAt: Carbon::now(),
             latencyMs: ($tofu->latencyMs ?? 0) + ($ansible->latencyMs ?? 0),
             version: implode(' | ', array_filter([$tofu->version, $ansible->version])),
+            group: 'automation',
+        );
+    }
+
+    private function securityHealth(): ServiceHealth
+    {
+        // Wazuh lives in SecurityMonitoringService so that the health card and
+        // the security widget can never disagree about the SIEM state.
+        $wazuh = app(SecurityMonitoringService::class)->wazuh();
+
+        return new ServiceHealth(
+            key: $wazuh->key,
+            label: $wazuh->label,
+            status: $wazuh->status,
+            summary: $wazuh->summary,
+            source: $wazuh->source,
+            checkedAt: $wazuh->checkedAt,
+            group: 'security',
         );
     }
 }

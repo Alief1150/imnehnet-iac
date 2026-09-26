@@ -13,9 +13,15 @@ beforeEach(fn () => Cache::flush());
 test('infrastructure summary maps real provider results without inventing health', function () {
     config()->set('infrastructure.prometheus_health_url', 'http://127.0.0.1:9090/-/healthy');
     config()->set('infrastructure.grafana_health_url', 'http://127.0.0.1:3000/api/health');
+    // Wazuh is reachable but has no management API credentials, so the
+    // service must report not_configured rather than inventing a healthy state.
+    config()->set('infrastructure.wazuh_api_url', 'https://127.0.0.1:55000');
+    config()->set('infrastructure.wazuh_api_username', null);
+    config()->set('infrastructure.wazuh_api_password', null);
     Http::fake([
         'http://127.0.0.1:9090/-/healthy' => Http::response("Prometheus Server is Healthy.\n", 200),
         'http://127.0.0.1:3000/api/health' => Http::response(['database' => 'failing'], 503),
+        'https://127.0.0.1:55000/*' => Http::response(['status' => 'Success'], 200),
     ]);
 
     $commands = Mockery::mock(CommandRunner::class);
@@ -41,7 +47,10 @@ test('infrastructure summary maps real provider results without inventing health
         ->and($summary['prometheus']['status'])->toBe('healthy')
         ->and($summary['grafana']['status'])->toBe('offline')
         ->and($summary['automation']['status'])->toBe('degraded')
-        ->and($summary['wazuh']['status'])->toBe('not_connected')
+        ->and($summary['wazuh']['status'])->toBe('not_configured')
+        ->and($summary['iaas_mgmt']['group'])->toBe('management_plane')
+        ->and($summary['lab_env']['group'])->toBe('compute_plane')
+        ->and($summary['wazuh']['group'])->toBe('security')
         ->and($cached)->toBe($summary);
 });
 

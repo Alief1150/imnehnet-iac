@@ -98,6 +98,36 @@
 }
 
 /* =========================================================
+   BRANDING
+   Filament 5 has no brandSubtitle() API, so the product subtitle
+   from the specification is rendered beneath the brand name.
+   ========================================================= */
+
+.fi-sidebar-header .fi-sidebar-item-button {
+    align-items: flex-start;
+}
+
+.fi-sidebar-header .fi-sidebar-item-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    line-height: 1.2;
+}
+
+.fi-sidebar-header .fi-sidebar-item-label::after {
+    content: 'Cybersecurity Infrastructure Control Plane';
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--gray-500);
+}
+
+.dark .fi-sidebar-header .fi-sidebar-item-label::after {
+    color: var(--gray-400);
+}
+
+/* =========================================================
    TOPBAR
    ========================================================= */
 

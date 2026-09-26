@@ -17,6 +17,8 @@ final class HttpHealthProvider implements InfrastructureHealthProvider
         private readonly ?string $url,
         private readonly int $timeoutSeconds = 3,
         private readonly ?Closure $validator = null,
+        private readonly bool $verifyTls = true,
+        private readonly string $group = 'infrastructure',
     ) {}
 
     public function check(): ServiceHealth
@@ -28,7 +30,13 @@ final class HttpHealthProvider implements InfrastructureHealthProvider
         $started = hrtime(true);
 
         try {
-            $response = Http::timeout($this->timeoutSeconds)->acceptJson()->get($this->url);
+            $request = Http::timeout($this->timeoutSeconds)->acceptJson();
+
+            if (! $this->verifyTls) {
+                $request = $request->withOptions(['verify' => false]);
+            }
+
+            $response = $request->get($this->url);
             $latency = (int) ((hrtime(true) - $started) / 1_000_000);
 
             if ($response->successful()) {
@@ -39,7 +47,7 @@ final class HttpHealthProvider implements InfrastructureHealthProvider
                 return $this->health('healthy', 'Health endpoint responded successfully.', $latency);
             }
 
-            return $this->health('offline', 'Health endpoint returned an unsuccessful response.', $latency);
+            return $this->health('offline', sprintf('Health endpoint returned HTTP %d.', $response->status()), $latency);
         } catch (Throwable) {
             $latency = (int) ((hrtime(true) - $started) / 1_000_000);
 
@@ -57,6 +65,7 @@ final class HttpHealthProvider implements InfrastructureHealthProvider
             source: $this->url ?? 'not configured',
             checkedAt: Carbon::now(),
             latencyMs: $latency,
+            group: $this->group,
         );
     }
 }

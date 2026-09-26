@@ -48,8 +48,12 @@ test('administrator can render the infrastructure page with evidence labels', fu
     $this->actingAs($admin)
         ->get(Infrastructure::getUrl(panel: 'admin'))
         ->assertOk()
-        ->assertSee('Source:')
-        ->assertSee('Checked:');
+        ->assertSee('Source', escape: false)
+        ->assertSee('Checked', escape: false)
+        // The management plane and the compute plane must be reported
+        // separately so an operator can tell which side is failing.
+        ->assertSee('IAAS-MGMT')
+        ->assertSee('LAB-ENV');
 });
 
 test('administrator can render users table with enum roles', function () {
