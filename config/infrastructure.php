@@ -26,6 +26,10 @@ return [
     // student connects to is the compute plane's management address.
     'lab_env_access_host' => env('LAB_ENV_ACCESS_HOST', '192.168.100.20'),
 
+    // Address a student actually types. Published ports are forwarded from
+    // the management plane, so this is the portal address, not the lab host.
+    'portal_public_host' => env('PORTAL_PUBLIC_HOST', '100.77.79.18'),
+
     // Public base address the portal is reached at, used to build links to the
     // monitoring consoles so an operator can open the source of a figure.
     'console_base_url' => env('CONSOLE_BASE_URL', 'http://100.77.79.18'),

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Labs;
 
 use App\Enums\LabOperationState;
+use App\Enums\LabStateRules;
 use App\Filament\Resources\Labs\Pages\ListLabs;
 use App\Filament\Resources\Labs\Pages\ViewLab;
 use App\Filament\Resources\Labs\Schemas\LabInfolist;
@@ -11,6 +12,9 @@ use App\Services\LabLifecycleService;
 use BackedEnum;
 use DomainException;
 use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -140,14 +144,35 @@ class LabResource extends Resource
 
                             Notification::make()
                                 ->title(ucfirst($action).' request queued')
-                                ->body("Operation {$operation->id} is fail-closed until a live provider is approved.")
+                                ->body($action === 'delete'
+                                    ? "Operation {$operation->id} will remove the container from the compute plane and archive the record."
+                                    : "Operation {$operation->id} is queued and will be reported back here.")
                                 ->warning()
                                 ->send();
                         }))
                     ->all(),
+
+                // A direct delete is only offered when the compute plane has
+                // nothing left to remove and no operation is in flight, so an
+                // operator can clear a dead record without queueing a job.
+                DeleteAction::make()
+                    ->label('Delete Record')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Delete this lab record?')
+                    ->modalDescription('This only removes the portal record. It is offered when the container is already absent on the compute plane and no operation is running. The activity log is kept.')
+                    ->visible(fn (Lab $record): bool => auth()->user()?->isAdmin() === true
+                        && ! LabStateRules::isInFlight($record->operation_state)
+                        && LabStateRules::isGone($record->actual_state))
+                    ->before(fn (Lab $record) => $record->delete()),
             ])
             ->bulkActions([
-                //
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
+                        ->authorizeIndividualRecords('delete')
+                        ->before(fn (Lab $record) => $record->delete()),
+                ]),
             ]);
     }
 
