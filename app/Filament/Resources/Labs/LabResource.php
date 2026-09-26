@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Labs;
 use App\Enums\LabOperationState;
 use App\Filament\Resources\Labs\Pages\ListLabs;
 use App\Filament\Resources\Labs\Pages\ViewLab;
+use App\Filament\Resources\Labs\Schemas\LabInfolist;
 use App\Models\Lab;
 use App\Services\LabLifecycleService;
 use BackedEnum;
@@ -27,7 +28,7 @@ class LabResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()->with('owner:id,name,email');
         $user = auth()->user();
 
         if ($user && ! $user->isAdmin()) {
@@ -45,13 +46,14 @@ class LabResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            // Form provisioning lab akan kita isi berikutnya
+            // The provisioning form is deliberately empty: labs are created by
+            // LabProvisioningService, never by editing a resource directly.
         ]);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema->components([]);
+        return LabInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -60,47 +62,65 @@ class LabResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Lab Name')
+                    ->description(fn (Lab $record): ?string => $record->container_name)
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('desired_state')
-                    ->label('Desired')
-                    ->badge()
-                    ->formatStateUsing(fn (mixed $state): string => strtoupper($state instanceof BackedEnum ? $state->value : (string) $state)),
+                Tables\Columns\TextColumn::make('owner.name')
+                    ->label('Owner')
+                    ->placeholder('—')
+                    ->searchable(),
 
                 Tables\Columns\TextColumn::make('actual_state')
-                    ->label('Actual')
+                    ->label('Container')
                     ->badge()
-                    ->formatStateUsing(fn (mixed $state): string => strtoupper($state instanceof BackedEnum ? $state->value : (string) $state)),
+                    ->formatStateUsing(fn (mixed $state): string => strtoupper($state instanceof BackedEnum ? $state->value : (string) $state))
+                    ->description(fn (Lab $record): ?string => $record->ip_address
+                        ? $record->ip_address.($record->ssh_port ? ':'.$record->ssh_port : '')
+                        : null)
+                    ->color(fn (mixed $state): string => match ((string) ($state instanceof BackedEnum ? $state->value : $state)) {
+                        'running' => 'success',
+                        'error' => 'danger',
+                        'created', 'stopped' => 'gray',
+                        default => 'warning',
+                    })
+                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('operation_state')
                     ->label('Operation')
                     ->badge()
-                    ->formatStateUsing(fn (mixed $state): string => strtoupper($state instanceof BackedEnum ? $state->value : (string) $state)),
+                    ->formatStateUsing(fn (mixed $state): string => strtoupper($state instanceof BackedEnum ? $state->value : (string) $state))
+                    ->color(fn (mixed $state): string => match ((string) ($state instanceof BackedEnum ? $state->value : $state)) {
+                        'failed' => 'danger',
+                        'queued', 'running' => 'warning',
+                        'idle' => 'success',
+                        default => 'gray',
+                    })
+                    ->description(fn (Lab $record): ?string => $record->last_error_message),
 
-                Tables\Columns\TextColumn::make('cpu_limit')
-                    ->label('CPU')
-                    ->numeric()
-                    ->suffix(' Core'),
-
-                Tables\Columns\TextColumn::make('memory_limit')
-                    ->label('RAM')
-                    ->numeric()
-                    ->suffix(' MB'),
-
-                Tables\Columns\TextColumn::make('storage_limit')
-                    ->label('Storage')
-                    ->numeric()
-                    ->suffix(' GB'),
+                Tables\Columns\TextColumn::make('resources')
+                    ->label('Limits')
+                    ->state(fn (Lab $record): string => sprintf('%d C / %d MB / %d GB', $record->cpu_limit, $record->memory_limit, $record->storage_limit))
+                    ->fontFamily('mono')
+                    ->color('gray'),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 //
             ])
             ->recordActions([
                 ViewAction::make(),
+
                 ...collect(['start', 'stop', 'reset', 'delete'])
                     ->map(fn (string $action): Action => Action::make("request{$action}")
                         ->label(ucfirst($action))
+                        ->icon(match ($action) {
+                            'start' => Heroicon::OutlinedPlay,
+                            'stop' => Heroicon::OutlinedStop,
+                            'reset' => Heroicon::OutlinedArrowPath,
+                            'delete' => Heroicon::OutlinedTrash,
+                            default => Heroicon::OutlinedWrenchScrewdriver,
+                        })
                         ->requiresConfirmation()
                         ->visible(fn (Lab $record): bool => auth()->user()?->can($action, $record) === true
                             && in_array($record->operation_state, [LabOperationState::Idle, LabOperationState::Failed], true)

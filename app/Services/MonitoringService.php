@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Data\MonitoringBackend;
 use App\Data\ResourceTrend;
 use App\Data\ResourceUsage;
 use Illuminate\Support\Carbon;
@@ -63,6 +64,21 @@ final class MonitoringService
 
                 return $summary;
             },
+        );
+    }
+
+    /**
+     * The consoles behind the figures, so an operator can open the source
+     * instead of trusting a number with no origin.
+     *
+     * @return array<int, MonitoringBackend>
+     */
+    public function backends(): array
+    {
+        return Cache::remember(
+            'monitoring.backends',
+            now()->addSeconds((int) config('infrastructure.resource_cache_seconds', 10)),
+            fn (): array => $this->probeBackends(),
         );
     }
 
@@ -143,6 +159,84 @@ final class MonitoringService
         }
 
         return $trends;
+    }
+
+    /**
+     * @return array<int, MonitoringBackend>
+     */
+    private function probeBackends(): array
+    {
+        $timeout = (int) config('infrastructure.probe_timeout_seconds', 3);
+
+        $definitions = [
+            [
+                'key' => 'prometheus',
+                'label' => 'Prometheus',
+                'url' => (string) config('infrastructure.console_base_url').':'.(string) config('infrastructure.prometheus_console_port'),
+                'description' => 'Time-series database queried for every figure on this page.',
+                'scope' => 'IAAS-MGMT host metrics, scraped by node_exporter',
+                'check' => fn (): bool => $this->reachable((string) config('infrastructure.prometheus_health_url'), $timeout, 'Prometheus Server is Healthy.'),
+            ],
+            [
+                'key' => 'grafana',
+                'label' => 'Grafana',
+                'url' => (string) config('infrastructure.console_base_url').':'.(string) config('infrastructure.grafana_console_port'),
+                'description' => 'Dashboard and visualisation layer over the same Prometheus data.',
+                'scope' => 'Visualises IAAS-MGMT host metrics',
+                'check' => fn (): bool => $this->reachable((string) config('infrastructure.grafana_health_url'), $timeout, null),
+            ],
+            [
+                'key' => 'wazuh',
+                'label' => 'Wazuh',
+                'url' => (string) config('infrastructure.console_base_url').':'.(string) config('infrastructure.wazuh_console_port'),
+                'description' => 'Security information and event management. Separate concern from resource monitoring.',
+                'scope' => 'Security events from hosts and containers',
+                'check' => fn (): bool => $this->reachable((string) config('infrastructure.wazuh_health_url'), $timeout, null, verifyTls: false),
+            ],
+        ];
+
+        $backends = [];
+
+        foreach ($definitions as $definition) {
+            $backends[] = new MonitoringBackend(
+                key: $definition['key'],
+                label: $definition['label'],
+                url: $definition['url'],
+                description: $definition['description'],
+                scope: $definition['scope'],
+                status: $definition['check']() ? 'healthy' : 'offline',
+                checkedAt: Carbon::now(),
+            );
+        }
+
+        return $backends;
+    }
+
+    private function reachable(string $url, int $timeout, ?string $expectedBody, bool $verifyTls = true): bool
+    {
+        if ($url === '') {
+            return false;
+        }
+
+        try {
+            $request = Http::timeout($timeout);
+
+            if (! $verifyTls) {
+                $request = $request->withOptions(['verify' => false]);
+            }
+
+            $response = $request->get($url);
+
+            if (! $response->successful()) {
+                return false;
+            }
+
+            return $expectedBody === null || trim($response->body()) === $expectedBody;
+        } catch (Throwable $exception) {
+            Log::debug('Monitoring backend probe failed.', ['url' => $url, 'error' => $exception->getMessage()]);
+
+            return false;
+        }
     }
 
     private function range(

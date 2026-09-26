@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Data\MonitoringBackend;
 use App\Services\InfrastructureStatusService;
 use App\Services\MonitoringService;
 use BackedEnum;
@@ -45,6 +46,17 @@ final class Monitoring extends Page
     public function health(): array
     {
         return app(InfrastructureStatusService::class)->summary();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function backends(): array
+    {
+        return array_map(
+            fn (MonitoringBackend $backend): array => $backend->toArray(),
+            app(MonitoringService::class)->backends(),
+        );
     }
 
     public function isPolling(): bool

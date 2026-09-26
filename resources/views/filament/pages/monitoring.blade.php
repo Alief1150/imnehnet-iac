@@ -3,6 +3,7 @@
         $resources = $this->resources();
         $trends = $this->trends();
         $health = collect($this->health())->whereIn('group', ['monitoring', 'automation']);
+        $backends = $this->backends();
         $refreshed = $this->refreshedAt();
         $keys = ['cpu', 'memory', 'storage', 'containers'];
     @endphp
@@ -25,6 +26,32 @@
                 Polling every 10s &middot; not real-time
             </span>
         </div>
+
+        {{-- What is actually being measured, stated up front. --}}
+        <section class="rounded-xl border border-teal-500/30 bg-teal-500/5 p-5">
+            <div class="flex items-start gap-3">
+                <x-filament::icon icon="heroicon-m-server-stack" class="mt-0.5 h-5 w-5 shrink-0 text-teal-600 dark:text-teal-400" />
+                <div>
+                    <h2 class="text-sm font-semibold text-gray-950 dark:text-white">
+                        What these numbers describe
+                    </h2>
+                    <p class="mt-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+                        These are the resource figures of the <span class="font-semibold">IAAS-MGMT host itself</span>,
+                        the physical machine running the portal. They are collected by
+                        <span class="font-mono text-xs">node_exporter</span>, which Prometheus scrapes, and they are
+                        stored in Prometheus as time series. Grafana draws the same data as dashboards.
+                    </p>
+                    <p class="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+                        They are <span class="font-semibold">not</span> the resource usage of an individual student
+                        container. A container's own quota is the limit shown on its lab record
+                        (<span class="font-mono text-xs">cpu_limit</span>, <span class="font-mono text-xs">memory_limit</span>,
+                        <span class="font-mono text-xs">storage_limit</span>), and its live container state comes from
+                        Incus on the LAB-ENV compute plane. The container count below is the number of containers the
+                        host is currently observing.
+                    </p>
+                </div>
+            </div>
+        </section>
 
         {{-- Resource capacity --}}
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -116,6 +143,47 @@
                     </article>
                 @endif
             @endforeach
+        </section>
+
+        {{-- Consoles: where a figure can be verified independently --}}
+        <section>
+            <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Monitoring Consoles
+            </h2>
+
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                @foreach ($backends as $backend)
+                    <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                        <div class="flex items-center justify-between gap-2">
+                            <h3 class="text-sm font-semibold text-gray-950 dark:text-white">{{ $backend['label'] }}</h3>
+                            <span @class([
+                                'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                                'bg-teal-500/15 text-teal-700 dark:text-teal-300' => $backend['status'] === 'healthy',
+                                'bg-rose-500/15 text-rose-700 dark:text-rose-300' => $backend['status'] !== 'healthy',
+                            ])>{{ $backend['status'] }}</span>
+                        </div>
+
+                        <p class="mt-2 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+                            {{ $backend['description'] }}
+                        </p>
+                        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span class="font-medium">Scope:</span> {{ $backend['scope'] }}
+                        </p>
+
+                        <a href="{{ $backend['url'] }}" target="_blank" rel="noopener noreferrer"
+                           class="mt-3 inline-flex items-center gap-1.5 font-mono text-xs text-teal-600 hover:underline dark:text-teal-400">
+                            <span>{{ $backend['url'] }}</span>
+                            <x-filament::icon icon="heroicon-m-arrow-top-right-on-square" class="h-3.5 w-3.5" />
+                        </a>
+                    </article>
+                @endforeach
+            </div>
+
+            <p class="mt-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                Grafana and Prometheus are reached directly on the management host. Wazuh answers
+                <span class="font-mono">401</span> without credentials by design, which is why the card above reads
+                <span class="font-mono">not_configured</span> rather than healthy.
+            </p>
         </section>
 
         {{-- Monitoring and automation stack --}}

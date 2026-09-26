@@ -19,6 +19,16 @@ return [
     'iaas_health_url' => env('IAAS_HEALTH_URL', 'http://127.0.0.1:8000/up'),
     'lab_env_api_url' => env('LAB_ENV_API_URL', 'https://192.168.100.20:8443/1.0'),
 
+    // Public base address the portal is reached at, used to build links to the
+    // monitoring consoles so an operator can open the source of a figure.
+    'console_base_url' => env('CONSOLE_BASE_URL', 'http://100.77.79.18'),
+
+    'prometheus_console_port' => env('PROMETHEUS_CONSOLE_PORT', '9090'),
+    'grafana_console_port' => env('GRAFANA_CONSOLE_PORT', '3000'),
+    'wazuh_console_port' => env('WAZUH_CONSOLE_PORT', '55000'),
+
+    'wazuh_health_url' => env('WAZUH_HEALTH_URL', 'https://127.0.0.1:55000'),
+
     'prometheus_health_url' => env('PROMETHEUS_HEALTH_URL', 'http://127.0.0.1:9090/-/healthy'),
     'prometheus_query_url' => env('PROMETHEUS_QUERY_URL', 'http://127.0.0.1:9090/api/v1/query'),
     'prometheus_range_url' => env('PROMETHEUS_RANGE_URL', 'http://127.0.0.1:9090/api/v1/query_range'),
