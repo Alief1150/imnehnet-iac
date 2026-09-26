@@ -1,0 +1,77 @@
+---
+- name: Bootstrap student environment
+  hosts: lab_env
+  gather_facts: false
+
+  vars:
+    incus_cmd: "sudo -n /usr/local/sbin/imnehnet-incus"
+    container_name: lab-tofu-test
+    student_user: student
+
+  tasks:
+    - name: Verify restricted Incus wrapper is callable without a password
+      ansible.builtin.command:
+        cmd: "{{ incus_cmd }} list"
+      changed_when: false
+
+    - name: Verify student container exists
+      ansible.builtin.command:
+        cmd: "{{ incus_cmd }} info {{ container_name }}"
+      changed_when: false
+
+    - name: Wait until container is running
+      ansible.builtin.shell: |
+        {{ incus_cmd }} info {{ container_name }} | grep -qi "Status: Running"
+      register: container_running
+      retries: 10
+      delay: 3
+      until: container_running.rc == 0
+      changed_when: false
+
+    - name: Create student user if not exists
+      ansible.builtin.shell: |
+        {{ incus_cmd }} exec {{ container_name }} bash -lc '
+          if ! id {{ student_user }} >/dev/null 2>&1; then
+            useradd -m -s /bin/bash {{ student_user }}
+          fi
+        '
+      register: create_user
+      changed_when: false
+
+    - name: Install base packages
+      ansible.builtin.shell: |
+        {{ incus_cmd }} exec {{ container_name }} bash -lc '
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y \
+            sudo \
+            curl \
+            wget \
+            nano \
+            iproute2 \
+            iputils-ping \
+            net-tools
+        '
+      register: install_packages
+      changed_when: false
+
+    - name: Add student user to sudo group
+      ansible.builtin.shell: |
+        {{ incus_cmd }} exec {{ container_name }} bash -lc '
+          usermod -aG sudo {{ student_user }}
+        '
+      changed_when: false
+
+    - name: Verify environment
+      ansible.builtin.shell: |
+        {{ incus_cmd }} exec {{ container_name }} bash -lc '
+          echo "HOSTNAME=$(hostname)"
+          echo "USER_EXISTS=$(id -u {{ student_user }})"
+          echo "IP=$(hostname -I | awk "{print \$1}")"
+        '
+      register: environment_check
+      changed_when: false
+
+    - name: Show environment status
+      ansible.builtin.debug:
+        var: environment_check.stdout_lines

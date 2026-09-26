@@ -1,0 +1,85 @@
+---
+- name: Install restricted Incus automation wrapper
+  hosts: lab_env
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Install IMNEHNET Incus wrapper
+      ansible.builtin.copy:
+        dest: /usr/local/sbin/imnehnet-incus
+        owner: root
+        group: root
+        mode: '0755'
+        content: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          INCUS="/usr/bin/incus"
+
+          valid_name() {
+              [[ "$1" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]]
+          }
+
+          action="${1:-}"
+
+          case "$action" in
+              list)
+                  exec "$INCUS" list
+                  ;;
+
+              info|start|stop|restart|delete)
+                  name="${2:-}"
+
+                  if ! valid_name "$name"; then
+                      echo "Invalid container name" >&2
+                      exit 2
+                  fi
+
+                  exec "$INCUS" "$action" "$name"
+                  ;;
+
+              exec)
+                  name="${2:-}"
+                  shift 2 || true
+
+                  if ! valid_name "$name"; then
+                      echo "Invalid container name" >&2
+                      exit 2
+                  fi
+
+                  # Callers often pass the docker-style "--" separator. Incus
+                  # needs exactly one to stop parsing flags of the inner
+                  # command, and this wrapper supplies it below, so drop any
+                  # duplicate the caller sent.
+                  if [ "${1:-}" = "--" ]; then
+                      shift
+                  fi
+
+                  if [ "$#" -eq 0 ]; then
+                      echo "Command required" >&2
+                      exit 2
+                  fi
+
+                  exec "$INCUS" exec "$name" -- "$@"
+                  ;;
+
+              *)
+                  echo "Usage: imnehnet-incus {list|info|start|stop|restart|delete|exec}" >&2
+                  exit 2
+                  ;;
+          esac
+
+    - name: Allow lab user to run only IMNEHNET wrapper without password
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/imnehnet-incus
+        owner: root
+        group: root
+        mode: '0440'
+        content: |
+          lab ALL=(root) NOPASSWD: /usr/local/sbin/imnehnet-incus *
+
+    - name: Validate sudoers
+      ansible.builtin.command:
+        cmd: visudo -cf /etc/sudoers.d/imnehnet-incus
+      changed_when: false
