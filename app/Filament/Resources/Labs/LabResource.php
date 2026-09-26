@@ -2,18 +2,17 @@
 
 namespace App\Filament\Resources\Labs;
 
-use App\Enums\LabOperationState;
 use App\Enums\LabStateRules;
 use App\Filament\Resources\Labs\Pages\ListLabs;
 use App\Filament\Resources\Labs\Pages\ViewLab;
 use App\Filament\Resources\Labs\Schemas\LabInfolist;
 use App\Models\Lab;
+use App\Services\LabDeletionService;
 use App\Services\LabLifecycleService;
 use BackedEnum;
 use DomainException;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
@@ -96,7 +95,7 @@ class LabResource extends Resource
                     ->formatStateUsing(fn (mixed $state): string => strtoupper($state instanceof BackedEnum ? $state->value : (string) $state))
                     ->color(fn (mixed $state): string => match ((string) ($state instanceof BackedEnum ? $state->value : $state)) {
                         'failed' => 'danger',
-                        'queued', 'running' => 'warning',
+                        'queued', 'provisioning', 'starting', 'stopping', 'resetting', 'deleting', 'reconciling' => 'warning',
                         'idle' => 'success',
                         default => 'gray',
                     })
@@ -125,9 +124,10 @@ class LabResource extends Resource
                             'delete' => Heroicon::OutlinedTrash,
                             default => Heroicon::OutlinedWrenchScrewdriver,
                         })
+                        ->color($action === 'delete' ? 'danger' : null)
                         ->requiresConfirmation()
                         ->visible(fn (Lab $record): bool => auth()->user()?->can($action, $record) === true
-                            && in_array($record->operation_state, [LabOperationState::Idle, LabOperationState::Failed], true)
+                            && ! LabStateRules::isInFlight($record->operation_state)
                             && app(LabLifecycleService::class)->isAvailable($record, $action))
                         ->action(function (Lab $record) use ($action): void {
                             try {
@@ -144,34 +144,48 @@ class LabResource extends Resource
 
                             Notification::make()
                                 ->title(ucfirst($action).' request queued')
-                                ->body($action === 'delete'
-                                    ? "Operation {$operation->id} will remove the container from the compute plane and archive the record."
-                                    : "Operation {$operation->id} is queued and will be reported back here.")
+                                ->body("Operation {$operation->id} will update the compute plane before the portal reports success.")
                                 ->warning()
                                 ->send();
                         }))
                     ->all(),
-
-                // A direct delete is only offered when the compute plane has
-                // nothing left to remove and no operation is in flight, so an
-                // operator can clear a dead record without queueing a job.
-                DeleteAction::make()
-                    ->label('Delete Record')
-                    ->icon('heroicon-o-trash')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Delete this lab record?')
-                    ->modalDescription('This only removes the portal record. It is offered when the container is already absent on the compute plane and no operation is running. The activity log is kept.')
-                    ->visible(fn (Lab $record): bool => auth()->user()?->isAdmin() === true
-                        && ! LabStateRules::isInFlight($record->operation_state)
-                        && LabStateRules::isGone($record->actual_state))
-                    ->before(fn (Lab $record) => $record->delete()),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    // Deletion goes through the same infrastructure-first path
+                    // as the single-record action; it never drops a row alone.
                     DeleteBulkAction::make()
+                        ->label('Delete selected')
                         ->authorizeIndividualRecords('delete')
-                        ->before(fn (Lab $record) => $record->delete()),
+                        ->action(function (iterable $records): void {
+                            $deletion = app(LabDeletionService::class);
+                            $failed = [];
+
+                            foreach ($records as $record) {
+                                $outcome = $deletion->delete(auth()->user(), $record);
+
+                                if (! $outcome['deleted']) {
+                                    $failed[] = $record->container_name;
+                                }
+                            }
+
+                            if ($failed !== []) {
+                                Notification::make()
+                                    ->title('Some labs were not deleted')
+                                    ->body('The compute plane still holds: '.implode(', ', $failed).'.')
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
+
+                                return;
+                            }
+
+                            Notification::make()
+                                ->title('Labs deleted')
+                                ->body('Every container was removed from the compute plane and its record archived.')
+                                ->success()
+                                ->send();
+                        }),
                 ]),
             ]);
     }

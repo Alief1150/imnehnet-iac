@@ -2,11 +2,10 @@
 
 namespace App\Filament\Resources\Labs\Pages;
 
-use App\Enums\LabStateRules;
 use App\Filament\Resources\Labs\LabResource;
 use App\Models\Lab;
+use App\Services\LabDeletionService;
 use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -26,29 +25,50 @@ class ViewLab extends ViewRecord
                 ->color('gray')
                 ->url(LabResource::getUrl('index')),
 
-            $this->getDeleteRecordAction(),
+            $this->getDeleteLabAction(),
         ];
     }
 
-    protected function getDeleteRecordAction(): Action
+    /**
+     * Deleting a lab removes the container on the compute plane first. The
+     * portal record is only archived once the container is confirmed gone, so
+     * the UI can never claim a lab is deleted while a student can still reach
+     * it.
+     */
+    protected function getDeleteLabAction(): Action
     {
-        return DeleteAction::make()
-            ->label('Delete Record')
+        return Action::make('deleteLab')
+            ->label('Delete Lab')
             ->icon('heroicon-o-trash')
             ->color('danger')
             ->requiresConfirmation()
-            ->modalHeading('Delete this lab record?')
-            ->modalDescription('This removes the portal record and keeps the activity log. It is offered only when the container is already gone from the compute plane and no operation is in flight.')
-            ->visible(fn (): bool => auth()->user()?->isAdmin() === true
-                && ! LabStateRules::isInFlight($this->record->operation_state)
-                && LabStateRules::isGone($this->record->actual_state))
-            ->before(fn (Lab $record) => $record->delete())
+            ->modalHeading('Delete this lab?')
+            ->modalDescription('The container is deleted from the compute plane first, then the portal record is archived. The activity log is kept. This cannot be undone.')
+            ->visible(fn (): bool => auth()->user()?->can('delete', $this->record) === true)
             ->action(function (): void {
+                /** @var LabDeletionService $deletion */
+                $deletion = app(LabDeletionService::class);
+
+                $outcome = $deletion->delete(auth()->user(), $this->record);
+
+                if (! $outcome['deleted']) {
+                    Notification::make()
+                        ->title('Lab was not deleted')
+                        ->body($outcome['message'])
+                        ->danger()
+                        ->persistent()
+                        ->send();
+
+                    return;
+                }
+
                 Notification::make()
-                    ->title('Lab record deleted')
-                    ->body('The portal record was removed. The activity log was kept for audit.')
+                    ->title('Lab deleted')
+                    ->body('The container was removed from the compute plane and the record archived.')
                     ->success()
                     ->send();
+
+                $this->redirect(LabResource::getUrl('index'));
             });
     }
 }

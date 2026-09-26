@@ -1,12 +1,17 @@
 <?php
 
+use App\Contracts\LabProvisioner;
+use App\Data\ProvisionedLab;
 use App\Enums\LabActualState;
+use App\Enums\LabOperationState;
 use App\Enums\UserRole;
 use App\Filament\Resources\ActivityLogs\ActivityLogResource;
 use App\Filament\Resources\Labs\LabResource;
 use App\Models\ActivityLog;
 use App\Models\Lab;
 use App\Models\User;
+use App\Services\ActivityLogService;
+use App\Services\LabDeletionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -81,17 +86,21 @@ test('an administrator can delete a lab record whose container is already absent
     $this->actingAs($admin)
         ->get(LabResource::getUrl('view', ['record' => $lab], 'admin'))
         ->assertOk()
-        ->assertSee('Delete Record');
+        ->assertSee('Delete Lab');
 });
 
-test('a lab with a live container does not offer a direct record delete', function () {
+test('an administrator may delete a lab whose container is still live', function () {
+    // Deletion goes through the compute plane, so a live container is exactly
+    // the case the action exists for: it removes the container, then archives
+    // the record. Blocking it here would leave operators with no way to clear a
+    // lab whose container refuses to go away.
     $admin = User::factory()->create(['role' => UserRole::Admin]);
     $lab = Lab::factory()->create(['actual_state' => LabActualState::Running]);
 
     $this->actingAs($admin)
         ->get(LabResource::getUrl('view', ['record' => $lab], 'admin'))
         ->assertOk()
-        ->assertDontSee('Delete Record');
+        ->assertSee('Delete Lab');
 });
 
 test('a student is never offered a lab delete', function () {
@@ -103,7 +112,133 @@ test('a student is never offered a lab delete', function () {
     $this->actingAs($student)
         ->get(LabResource::getUrl('view', ['record' => $lab], 'admin'))
         ->assertOk()
-        ->assertDontSee('Delete Record');
+        ->assertDontSee('Delete Lab');
+});
+
+test('deleting a lab removes the container before the record is archived', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $student = User::factory()->create();
+    $lab = Lab::factory()->for($student, 'owner')->create([
+        'actual_state' => LabActualState::Running,
+    ]);
+
+    $destroyed = false;
+    $destroyedAfter = null;
+
+    $provisioner = new class($destroyed, $destroyedAfter) implements LabProvisioner
+    {
+        public function __construct(
+            public bool &$destroyed,
+            public ?bool &$destroyedAfter,
+        ) {}
+
+        public function provision(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(successful: true);
+        }
+
+        public function start(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(successful: true);
+        }
+
+        public function stop(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(successful: true);
+        }
+
+        public function reset(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(successful: true);
+        }
+
+        public function destroy(Lab $lab): ProvisionedLab
+        {
+            $this->destroyed = true;
+            // The record must still exist at this point, which is the whole
+            // point of removing the container first.
+            $this->destroyedAfter = Lab::withTrashed()->whereKey($lab->id)->exists();
+
+            return new ProvisionedLab(
+                successful: true,
+                containerName: $lab->container_name,
+                status: 'deleted',
+            );
+        }
+
+        public function observe(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(successful: true);
+        }
+    };
+
+    $deletion = new LabDeletionService(
+        $provisioner,
+        app(ActivityLogService::class),
+    );
+
+    $outcome = $deletion->delete($admin, $lab);
+
+    expect($outcome['deleted'])->toBeTrue()
+        ->and($destroyed)->toBeTrue()
+        // Container was removed while the record still existed.
+        ->and($destroyedAfter)->toBeTrue()
+        // Now the record is archived, not hard deleted.
+        ->and(Lab::withTrashed()->whereKey($lab->id)->first()->trashed())->toBeTrue();
+});
+
+test('a lab is kept when the compute plane refuses to remove the container', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $lab = Lab::factory()->create(['actual_state' => LabActualState::Running]);
+
+    $provisioner = new class implements LabProvisioner
+    {
+        public function provision(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(successful: true);
+        }
+
+        public function start(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(successful: true);
+        }
+
+        public function stop(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(successful: true);
+        }
+
+        public function reset(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(successful: true);
+        }
+
+        public function destroy(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(
+                successful: false,
+                errorCode: 'delete_failed',
+                message: 'The container is still in use.',
+            );
+        }
+
+        public function observe(Lab $lab): ProvisionedLab
+        {
+            return new ProvisionedLab(successful: true);
+        }
+    };
+
+    $deletion = new LabDeletionService(
+        $provisioner,
+        app(ActivityLogService::class),
+    );
+
+    $outcome = $deletion->delete($admin, $lab);
+
+    expect($outcome['deleted'])->toBeFalse()
+        // The record survives so the operator can retry.
+        ->and(Lab::whereKey($lab->id)->exists())->toBeTrue()
+        ->and($lab->refresh()->operation_state)->toBe(LabOperationState::Failed);
 });
 
 test('the activity log infolist never renders an updated timestamp', function () {

@@ -70,7 +70,7 @@ final class LabLifecycleService
                 action: strtoupper($action).'_LAB',
                 resource: $locked,
                 status: 'queued',
-                description: ucfirst($action).' request queued; live mutation is disabled in Milestone 1.',
+                description: ucfirst($action).' request queued; the compute plane will be updated before the portal reports success.',
                 metadata: ['operation_id' => $operation->id],
             );
 
