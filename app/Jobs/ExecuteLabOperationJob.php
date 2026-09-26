@@ -45,6 +45,12 @@ final class ExecuteLabOperationJob implements ShouldQueue
             return;
         }
 
+        $lab = $operation->lab;
+        $before = [
+            'actual_state' => $lab->actual_state->value,
+            'operation_state' => $lab->operation_state->value,
+        ];
+
         try {
             $result = $this->execute($provisioner, $operation);
         } catch (Throwable $exception) {
@@ -52,11 +58,10 @@ final class ExecuteLabOperationJob implements ShouldQueue
                 successful: false,
                 errorCode: 'provider_failure',
                 message: 'The infrastructure provider failed safely.',
-                detail: ['error' => $exception->getMessage()],
             );
         }
 
-        $this->settle($operation, $result, $activity);
+        $this->settle($operation, $result, $activity, $before);
     }
 
     private function execute(LabProvisioner $provisioner, LabOperation $operation): ProvisionedLab
@@ -73,9 +78,12 @@ final class ExecuteLabOperationJob implements ShouldQueue
         };
     }
 
-    private function settle(LabOperation $operation, ProvisionedLab $result, ActivityLogService $activity): void
+    /**
+     * @param  array<string, string>  $before
+     */
+    private function settle(LabOperation $operation, ProvisionedLab $result, ActivityLogService $activity, array $before): void
     {
-        DB::transaction(function () use ($operation, $result, $activity): void {
+        DB::transaction(function () use ($operation, $result, $activity, $before): void {
             $locked = LabOperation::query()->with('lab.owner')->lockForUpdate()->findOrFail($operation->id);
             $lab = $locked->lab;
 
@@ -94,20 +102,52 @@ final class ExecuteLabOperationJob implements ShouldQueue
                 ]);
             }
 
+            $after = [
+                'actual_state' => $lab->fresh()?->actual_state->value ?? 'unknown',
+            ];
+
             $activity->record(
                 actor: $locked->requester,
                 action: strtoupper($locked->type).'_LAB_RESULT',
                 resource: $lab,
                 status: $result->successful ? 'completed' : 'failed',
-                description: $result->successful
-                    ? sprintf('%s completed on the compute plane.', ucfirst($locked->type))
-                    : ($result->message ?? 'The operation could not be completed.'),
+                description: $this->describe($locked, $result),
                 metadata: [
                     'operation_id' => $locked->id,
                     'error_code' => $result->errorCode,
+                    'container_name' => $result->containerName ?? $lab->container_name,
+                    'from_state' => $before['actual_state'],
+                    'to_state' => $result->successful ? $after['actual_state'] : $before['actual_state'],
+                    'port' => $result->sshPort ?? $lab->ssh_port,
                 ],
             );
         });
+    }
+
+    private function describe(LabOperation $operation, ProvisionedLab $result): string
+    {
+        if (! $result->successful) {
+            return $result->message ?? sprintf('The %s could not be completed.', $operation->type);
+        }
+
+        $verb = match ($operation->type) {
+            'provision' => 'Provisioned',
+            'start' => 'Started',
+            'stop' => 'Stopped',
+            'reset' => 'Reset to the baseline',
+            'delete' => 'Deleted',
+            default => ucfirst($operation->type),
+        };
+
+        $state = $result->status !== null ? ' and reported '.$result->status : '';
+
+        return sprintf(
+            '%s container %s on the compute plane%s%s.',
+            $verb,
+            (string) ($result->containerName ?? $operation->lab->container_name),
+            $result->ipAddress !== null ? ' at '.$result->ipAddress : '',
+            $state,
+        );
     }
 
     private function applySuccess(LabOperation $operation, Lab $lab, ProvisionedLab $result): void
@@ -133,8 +173,6 @@ final class ExecuteLabOperationJob implements ShouldQueue
         }
 
         if ($operation->type === 'delete') {
-            // The operation itself is closed before the record is soft deleted,
-            // otherwise the audit trail would be lost with the lab row.
             $operation->update([
                 'status' => 'completed',
                 'finished_at' => now(),
@@ -148,11 +186,18 @@ final class ExecuteLabOperationJob implements ShouldQueue
             return;
         }
 
-        if ($operation->type === 'provision' || $operation->type === 'reset') {
+        if (in_array($operation->type, ['provision', 'reset'], true)) {
             $attributes['status'] = $actual === LabActualState::Running ? 'RUNNING' : 'PENDING';
             $attributes['last_verified_at'] = now();
 
-            if ($actual === LabActualState::Running && $lab->access_host !== null) {
+            if ($result->accessUsername !== null) {
+                $attributes['access_username'] = $result->accessUsername;
+            }
+
+            if ($actual === LabActualState::Running && $result->ipAddress !== null && $result->sshPort !== null) {
+                // Access details are only published once the container reports
+                // both an address and a port, never on request alone.
+                $attributes['access_host'] = (string) config('infrastructure.portal_public_host');
                 $attributes['access_verified_at'] = now();
             }
         }

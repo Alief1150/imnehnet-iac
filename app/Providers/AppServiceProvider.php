@@ -2,11 +2,14 @@
 
 namespace App\Providers;
 
-use App\Contracts\LabMutationProvider;
 use App\Contracts\LabProvisioner;
-use App\Infrastructure\Mutation\UnavailableLabMutationProvider;
 use App\Infrastructure\Provision\IncusLabProvisioner;
+use App\Listeners\RecordPortalLogin;
+use App\Models\User;
+use App\Observers\UserObserver;
 use App\Services\LabPortAllocationService;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,8 +29,6 @@ class AppServiceProvider extends ServiceProvider
                 network: (string) config('infrastructure.incus_network', 'incusbr0'),
             ),
         );
-
-        $this->app->bind(LabMutationProvider::class, UnavailableLabMutationProvider::class);
     }
 
     /**
@@ -35,6 +36,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Signing in is an audited event and also stamps last_login_at.
+        Event::listen(Login::class, RecordPortalLogin::class);
+
+        // Role and status changes are audited on the model, so the entry is
+        // written whichever surface made the change.
+        User::observe(UserObserver::class);
     }
 }
