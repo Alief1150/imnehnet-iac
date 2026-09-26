@@ -6,10 +6,7 @@ use App\Enums\LabActualState;
 use App\Enums\LabDesiredState;
 use App\Enums\LabOperationState;
 use App\Enums\OperationStatus;
-use App\Jobs\DeleteLabJob;
-use App\Jobs\ResetLabJob;
-use App\Jobs\StartLabJob;
-use App\Jobs\StopLabJob;
+use App\Jobs\ExecuteLabOperationJob;
 use App\Models\Lab;
 use App\Models\LabOperation;
 use App\Models\User;
@@ -107,11 +104,6 @@ final class LabLifecycleService
 
     private function dispatch(string $action, string $operationId): void
     {
-        match ($action) {
-            'start' => StartLabJob::dispatch($operationId),
-            'stop' => StopLabJob::dispatch($operationId),
-            'reset' => ResetLabJob::dispatch($operationId),
-            'delete' => DeleteLabJob::dispatch($operationId),
-        };
+        ExecuteLabOperationJob::dispatch($operationId);
     }
 }

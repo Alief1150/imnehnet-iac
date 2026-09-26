@@ -2,7 +2,7 @@
 
 use App\Enums\LabActualState;
 use App\Enums\OperationStatus;
-use App\Jobs\StopLabJob;
+use App\Jobs\ExecuteLabOperationJob;
 use App\Models\ActivityLog;
 use App\Models\Lab;
 use App\Models\LabOperation;
@@ -25,7 +25,7 @@ test('owner can request stop for a running lab', function () {
         ->and($operation->type)->toBe('stop')
         ->and(ActivityLog::query()->where('action', 'STOP_LAB')->count())->toBe(1);
 
-    Queue::assertPushed(StopLabJob::class, fn ($job) => $job->operationId === $operation->id);
+    Queue::assertPushed(ExecuteLabOperationJob::class, fn ($job) => $job->operationId === $operation->id);
 });
 
 test('student cannot request lifecycle action for another students lab', function () {

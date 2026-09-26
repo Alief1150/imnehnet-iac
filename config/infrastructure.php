@@ -14,10 +14,17 @@ return [
 
     'incus_remote' => 'lab-env:',
 
+    // Network the student containers are attached to on the compute plane.
+    'incus_network' => env('INCUS_NETWORK', 'incusbr0'),
+
     // Management plane (this host) and compute plane (LAB-ENV) are probed
     // separately so an operator can tell which side of the split is failing.
     'iaas_health_url' => env('IAAS_HEALTH_URL', 'http://127.0.0.1:8000/up'),
     'lab_env_api_url' => env('LAB_ENV_API_URL', 'https://192.168.100.20:8443/1.0'),
+
+    // Published ports are bound on the host running Incus, so the address a
+    // student connects to is the compute plane's management address.
+    'lab_env_access_host' => env('LAB_ENV_ACCESS_HOST', '192.168.100.20'),
 
     // Public base address the portal is reached at, used to build links to the
     // monitoring consoles so an operator can open the source of a figure.

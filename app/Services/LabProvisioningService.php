@@ -6,7 +6,7 @@ use App\Enums\LabActualState;
 use App\Enums\LabDesiredState;
 use App\Enums\LabOperationState;
 use App\Enums\OperationStatus;
-use App\Jobs\ProvisionLabJob;
+use App\Jobs\ExecuteLabOperationJob;
 use App\Models\Lab;
 use App\Models\LabOperation;
 use App\Models\User;
@@ -88,7 +88,7 @@ final class LabProvisioningService
         });
 
         if ($created) {
-            ProvisionLabJob::dispatch($operation->id);
+            ExecuteLabOperationJob::dispatch($operation->id);
         }
 
         return $operation;
