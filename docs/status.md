@@ -1,6 +1,6 @@
 # Current Verified Status
 
-Last update: 2026-09-25
+Last update: 2026-09-26
 
 This file records only facts that have been observed or explicitly confirmed. Planned architecture belongs in `architecture.md` or `networking.md`.
 
@@ -69,7 +69,18 @@ Verified read-only on 2026-09-25:
 
 The operator-provided breakpoint evidence for 2026-09-25 records the most recent successful `student-bootstrap.yml` run as `ok=7 changed=0 unreachable=0 failed=0`, and records `imnehnet.lab_environments` row `lab-tofu-test` as `status=READY`, `runtime_status=Running`, workspace `default`, and internal IP `10.20.0.202`. Those two facts were not recreated with a mutating playbook or an unauthorized database query during this documentation pass.
 
-This remains a single-environment proof of concept. Laravel/Filament, multi-user OpenTofu state strategy, lifecycle REST API, web terminal, and end-to-end micro-segmentation enforcement remain pending.
+The 2026-09-25 application-directory observation above was superseded by direct verification on 2026-09-26:
+
+- `/home/iaas/projects/webportal-iaas` now contains a Laravel 13.33.0 / Filament 5.8.4 Milestone 1 control-plane implementation with role-aware pages, ownership-scoped lab reads, append-only activity behavior, versioned same-origin API routes, read-only infrastructure health providers, and a mutation adapter that returns `not_configured` without invoking OpenTofu, Incus, Ansible, or network changes.
+- The remote test suite passed `38` tests with `132` assertions after Pint formatting. Vite 8.3.1 produced the production assets under a verified user-local Node.js 22.23.3 runtime; the system Node.js remains 18.19.1 and is incompatible with Vite 8.
+- The development listener was restored on `0.0.0.0:8000`; `/` and `/admin/login` returned HTTP 200 from the physical host path. This is still a development server, not a production web-server deployment.
+- Before live schema activation, a mode-`0600` compressed MySQL backup was created at `/home/iaas/projects/webportal-iaas/storage/app/backups/iaas_portal-pre-migrate-20260926-051515.sql.gz`; gzip validation passed and its SHA-256 is `1e2ff3f0be2f230dbadf0beee87e116364ffee4679f650b7f2d7b094ab50a2fa`.
+- The three pending control-plane migrations completed in batch 2. A post-migration check reported zero pending migrations, 2 users, 0 labs, 0 lab operations, 0 activity logs, 0 queued jobs, and 0 failed jobs. Unique database constraints now enforce one lab per user plus unique container and external identifiers.
+- The legacy `imnehnet.lab_environments` row for `lab-tofu-test` has `user_id=NULL`; it was not copied into the ownership-scoped portal `labs` table because no owner can be proven. Both `lab-test` and `lab-tofu-test` remain observed as running through the read-only Incus provider.
+- An unprivileged database-queue worker was started alongside the existing development server. This is not a persistent production service, and the mutation provider remains intentionally fail-closed with `not_configured`, so queued lifecycle requests cannot mutate Incus, OpenTofu, Ansible, or networking.
+- The Prometheus health validator was corrected under a RED-GREEN regression test to accept the observed standard response `Prometheus Server is Healthy.`. Fresh portal health results were Incus, MySQL, Prometheus, Grafana, and Blackbox `healthy`; automation `degraded` because its tools are available while live mutation remains disabled; and Wazuh `not_connected`.
+
+This remains a single-environment proof of concept. Multi-user OpenTofu state strategy, Wazuh integration, web terminal, persistent production web/queue serving, live lifecycle mutation, and end-to-end micro-segmentation enforcement remain pending.
 
 ## Distributed infrastructure audit
 
