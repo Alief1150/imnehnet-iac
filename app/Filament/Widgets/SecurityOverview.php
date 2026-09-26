@@ -19,7 +19,9 @@ final class SecurityOverview extends StatsOverviewWidget
 
     protected ?string $description = 'SIEM reachability and student isolation policy state. Values are read from Wazuh and the portal database; nothing is simulated.';
 
-    protected int|array|null $columns = 2;
+    protected int|array|null $columns = ['default' => 1, 'sm' => 2];
+
+    protected int|string|array $columnSpan = 'full';
 
     protected function getStats(): array
     {

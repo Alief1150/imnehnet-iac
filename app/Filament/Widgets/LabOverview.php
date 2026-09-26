@@ -18,7 +18,9 @@ final class LabOverview extends StatsOverviewWidget
 
     protected ?string $description = 'Every count below is read from the portal database. Container state itself is reported by the infrastructure widgets.';
 
-    protected int|array|null $columns = 4;
+    protected int|array|null $columns = ['default' => 1, 'sm' => 2, 'lg' => 4];
+
+    protected int|string|array $columnSpan = 'full';
 
     protected function getStats(): array
     {

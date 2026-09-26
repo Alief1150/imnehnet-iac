@@ -7,6 +7,7 @@ use App\Infrastructure\Health\CommandRunner;
 use App\Infrastructure\Health\HttpHealthProvider;
 use App\Infrastructure\Health\IncusHealthProvider;
 use App\Infrastructure\Health\LocalServiceHealthProvider;
+use App\Infrastructure\Health\ManagementPlaneHealthProvider;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -37,10 +38,10 @@ final class InfrastructureStatusService
         $timeout = (int) config('infrastructure.probe_timeout_seconds', 3);
 
         $services = [
-            // Management plane and compute plane are reported separately so the
-            // dashboard can distinguish "the portal is down" from "the lab host
-            // is down", which is what an operator actually needs to know.
-            $this->managementPlane($timeout),
+            // The management plane and the compute plane are reported separately
+            // so the dashboard can distinguish "the portal is down" from "the lab
+            // host is down", which is what an operator actually needs to know.
+            $this->managementPlane(),
             $this->computePlane($timeout),
             (new IncusHealthProvider(
                 $this->commands,
@@ -84,30 +85,13 @@ final class InfrastructureStatusService
         return $summary;
     }
 
-    private function managementPlane(int $timeout): ServiceHealth
+    private function managementPlane(): ServiceHealth
     {
-        $url = (string) config('infrastructure.iaas_health_url', 'http://127.0.0.1:8000/up');
-
-        $health = (new HttpHealthProvider(
-            'iaas_mgmt',
-            'IAAS-MGMT',
-            $url,
-            $timeout,
-            group: 'management_plane',
+        return (new ManagementPlaneHealthProvider(
+            appName: (string) config('app.name', 'IMNEHNET IaaS Portal'),
+            environment: (string) config('app.env', 'production'),
+            host: (string) gethostname(),
         ))->check();
-
-        return new ServiceHealth(
-            key: $health->key,
-            label: $health->label,
-            status: $health->status,
-            summary: $health->status === 'healthy'
-                ? 'Management plane is serving the portal.'
-                : $health->summary,
-            source: $health->source,
-            checkedAt: $health->checkedAt,
-            latencyMs: $health->latencyMs,
-            group: 'management_plane',
-        );
     }
 
     private function computePlane(int $timeout): ServiceHealth

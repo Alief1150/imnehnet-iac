@@ -20,7 +20,9 @@ final class ResourceUsageOverview extends StatsOverviewWidget
 
     protected ?string $description = 'Live host capacity as reported by the Prometheus node exporter.';
 
-    protected int|array|null $columns = 4;
+    protected int|array|null $columns = ['default' => 1, 'sm' => 2, 'lg' => 4];
+
+    protected int|string|array $columnSpan = 'full';
 
     protected function getStats(): array
     {
@@ -114,7 +116,7 @@ final class ResourceUsageOverview extends StatsOverviewWidget
         return match ($key) {
             'cpu' => 'heroicon-m-cpu-chip',
             'memory' => 'heroicon-m-circle-stack',
-            'storage' => 'heroicon-m-hard-drive-stack',
+            'storage' => 'heroicon-m-server-stack',
             default => 'heroicon-m-chart-bar',
         };
     }

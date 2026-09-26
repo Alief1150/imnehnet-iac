@@ -20,7 +20,9 @@ final class InfrastructureHealthOverview extends StatsOverviewWidget
 
     protected ?string $description = 'Each card is a live probe. A card that cannot be verified reports its real state rather than an optimistic one.';
 
-    protected int|array|null $columns = 5;
+    protected int|array|null $columns = ['default' => 1, 'sm' => 2, 'lg' => 3];
+
+    protected int|string|array $columnSpan = 'full';
 
     protected function getStats(): array
     {
