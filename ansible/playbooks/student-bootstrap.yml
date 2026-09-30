@@ -5,11 +5,12 @@
 
   vars:
     incus_cmd: "sudo -n /usr/local/sbin/imnehnet-incus"
-      # The portal always passes this explicitly with -e container_name=<env>.
-      # The fallback below is a name that does not exist, so running the playbook
-      # by hand without an override fails immediately instead of reconfiguring
-      # the protected reference container.
-      container_name: "{{ container_name | default('UNSET-container_name-required', true) }}"
+    # container_name has no default on purpose. The portal always passes
+    #   -e container_name=<environment>
+    # Running this playbook without it stops at the first task that uses the
+    # variable, with an undefined variable error. A previous default pointed at
+    # the protected reference container, and a templated default referring to
+    # itself produced a recursive loop, so absence is the safest default there is.
     student_user: student
 
   tasks:
