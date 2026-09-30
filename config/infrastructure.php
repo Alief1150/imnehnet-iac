@@ -32,6 +32,38 @@ return [
 
     'protected_containers' => ['lab-tofu-test'],
 
+    /*
+     * OpenTofu drives the container lifecycle.
+     *
+     * The working directory holds the state of exactly one selected
+     * workspace, so every command that switches workspace, plans, applies or
+     * destroys runs under a single exclusive lock. Without it two queue jobs
+     * could interleave a workspace switch and apply against the wrong
+     * environment.
+     */
+    'tofu' => [
+        'directory' => env('TOFU_DIRECTORY', '/home/iaas/imnehnet-iac/tofu'),
+        'binary' => env('TOFU_BINARY', 'tofu'),
+        'lock_file' => env('TOFU_LOCK_FILE', storage_path('framework/tofu.lock')),
+        // apply waits on an image download on a cold host, so this is generous
+        // on purpose. It is still bounded, because an unbounded command would
+        // hold the lock forever.
+        'timeout_seconds' => (int) env('TOFU_TIMEOUT_SECONDS', 900),
+        'lock_wait_seconds' => (int) env('TOFU_LOCK_WAIT_SECONDS', 300),
+    ],
+
+    /*
+     * Ansible configures a container that already exists. Provisioning and
+     * lifecycle are OpenTofu's job; configuration is Ansible's.
+     */
+    'ansible' => [
+        'directory' => env('ANSIBLE_DIRECTORY', '/home/iaas/imnehnet-iac/ansible'),
+        'binary' => env('ANSIBLE_BINARY', 'ansible-playbook'),
+        'playbook' => env('ANSIBLE_PLAYBOOK', 'playbooks/student-bootstrap.yml'),
+        'inventory_group' => env('ANSIBLE_INVENTORY_GROUP', 'lab_env'),
+        'timeout_seconds' => (int) env('ANSIBLE_TIMEOUT_SECONDS', 600),
+    ],
+
     'incus_remote' => 'lab-env:',
 
     // Network the student containers are attached to on the compute plane.
