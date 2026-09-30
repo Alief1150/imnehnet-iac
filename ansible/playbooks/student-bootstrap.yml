@@ -5,7 +5,11 @@
 
   vars:
     incus_cmd: "sudo -n /usr/local/sbin/imnehnet-incus"
-    container_name: lab-tofu-test
+      # The portal always passes this explicitly with -e container_name=<env>.
+      # The fallback below is a name that does not exist, so running the playbook
+      # by hand without an override fails immediately instead of reconfiguring
+      # the protected reference container.
+      container_name: "{{ container_name | default('UNSET-container_name-required', true) }}"
     student_user: student
 
   tasks:
