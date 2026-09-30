@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\EnvironmentStatus;
 use App\Enums\RuntimeStatus;
+use Database\Factories\LabEnvironmentFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -31,6 +33,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class LabEnvironment extends Model
 {
+    /** @use HasFactory<LabEnvironmentFactory> */
+    use HasFactory;
+
     protected $connection = 'imnehnet';
 
     protected $table = 'lab_environments';
