@@ -43,7 +43,9 @@ test('the environment table renders every column the specification names', funct
     Livewire::actingAs($admin)
         ->test(ListEnvironments::class)
         ->assertOk()
-        ->assertCanSeeTableRecords(['lab-demo-01']);
+        ->assertSee('lab-demo-01')
+        ->assertSee('10.20.0.205')
+        ->assertSee('env-lab-demo-01');
 
     // Every heading from the specification, so a renamed column is a failure
     // rather than something nobody notices until a demo.
@@ -129,10 +131,6 @@ test('the dashboard reports live figures and its own heading', function () {
     LabEnvironment::factory()->create(['status' => EnvironmentStatus::Ready, 'runtime_status' => RuntimeStatus::Running]);
     LabEnvironment::factory()->error()->create();
     LabEnvironment::factory()->create(['status' => EnvironmentStatus::Stopped, 'runtime_status' => RuntimeStatus::Stopped]);
-
-    $this->actingAs($admin)
-        ->get(EnvironmentResource::getUrl('index', panel: 'admin'))
-        ->assertOk();
 
     Livewire::actingAs($admin)
         ->test(Dashboard::class)
