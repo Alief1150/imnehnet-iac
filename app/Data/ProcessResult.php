@@ -67,6 +67,12 @@ final readonly class ProcessResult
 
     /**
      * First meaningful line of the failure, for a one-line summary.
+     *
+     * This is the text that becomes last_error on the record and the message
+     * on the audit entry, both of which end up in a browser, so it is redacted
+     * here rather than at the call site. External tools are chatty enough to
+     * print a credential in an error line, and the specification forbids
+     * showing one at all.
      */
     public function summary(int $limit = 200): string
     {
@@ -74,9 +80,7 @@ final readonly class ProcessResult
             return 'Completed successfully.';
         }
 
-        $source = trim($this->stderr) !== '' ? $this->stderr : $this->stdout;
-
-        foreach (preg_split('/\R/', $source) ?: [] as $line) {
+        foreach (preg_split('/\R/', $this->redact(trim($this->stderr) !== '' ? $this->stderr : $this->stdout)) ?: [] as $line) {
             $line = trim($line);
 
             if ($line !== '') {
@@ -100,16 +104,29 @@ final readonly class ProcessResult
             return sprintf('No output. Exit code %d.', $this->exitCode);
         }
 
-        $redacted = preg_replace(
+        return $this->truncate($this->redact($text), $limit);
+    }
+
+    /**
+     * Removes anything shaped like an assigned credential, and long opaque
+     * tokens. Applied on the way out rather than on the way in, so the raw
+     * output is still available for a full log on the server.
+     */
+    private function redact(string $text): string
+    {
+        return preg_replace(
             [
-                '/\b[A-Za-z0-9_\-]*(?:password|secret|token|passphrase|private_key)[A-Za-z0-9_\-]*\s*[:=]\s*\S+/i',
+                // key = value, key: value, for password / token / secret names
+                '/\b([A-Za-z0-9_\-]*(?:password|passphrase|secret|token|credential|api[_-]?key)[A-Za-z0-9_\-]*)\s*[:=]\s*\S+/i',
+                // PEM blocks
+                '/-----BEGIN [A-Z ]+PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+PRIVATE KEY-----/',
+                // Long opaque hex or base64 blobs
                 '/\b[A-Fa-f0-9]{32,}\b/',
+                '/\b[A-Za-z0-9+\/]{40,}={0,2}\b/',
             ],
-            ['[redacted]', '[redacted]'],
+            ['$1=[redacted]', '[redacted private key]', '[redacted]', '[redacted]'],
             $text
         ) ?? $text;
-
-        return $this->truncate($redacted, $limit);
     }
 
     private function truncate(string $text, int $limit): string

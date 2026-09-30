@@ -46,6 +46,21 @@ class LabResource extends Resource
         return false;
     }
 
+    /**
+     * Removed from the navigation while the environment resource takes over.
+     *
+     * This resource writes to the portal's own labs table and reaches the
+     * hypervisor directly, so it bypasses the workspace isolation, the
+     * directory lock and the protected-environment guard that the new
+     * lifecycle enforces. Leaving it clickable would mean an operator could
+     * create a container with none of those protections, which is worse than
+     * not offering the action at all.
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([

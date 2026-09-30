@@ -1,7 +1,6 @@
 <?php
 
 use App\Support\EnvironmentWorkspace;
-use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 // The guard reads its protected lists from configuration, so this needs the

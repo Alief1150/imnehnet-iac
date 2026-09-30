@@ -34,6 +34,16 @@ final class ActivityLogService
         'source_service',
         'previous_status',
         'new_status',
+        'workspace',
+        'internal_ip',
+        'runtime_status',
+        'image',
+        'cpu_limit',
+        'memory_limit_mb',
+        'apply_seconds',
+        'requested_action',
+        'exit_code',
+        'command',
     ];
 
     /**
