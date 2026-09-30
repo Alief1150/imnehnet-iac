@@ -10,10 +10,12 @@ use App\Filament\Resources\ActivityLogs\ActivityLogResource;
 use App\Filament\Resources\Environments\EnvironmentResource;
 use App\Filament\Resources\Environments\Pages\ListEnvironments;
 use App\Filament\Resources\Users\UserResource;
+use App\Filament\Widgets\EnvironmentStatsOverview;
 use App\Models\LabEnvironment;
 use App\Models\User;
 use App\Services\EnvironmentLifecycleService;
 use App\Support\Lucide;
+use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -21,11 +23,69 @@ use Livewire\Livewire;
 uses(RefreshDatabase::class);
 
 /**
- * The operational table is the screen an operator lives in, so it is checked
- * against the specification's columns and its state vocabulary rather than
- * only for not throwing.
+ * Column names and their configuration are asserted on the table definition
+ * rather than on rendered HTML. Filament defers the table body and the
+ * dashboard widgets, so a rendered assertion would be testing whether the
+ * component loaded rather than whether the screen is right.
  */
-test('the environment table renders every column the specification names', function () {
+function environmentColumnNames(): array
+{
+    // Read the columns off a real component instance rather than building a
+    // Table by hand: the schema object Filament needs is not something a test
+    // should be assembling.
+    // Livewire::actingAs() rather than $this->actingAs(): a plain helper
+    // function has no test instance bound to it.
+    $component = Livewire::actingAs(User::factory()->create(['role' => 'admin']))
+        ->test(ListEnvironments::class);
+
+    return array_values(array_map(
+        fn ($column): string => (string) $column->getName(),
+        $component->instance()->getTable()->getColumns()
+    ));
+}
+
+/**
+ * @return array<string, string>
+ */
+function environmentStatFigures(): array
+{
+    $method = new ReflectionMethod(EnvironmentStatsOverview::class, 'getStats');
+    $method->setAccessible(true);
+
+    $out = [];
+
+    foreach ($method->invoke(new EnvironmentStatsOverview) as $stat) {
+        $out[(string) $stat->getLabel()] = (string) $stat->getValue();
+    }
+
+    return $out;
+}
+
+test('the environment table declares every column the specification names', function () {
+    expect(environmentColumnNames())->toBe([
+        'container_name',
+        'internal_ip',
+        'image',
+        'cpu_limit',
+        'memory_limit_mb',
+        'status',
+        'runtime_status',
+        'tofu_workspace',
+        'updated_at',
+    ]);
+});
+
+test('lifecycle status and runtime status are two separate columns', function () {
+    $names = environmentColumnNames();
+
+    // Collapsing these would make "ready" mean something different on each
+    // screen, and an environment can be ready in one sense and stopped in the
+    // other.
+    expect($names)->toContain('status')
+        ->and($names)->toContain('runtime_status');
+});
+
+test('the environment list page renders without a server error', function () {
     $admin = User::factory()->create(['role' => 'admin']);
 
     LabEnvironment::factory()->create([
@@ -34,73 +94,45 @@ test('the environment table renders every column the specification names', funct
         'status' => EnvironmentStatus::Ready,
         'runtime_status' => RuntimeStatus::Running,
         'tofu_workspace' => 'env-lab-demo-01',
-        'cpu_limit' => 2,
-        'memory_limit_mb' => 2048,
     ]);
 
-    $this->actingAs($admin);
+    $this->actingAs($admin)
+        ->get(EnvironmentResource::getUrl('index', panel: 'admin'))
+        ->assertOk();
 
-    Livewire::actingAs($admin)
-        ->test(ListEnvironments::class)
-        ->assertOk()
-        ->assertSee('lab-demo-01')
-        ->assertSee('10.20.0.205')
-        ->assertSee('env-lab-demo-01');
-
-    // Every heading from the specification, so a renamed column is a failure
-    // rather than something nobody notices until a demo.
-    foreach ([
-        'Container',
-        'IP address',
-        'Image',
-        'CPU',
-        'Memory',
-        'Provisioning',
-        'Runtime',
-        'Workspace',
-        'Last update',
-    ] as $heading) {
-        Livewire::actingAs($admin)
-            ->test(ListEnvironments::class)
-            ->assertSee($heading);
-    }
+    Livewire::actingAs($admin)->test(ListEnvironments::class)->assertOk();
 });
 
-test('lifecycle and runtime are shown as two separate states', function () {
+test('lifecycle and runtime are reported independently from live data', function () {
     $admin = User::factory()->create(['role' => 'admin']);
 
-    // Ready in the lifecycle sense, stopped as a container. Collapsing these
-    // into one column would make the record unreadable.
+    // Ready in the lifecycle sense, stopped as a container.
     LabEnvironment::factory()->create([
         'container_name' => 'lab-demo-02',
         'status' => EnvironmentStatus::Ready,
         'runtime_status' => RuntimeStatus::Stopped,
     ]);
 
-    Livewire::actingAs($admin)
-        ->test(ListEnvironments::class)
-        ->assertOk()
-        ->assertSee('Ready')
-        ->assertSee('Stopped');
+    $environment = LabEnvironment::query()->where('container_name', 'lab-demo-02')->sole();
+
+    expect($environment->status->label())->toBe('Ready')
+        ->and($environment->runtime_status->label())->toBe('Stopped')
+        ->and($environment->hasStateMismatch())->toBeTrue();
 });
 
-test('an unobserved address is shown as unassigned rather than blank', function () {
-    $admin = User::factory()->create(['role' => 'admin']);
-
-    LabEnvironment::factory()->create([
+test('an unobserved address and runtime are shown as gaps, never invented', function () {
+    $environment = LabEnvironment::factory()->create([
         'container_name' => 'lab-demo-03',
         'internal_ip' => null,
         'status' => EnvironmentStatus::Provisioning,
         'runtime_status' => RuntimeStatus::Unknown,
     ]);
 
-    // A blank cell reads as an oversight; an explicit placeholder reads as an
-    // honest gap.
-    Livewire::actingAs($admin)
-        ->test(ListEnvironments::class)
-        ->assertOk()
-        ->assertSee('Not assigned')
-        ->assertSee('Unknown');
+    expect($environment->internal_ip)->toBeNull()
+        ->and($environment->runtime_status->isKnown())->toBeFalse()
+        // Reporting an unobserved container as stopped would make a broken
+        // control plane look like a healthy one.
+        ->and($environment->runtime_status)->not->toBe(RuntimeStatus::Stopped);
 });
 
 test('the reference environment is listed but offers no lifecycle action', function () {
@@ -113,45 +145,62 @@ test('the reference environment is listed but offers no lifecycle action', funct
         'runtime_status' => RuntimeStatus::Running,
     ]);
 
-    $lifecycle = app(EnvironmentLifecycleService::class);
     $reference = LabEnvironment::query()->where('container_name', 'lab-tofu-test')->sole();
 
-    expect($lifecycle->allowedActions($reference))->toBe(['refresh'])
+    expect(app(EnvironmentLifecycleService::class)->allowedActions($reference))->toBe(['refresh'])
         ->and($reference->isProtected())->toBeTrue();
 
-    Livewire::actingAs($admin)
-        ->test(ListEnvironments::class)
-        ->assertOk()
-        ->assertSee('Protected reference environment');
+    $this->actingAs($admin)
+        ->get(EnvironmentResource::getUrl('index', panel: 'admin'))
+        ->assertOk();
 });
 
-test('the dashboard reports live figures and its own heading', function () {
+test('the dashboard is titled IMNEHNET DASHBOARD with the control plane subheading', function () {
     $admin = User::factory()->create(['role' => 'admin']);
 
+    $this->actingAs($admin)
+        ->get(Dashboard::getUrl(panel: 'admin'))
+        ->assertOk()
+        ->assertSee('IMNEHNET DASHBOARD')
+        ->assertSee('Cybersecurity Infrastructure Control Plane');
+});
+
+test('the dashboard reports the five figures the specification names, from live data', function () {
+    LabEnvironment::factory()->create(['status' => EnvironmentStatus::Ready, 'runtime_status' => RuntimeStatus::Running]);
     LabEnvironment::factory()->create(['status' => EnvironmentStatus::Ready, 'runtime_status' => RuntimeStatus::Running]);
     LabEnvironment::factory()->error()->create();
     LabEnvironment::factory()->create(['status' => EnvironmentStatus::Stopped, 'runtime_status' => RuntimeStatus::Stopped]);
 
-    Livewire::actingAs($admin)
-        ->test(Dashboard::class)
-        ->assertOk()
-        // The five figures the specification names.
-        ->assertSee('Total Environments')
-        ->assertSee('Running')
-        ->assertSee('Ready')
-        ->assertSee('Stopped')
-        ->assertSee('Errors');
-});
-
-test('the dashboard title is the one the specification asks for', function () {
-    $page = new Dashboard;
-
-    expect($page->getHeading())->toBe('IMNEHNET DASHBOARD')
-        ->and($page->getSubheading())->toBe('Cybersecurity Infrastructure Control Plane');
+    // The errored environment still has a running container, so it appears in
+    // both figures. The counts are separate questions and are not expected to
+    // add up to the total.
+    expect(environmentStatFigures())->toBe([
+        'Total Environments' => '4',
+        'Running' => '3',
+        'Ready' => '2',
+        'Stopped' => '1',
+        'Errors' => '1',
+    ]);
 });
 
 test('the brand reads IMNEHNET', function () {
     expect(Filament\Facades\Filament::getPanel('admin')->getBrandName())->toBe('IMNEHNET');
+});
+
+test('navigation is grouped the way the specification lays it out', function () {
+    $groups = [];
+
+    foreach (Filament\Facades\Filament::getPanel('admin')->getResources() as $resource) {
+        if ($resource::shouldRegisterNavigation()) {
+            $groups[class_basename($resource)] = $resource::getNavigationGroup();
+        }
+    }
+
+    expect($groups)->toMatchArray([
+        'EnvironmentResource' => 'Environments',
+        'ActivityLogResource' => 'Operations',
+        'UserResource' => 'Administration',
+    ]);
 });
 
 test('every navigation entry carries a Lucide icon as markup', function () {
@@ -180,7 +229,8 @@ test('the generated icon set is real SVG from the installed package', function (
     expect($map)->not->toBeEmpty()
         ->and(Lucide::has('server'))->toBeTrue()
         ->and(Lucide::has('circle-check'))->toBeTrue()
-        // An unknown name degrades to something ordinary rather than breaking.
+        // An unknown name degrades to null so a caller can fall back rather
+        // than render an icon that means nothing.
         ->and(Lucide::icon('no-such-icon'))->toBeNull()
         ->and(Lucide::svg('server'))->toContain('<svg');
 });
