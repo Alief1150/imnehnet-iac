@@ -33,7 +33,7 @@ test('the environment record is read from the infrastructure connection', functi
         ->and($environment->getConnectionName())->toBe(config('database.default'))
         ->and($environment->exists)->toBeTrue()
         // Present in the infrastructure database, absent from the app one.
-        ->and(DB::connection('imnehnet')
+        ->and(DB::connection($environment->getConnectionName())
             ->table('lab_environments')->where('container_name', 'lab-demo-01')->count())->toBe(1)
         ->and(DB::table('labs')->count())->toBe(0);
 });
