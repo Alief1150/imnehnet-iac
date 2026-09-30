@@ -1,0 +1,113 @@
+---
+# Guided CTF lab pair provisioning (LaaS MVP).
+# Provisions ONE disposable pair for a single lab_id:
+#   victim-<lab_id> on lab-env (ubuntu/24.04 + CTF web service)
+#   atk-<lab_id>    on lab-atk (local image ctf-attacker-kali-base)
+#
+# Usage:
+#   ansible-playbook ansible/playbooks/ctf-lab-pair.yml \
+#     -e lab_id=demo-c \
+#     -e attacker_ip=10.30.0.102 \
+#     -e victim_ip=10.20.0.102 \
+#     -e ctf_flag="IMNEHNET{...}"
+#
+# lab_id, attacker_ip, victim_ip and ctf_flag have no defaults on purpose:
+# the portal must pass them explicitly, and running without them stops on
+# the first task with an undefined-variable error instead of guessing.
+#
+# After provisioning, add the new (attacker_ip . victim_ip) pair to the
+# allowed_pairs nftables set on lab-atk (see /etc/laa-ctf/laa-ctf.nft)
+# and the victim_ip to the victim_demo set on lab-env.
+- name: Provision CTF victim on lab-env
+  hosts: lab_env
+  gather_facts: false
+  vars:
+    incus_cmd: "sudo -n incus"
+  tasks:
+    - name: Verify lab_id is set
+      ansible.builtin.assert:
+        that:
+          - lab_id is defined
+          - victim_ip is defined
+          - ctf_flag is defined
+
+    - name: Launch victim container with static IP
+      ansible.builtin.command:
+        cmd: "{{ incus_cmd }} launch images:ubuntu/24.04 victim-{{ lab_id }} -d eth0,ipv4.address={{ victim_ip }}"
+      changed_when: true
+
+    - name: Wait until container is running
+      ansible.builtin.shell: |
+        {{ incus_cmd }} info victim-{{ lab_id }} | grep -qi "Status: Running"
+      register: victim_running
+      retries: 20
+      delay: 3
+      until: victim_running.rc == 0
+      changed_when: false
+
+    - name: Create CTF web root
+      ansible.builtin.command:
+        cmd: "{{ incus_cmd }} exec victim-{{ lab_id }} -- mkdir -p /opt/ctf/n0te-4-admin"
+      changed_when: true
+
+    - name: Deploy CTF index page
+      ansible.builtin.shell: |
+        echo '<html><body><h1>IMNEHNET Guided CTF - Victim Node</h1><p>Hint: webmasters sometimes leave notes for crawlers.</p></body></html>' \
+          | {{ incus_cmd }} exec victim-{{ lab_id }} -- tee /opt/ctf/index.html >/dev/null
+      changed_when: true
+
+    - name: Deploy robots.txt hint
+      ansible.builtin.shell: |
+        echo 'User-agent: *
+        Disallow: /n0te-4-admin/' \
+          | {{ incus_cmd }} exec victim-{{ lab_id }} -- tee /opt/ctf/robots.txt >/dev/null
+      changed_when: true
+
+    - name: Deploy flag page
+      ansible.builtin.shell: |
+        echo '<html><body><p>Nice work enumerating. Your flag:</p><p><b>{{ ctf_flag }}</b></p></body></html>' \
+          | {{ incus_cmd }} exec victim-{{ lab_id }} -- tee /opt/ctf/n0te-4-admin/flag.html >/dev/null
+      no_log: true
+      changed_when: true
+
+    - name: Install CTF web service unit
+      ansible.builtin.shell: |
+        printf '[Unit]\nDescription=IMNEHNET CTF web service\nAfter=network.target\n\n[Service]\nExecStart=/usr/bin/python3 -m http.server 80 --directory /opt/ctf\nRestart=on-failure\n\n[Install]\nWantedBy=multi-user.target\n' \
+          | {{ incus_cmd }} exec victim-{{ lab_id }} -- tee /etc/systemd/system/ctf-http.service >/dev/null
+      changed_when: true
+
+    - name: Enable and start CTF web service
+      ansible.builtin.command:
+        cmd: "{{ incus_cmd }} exec victim-{{ lab_id }} -- systemctl enable --now ctf-http"
+      changed_when: true
+
+- name: Provision CTF attacker on lab-atk
+  hosts: lab_atk
+  gather_facts: false
+  vars:
+    incus_cmd: "sudo -n incus"
+  tasks:
+    - name: Verify lab_id is set
+      ansible.builtin.assert:
+        that:
+          - lab_id is defined
+          - attacker_ip is defined
+
+    - name: Launch attacker container from reproducible baseline image
+      ansible.builtin.command:
+        cmd: "{{ incus_cmd }} launch local:ctf-attacker-kali-base atk-{{ lab_id }} -d eth0,ipv4.address={{ attacker_ip }}"
+      changed_when: true
+
+    - name: Wait until attacker container is running
+      ansible.builtin.shell: |
+        {{ incus_cmd }} info atk-{{ lab_id }} | grep -qi "Status: Running"
+      register: attacker_running
+      retries: 20
+      delay: 3
+      until: attacker_running.rc == 0
+      changed_when: false
+
+    - name: Verify baseline tools are present
+      ansible.builtin.command:
+        cmd: "{{ incus_cmd }} exec atk-{{ lab_id }} -- which nmap curl nc dig"
+      changed_when: false
