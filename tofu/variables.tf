@@ -17,3 +17,12 @@ variable "memory_limit" {
   type    = string
   default = "1GiB"
 }
+
+variable "desired_running" {
+  type        = bool
+  description = "Desired runtime state. Lifecycle start and stop converge onto this."
+  # True matches the state the reference environment is already in, so adding
+  # this variable produces no drift for an environment created before it
+  # existed.
+  default = true
+}
