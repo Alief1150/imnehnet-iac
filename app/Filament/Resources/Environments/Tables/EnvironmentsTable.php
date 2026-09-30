@@ -6,7 +6,6 @@ use App\Enums\EnvironmentStatus;
 use App\Enums\RuntimeStatus;
 use App\Models\LabEnvironment;
 use Filament\Actions\ViewAction;
-use Filament\Facades\FilamentIcon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -121,8 +120,7 @@ class EnvironmentsTable
                         })),
             ])
             ->recordActions([
-                ViewAction::make()
-                    ->icon(FilamentIcon::get('lucide-circle-check')),
+                ViewAction::make(),
             ])
             ->actions([])
             ->headerActions([])
