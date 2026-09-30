@@ -2,6 +2,11 @@
 
 use App\Support\EnvironmentWorkspace;
 use DomainException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+// The guard reads its protected lists from configuration, so this needs the
+// application booted. It lives under Feature for that reason.
+uses(RefreshDatabase::class);
 
 test('the reference workspace is refused for portal use', function () {
     // The default workspace holds the state of the protected reference
