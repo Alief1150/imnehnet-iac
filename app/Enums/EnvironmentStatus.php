@@ -2,6 +2,9 @@
 
 namespace App\Enums;
 
+use App\Support\Lucide;
+use Illuminate\Contracts\Support\Htmlable;
+
 /**
  * Where an environment is in its provisioning lifecycle.
  *
@@ -70,15 +73,22 @@ enum EnvironmentStatus: string
         };
     }
 
-    public function icon(): string
+    /**
+     * The icon as markup.
+     *
+     * A name would be looked up in the blade-icons default set, which only
+     * knows Heroicons, so passing one raises SvgNotFound. Markup is the
+     * supported way to use an icon set Filament does not ship.
+     */
+    public function icon(): ?Htmlable
     {
         return match ($this) {
-            self::Provisioning, self::Configuring => 'lucide-loader-circle',
-            self::Ready => 'lucide-circle-check',
-            self::Stopped => 'lucide-square',
-            self::Resetting => 'lucide-rotate-ccw',
-            self::Deleting => 'lucide-trash-2',
-            self::Error => 'lucide-circle-alert',
+            self::Provisioning, self::Configuring => Lucide::icon('loader-circle'),
+            self::Ready => Lucide::icon('circle-check'),
+            self::Stopped => Lucide::icon('square'),
+            self::Resetting => Lucide::icon('rotate-ccw'),
+            self::Deleting => Lucide::icon('trash'),
+            self::Error => Lucide::icon('circle-alert'),
         };
     }
 }

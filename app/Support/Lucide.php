@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Support\HtmlString;
+
 /**
  * Lucide icons, generated from the installed npm package.
  *
@@ -124,6 +126,28 @@ SVG,
     public static function svg(string $name, string $class = ''): string
     {
         return self::map()[$name] ?? self::map()['circle-help'];
+    }
+
+    /**
+     * An icon as markup a component can render directly.
+     *
+     * Filament resolves a string icon through the blade-icons default set,
+     * which only knows Heroicons, so passing a name such as "lucide-server"
+     * raises SvgNotFound. Markup bypasses that lookup entirely, which is the
+     * supported way to use an icon set Filament does not ship.
+     *
+     * Returns null for an unknown name so a caller can fall back rather than
+     * render an icon that means nothing.
+     */
+    public static function icon(string $name): ?HtmlString
+    {
+        $map = self::map();
+
+        if (! array_key_exists($name, $map)) {
+            return null;
+        }
+
+        return new HtmlString($map[$name]);
     }
 
     /**

@@ -8,17 +8,15 @@ use App\Filament\Resources\ActivityLogs\Schemas\ActivityLogForm;
 use App\Filament\Resources\ActivityLogs\Schemas\ActivityLogInfolist;
 use App\Filament\Resources\ActivityLogs\Tables\ActivityLogsTable;
 use App\Models\ActivityLog;
-use BackedEnum;
+use App\Support\Lucide;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Support\Htmlable;
 
 class ActivityLogResource extends Resource
 {
     protected static ?string $model = ActivityLog::class;
-
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     public static function canAccess(): bool
     {
@@ -54,4 +52,17 @@ class ActivityLogResource extends Resource
             'view' => ViewActivityLog::route('/{record}'),
         ];
     }
+
+    public static function getNavigationIcon(): Htmlable|string|null
+    {
+        return Lucide::icon('scroll-text');
+    }
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+
+    protected static ?int $navigationSort = 30;
+
+    protected static ?string $label = 'Activity Logs';
+
+    protected static ?string $pluralLabel = 'Activity Logs';
 }

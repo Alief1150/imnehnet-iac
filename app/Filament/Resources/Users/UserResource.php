@@ -8,17 +8,15 @@ use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Schemas\UserInfolist;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
-use BackedEnum;
+use App\Support\Lucide;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Support\Htmlable;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
-
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
 
     public static function form(Schema $schema): Schema
     {
@@ -47,4 +45,13 @@ class UserResource extends Resource
             'view' => ViewUser::route('/{record}'),
         ];
     }
+
+    public static function getNavigationIcon(): Htmlable|string|null
+    {
+        return Lucide::icon('users');
+    }
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Administration';
+
+    protected static ?int $navigationSort = 10;
 }

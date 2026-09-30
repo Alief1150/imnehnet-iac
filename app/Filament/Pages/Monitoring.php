@@ -5,23 +5,14 @@ namespace App\Filament\Pages;
 use App\Data\MonitoringBackend;
 use App\Services\InfrastructureStatusService;
 use App\Services\MonitoringService;
-use BackedEnum;
+use App\Support\Lucide;
 use Filament\Pages\Page;
-use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
 use Throwable;
-use UnitEnum;
 
 final class Monitoring extends Page
 {
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
-
-    protected static ?string $navigationLabel = 'Monitoring';
-
-    protected static string|UnitEnum|null $navigationGroup = 'Infrastructure';
-
-    protected static ?int $navigationSort = 20;
-
     protected string $view = 'filament.pages.monitoring';
 
     /**
@@ -79,4 +70,13 @@ final class Monitoring extends Page
     {
         return auth()->user()?->isAdmin() === true;
     }
+
+    public static function getNavigationIcon(): Htmlable|string|null
+    {
+        return Lucide::icon('gauge');
+    }
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Infrastructure';
+
+    protected static ?int $navigationSort = 20;
 }

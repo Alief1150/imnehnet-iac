@@ -4,18 +4,12 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\InfrastructureHealthOverview;
 use App\Services\InfrastructureStatusService;
-use BackedEnum;
+use App\Support\Lucide;
 use Filament\Pages\Page;
-use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
 
 final class Infrastructure extends Page
 {
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedServerStack;
-
-    protected static ?string $navigationLabel = 'Infrastructure';
-
-    protected static ?int $navigationSort = 10;
-
     protected string $view = 'filament.pages.infrastructure';
 
     public static function canAccess(): bool
@@ -34,4 +28,13 @@ final class Infrastructure extends Page
     {
         return app(InfrastructureStatusService::class)->summary();
     }
+
+    public static function getNavigationIcon(): Htmlable|string|null
+    {
+        return Lucide::icon('network');
+    }
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Infrastructure';
+
+    protected static ?int $navigationSort = 10;
 }

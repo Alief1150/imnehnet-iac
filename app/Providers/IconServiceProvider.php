@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Support\Lucide;
 use Filament\Support\Facades\FilamentIcon;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -20,7 +21,7 @@ class IconServiceProvider extends ServiceProvider
         $icons = [];
 
         foreach (Lucide::map() as $name => $svg) {
-            $icons['lucide-'.$name] = new \Illuminate\Support\HtmlString($svg);
+            $icons['lucide-'.$name] = new HtmlString($svg);
         }
 
         // Named to match the identifiers used across the enums and resources,

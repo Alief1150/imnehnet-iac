@@ -6,9 +6,12 @@ use App\Contracts\LabProvisioner;
 use App\Contracts\LifecycleDriver;
 use App\Drivers\LiveLifecycleDriver;
 use App\Infrastructure\Provision\IncusLabProvisioner;
+use App\Models\LabEnvironment;
+use App\Policies\LabEnvironmentPolicy;
 use App\Services\AnsibleService;
 use App\Services\LabPortAllocationService;
 use App\Services\OpenTofuService;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -54,6 +57,13 @@ class AppServiceProvider extends ServiceProvider
         // invisible to the transaction that rolls the test back. Pointing the
         // inventory at the suite's own database keeps one database, so the
         // schema, the factory and the rollback all agree.
+        // Bound on the model rather than checked in each action, so a caller
+        // that reaches the model directly is authorised too.
+        Gate::policy(
+            LabEnvironment::class,
+            LabEnvironmentPolicy::class
+        );
+
         if ($this->app->runningUnitTests()) {
             config([
                 'infrastructure.environment_connection' => config('database.default'),

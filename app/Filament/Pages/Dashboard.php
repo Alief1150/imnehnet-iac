@@ -2,56 +2,69 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\EnvironmentStatsOverview;
 use App\Filament\Widgets\InfrastructureHealthOverview;
-use App\Filament\Widgets\LabOverview;
-use App\Filament\Widgets\MyLabOverview;
 use App\Filament\Widgets\RecentActivity;
-use App\Filament\Widgets\ResourceUsageOverview;
-use App\Filament\Widgets\SecurityOverview;
-use BackedEnum;
+use App\Filament\Widgets\RecentEnvironments;
+use App\Support\Lucide;
 use Filament\Pages\Dashboard as BaseDashboard;
-use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
 
+/**
+ * The control plane's front page.
+ *
+ * Reads as an ordered brief rather than a grid of widgets: what exists, what
+ * is running, what is wrong, and what happened most recently. An operator
+ * opens this to answer those four questions, so they appear in that order.
+ *
+ * Every figure comes from the inventory record. Nothing here is invented: an
+ * environment whose runtime has never been observed is counted as unknown
+ * rather than being folded into stopped.
+ */
 final class Dashboard extends BaseDashboard
 {
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-
     protected int|string|array $columnSpan = 'full';
 
+    public function getHeading(): string
+    {
+        return 'IMNEHNET DASHBOARD';
+    }
+
+    public function getSubheading(): ?string
+    {
+        return 'Cybersecurity Infrastructure Control Plane';
+    }
+
+    public static function getNavigationIcon(): Htmlable|string|null
+    {
+        return Lucide::icon('layout-dashboard');
+    }
+
+    protected static ?int $navigationSort = 1;
+
     /**
-     * The control plane reads better as an ordered brief than as an undifferentiated
-     * widget grid, so the sections follow the order an operator triages in:
-     * planes first, then capacity, then the labs being served, then security,
-     * then the audit trail.
-     *
-     * Each widget spans the full width and lays its own cards out internally, so
-     * the dashboard never ends up with a half-empty column beside a tall stack.
-     *
      * @return array<class-string>
      */
     public function getWidgets(): array
     {
-        if (auth()->user()?->isAdmin() !== true) {
-            return [
-                MyLabOverview::class,
-                RecentActivity::class,
-            ];
-        }
-
         return [
+            EnvironmentStatsOverview::class,
             InfrastructureHealthOverview::class,
-            ResourceUsageOverview::class,
-            LabOverview::class,
-            SecurityOverview::class,
+            RecentEnvironments::class,
             RecentActivity::class,
         ];
     }
 
-    public function getColumns(): int|array
+    /**
+     * @return array<string, string>
+     */
+    protected function getHeaderWidgets(): array
     {
-        return [
-            'md' => 1,
-            'xl' => 1,
-        ];
+        return [];
+    }
+
+    protected function getFooterWidgets(): array
+    {
+        return [];
     }
 }

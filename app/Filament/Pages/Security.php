@@ -3,21 +3,12 @@
 namespace App\Filament\Pages;
 
 use App\Services\SecurityMonitoringService;
-use BackedEnum;
+use App\Support\Lucide;
 use Filament\Pages\Page;
-use Filament\Support\Icons\Heroicon;
-use UnitEnum;
+use Illuminate\Contracts\Support\Htmlable;
 
 final class Security extends Page
 {
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;
-
-    protected static ?string $navigationLabel = 'Security';
-
-    protected static string|UnitEnum|null $navigationGroup = 'Infrastructure';
-
-    protected static ?int $navigationSort = 30;
-
     protected string $view = 'filament.pages.security';
 
     /**
@@ -32,4 +23,13 @@ final class Security extends Page
     {
         return auth()->user()?->isAdmin() === true;
     }
+
+    public static function getNavigationIcon(): Htmlable|string|null
+    {
+        return Lucide::icon('shield-check');
+    }
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Infrastructure';
+
+    protected static ?int $navigationSort = 30;
 }

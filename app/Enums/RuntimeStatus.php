@@ -2,12 +2,15 @@
 
 namespace App\Enums;
 
+use App\Support\Lucide;
+use Illuminate\Contracts\Support\Htmlable;
+
 /**
  * What the container is actually doing right now.
  *
  * Read from the hypervisor, never from a request. When it is not known the
- * value is Unknown rather than a guess, so a disconnected control plane
- * cannot make a stopped container look healthy.
+ * value is Unknown rather than a guess, so a disconnected control plane cannot
+ * make a stopped container look healthy.
  */
 enum RuntimeStatus: string
 {
@@ -45,13 +48,13 @@ enum RuntimeStatus: string
         };
     }
 
-    public function icon(): string
+    public function icon(): ?Htmlable
     {
         return match ($this) {
-            self::Running => 'lucide-circle-check',
-            self::Stopped => 'lucide-circle-pause',
-            self::Frozen => 'lucide-snowflake',
-            self::Unknown => 'lucide-circle-help',
+            self::Running => Lucide::icon('circle-check'),
+            self::Stopped => Lucide::icon('circle-pause'),
+            self::Frozen => Lucide::icon('snowflake'),
+            self::Unknown => Lucide::icon('circle-question-mark'),
         };
     }
 }

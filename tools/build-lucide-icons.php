@@ -10,7 +10,6 @@
  *
  * Run with: php tools/build-lucide-icons.php
  */
-
 $source = __DIR__.'/../node_modules/lucide/dist/esm/icons';
 
 if (! is_dir($source)) {
@@ -96,6 +95,7 @@ foreach ($wanted as $name) {
 
     if (! is_file($file)) {
         $missing[] = $name;
+
         continue;
     }
 
@@ -103,6 +103,7 @@ foreach ($wanted as $name) {
 
     if ($shapes === []) {
         $missing[] = $name;
+
         continue;
     }
 
@@ -152,9 +153,8 @@ $php .= "        ];\n    }\n\n"
 
 file_put_contents(__DIR__.'/../app/Support/Lucide.php', $php);
 
-printf("Generated %d icons -> app/Support/Lucide.php%s", count($icons), PHP_EOL);
+printf('Generated %d icons -> app/Support/Lucide.php%s', count($icons), PHP_EOL);
 
 if ($missing !== []) {
-    printf("Not in the package: %s%s", implode(', ', $missing), PHP_EOL);
+    printf('Not in the package: %s%s', implode(', ', $missing), PHP_EOL);
 }
-
