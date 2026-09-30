@@ -84,6 +84,38 @@ return [
             ]) : [],
         ],
 
+        /*
+         * Infrastructure database.
+         *
+         * The portal owns iaas_portal: admin users, sessions, queues and its
+         * own audit log. The container inventory is owned by the
+         * infrastructure automation, so it stays in its own database and is
+         * read from a separate connection rather than being copied into the
+         * application schema, which would only create a second unsynchronised
+         * copy of the same state.
+         *
+         * Defaults to the application credentials so a single grant is
+         * enough, but every part is overridable for a separated deployment.
+         */
+        'imnehnet' => [
+            'driver' => env('IMNEHNET_DB_CONNECTION', 'mysql'),
+            'host' => env('IMNEHNET_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('IMNEHNET_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('IMNEHNET_DB_DATABASE', 'imnehnet'),
+            'username' => env('IMNEHNET_DB_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('IMNEHNET_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('IMNEHNET_DB_SOCKET', ''),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),
