@@ -36,9 +36,17 @@ class LabEnvironment extends Model
     /** @use HasFactory<LabEnvironmentFactory> */
     use HasFactory;
 
-    protected $connection = 'imnehnet';
-
     protected $table = 'lab_environments';
+
+    /**
+     * The inventory normally sits in the infrastructure database. The name is
+     * read from configuration so the test suite can aim it at its own
+     * throwaway database instead of a second in-memory one.
+     */
+    public function getConnectionName(): ?string
+    {
+        return (string) config('infrastructure.environment_connection', 'imnehnet');
+    }
 
     /**
      * The infrastructure table is column complete rather than mass-assignment

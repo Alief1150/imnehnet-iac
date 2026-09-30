@@ -28,15 +28,20 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Bootstrap any application services.
-     *
-     * Nothing is registered here on purpose. The portal login listener is
-     * discovered from app/Listeners, and the user observer is declared on the
-     * model with #[ObservedBy]. Registering either manually from a provider
-     * risks double registration, which would write two identical audit rows
-     * for a single change.
      */
     public function boot(): void
     {
-        //
+        // The environment inventory normally lives in the infrastructure
+        // database. The suite cannot use it: two in-memory SQLite connections
+        // are two different databases, so a record created through the
+        // infrastructure connection would be invisible to the migrations and
+        // invisible to the transaction that rolls the test back. Pointing the
+        // inventory at the suite's own database keeps one database, so the
+        // schema, the factory and the rollback all agree.
+        if ($this->app->runningUnitTests()) {
+            config([
+                'infrastructure.environment_connection' => config('database.default'),
+            ]);
+        }
     }
 }

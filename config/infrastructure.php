@@ -12,6 +12,17 @@ return [
     'resource_degraded_percent' => 75,
     'resource_critical_percent' => 90,
 
+    /*
+     * Connection the lab inventory is read from.
+     *
+     * In production this is the infrastructure database, which owns
+     * lab_environments. The test suite points it at its own throwaway
+     * database instead, because two in-memory SQLite connections are two
+     * separate databases and a record written through one would be invisible
+     * to the other.
+     */
+    'environment_connection' => env('ENVIRONMENT_CONNECTION', 'imnehnet'),
+
     'incus_remote' => 'lab-env:',
 
     // Network the student containers are attached to on the compute plane.

@@ -25,7 +25,12 @@ test('the environment record is read from the infrastructure connection', functi
         'memory_limit_mb' => 2048,
     ]);
 
-    expect($environment->getConnectionName())->toBe('imnehnet')
+    // Production reads the infrastructure database; the suite aims the same
+    // setting at its own throwaway database so the schema, the factory and
+    // the rollback all agree.
+    expect($environment->getConnectionName())
+        ->toBe(config('infrastructure.environment_connection'))
+        ->and($environment->getConnectionName())->toBe(config('database.default'))
         ->and($environment->exists)->toBeTrue()
         // Present in the infrastructure database, absent from the app one.
         ->and(DB::connection('imnehnet')

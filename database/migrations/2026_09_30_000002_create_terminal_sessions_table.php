@@ -17,7 +17,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::connection('imnehnet')->create('terminal_sessions', function (Blueprint $table): void {
+        Schema::connection(config('infrastructure.environment_connection'))->create('terminal_sessions', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->foreignId('user_id')->index();
             $table->unsignedBigInteger('lab_environment_id')->index();
@@ -34,6 +34,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::connection('imnehnet')->dropIfExists('terminal_sessions');
+        Schema::connection(config('infrastructure.environment_connection'))->dropIfExists('terminal_sessions');
     }
 };

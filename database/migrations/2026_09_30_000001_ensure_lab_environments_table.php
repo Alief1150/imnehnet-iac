@@ -18,7 +18,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $schema = Schema::connection('imnehnet');
+        $schema = Schema::connection(config('infrastructure.environment_connection'));
 
         if (! $schema->hasTable('lab_environments')) {
             $schema->create('lab_environments', function (Blueprint $table): void {
