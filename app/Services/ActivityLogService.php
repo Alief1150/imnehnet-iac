@@ -36,6 +36,38 @@ final class ActivityLogService
         'new_status',
     ];
 
+    /**
+     * Keys that must never be written, at any nesting depth.
+     *
+     * The top level is already restricted by the allow list. This catches a
+     * caller that hides a credential inside an allow-listed value, for example
+     * `previous_values => ['password' => ...]`.
+     *
+     * Filtering at depth cannot use the allow list itself: the keys inside a
+     * value are the caller's own vocabulary rather than metadata keys, so
+     * `changed_fields => ['status']` would be reduced to an empty list and the
+     * audit entry would claim a change without saying what it was.
+     *
+     * @var list<string>
+     */
+    private const BLOCKED_KEYS = [
+        'password',
+        'password_confirmation',
+        'current_password',
+        'new_password',
+        'secret',
+        'token',
+        'api_token',
+        'access_token',
+        'refresh_token',
+        'bearer',
+        'authorization',
+        'private_key',
+        'passphrase',
+        'credential',
+        'credentials',
+    ];
+
     public function __construct(private readonly ?Request $request = null) {}
 
     /**
@@ -79,11 +111,32 @@ final class ActivityLogService
             }
 
             $sanitized[$key] = is_array($value)
-                ? $this->sanitizeMetadata($value)
+                ? $this->stripBlockedKeys($value)
                 : $value;
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Removes credential-shaped keys from inside a value, at any depth.
+     *
+     * @param  array<array-key, mixed>  $value
+     * @return array<array-key, mixed>
+     */
+    private function stripBlockedKeys(array $value): array
+    {
+        $clean = [];
+
+        foreach ($value as $key => $item) {
+            if (in_array(strtolower((string) $key), self::BLOCKED_KEYS, true)) {
+                continue;
+            }
+
+            $clean[$key] = is_array($item) ? $this->stripBlockedKeys($item) : $item;
+        }
+
+        return $clean;
     }
 
     private function shortUserAgent(?Request $request): ?string
