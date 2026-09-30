@@ -88,7 +88,7 @@ final class InfrastructureStatusService
     private function managementPlane(): ServiceHealth
     {
         return (new ManagementPlaneHealthProvider(
-            appName: (string) config('app.name', 'IMNEHNET IaaS Portal'),
+            appName: (string) config('app.name', 'IMNEHNET'),
             environment: (string) config('app.env', 'production'),
             host: (string) gethostname(),
         ))->check();

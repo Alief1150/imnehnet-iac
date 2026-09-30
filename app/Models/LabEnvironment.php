@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\EnvironmentStatus;
 use App\Enums\RuntimeStatus;
+use App\Support\EnvironmentWorkspace;
 use Database\Factories\LabEnvironmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -86,13 +87,12 @@ class LabEnvironment extends Model
 
     /**
      * Container names become Incus instance names, an OpenTofu workspace
-     * suffix and an Ansible extra variable. All three are shell and URL
-     * adjacent, so the value is validated to a conservative character set
-     * before it is ever used.
+     * suffix and an Ansible extra variable, so the identifier rules live in one
+     * place rather than being re-implemented per call site.
      */
     public static function isValidContainerName(string $name): bool
     {
-        return (bool) preg_match('/^[a-z0-9][a-z0-9-]{2,62}$/', $name);
+        return EnvironmentWorkspace::isValidContainerName($name);
     }
 
     /**
@@ -102,7 +102,18 @@ class LabEnvironment extends Model
      */
     public static function workspaceFor(string $containerName): string
     {
-        return 'env-'.$containerName;
+        return EnvironmentWorkspace::forContainer($containerName);
+    }
+
+    /**
+     * True when this environment is one the portal must never operate on.
+     */
+    public function isProtected(): bool
+    {
+        return EnvironmentWorkspace::isProtected(
+            (string) $this->tofu_workspace,
+            (string) $this->container_name
+        );
     }
 
     /**

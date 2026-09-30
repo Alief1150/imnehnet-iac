@@ -23,6 +23,15 @@ return [
      */
     'environment_connection' => env('ENVIRONMENT_CONNECTION', 'imnehnet'),
 
+    /*
+     * Never operated on by the portal. The default workspace holds the state
+     * of the reference container, so aiming a destroy at it would take down a
+     * container that exists to be a baseline for comparison.
+     */
+    'protected_workspaces' => ['default'],
+
+    'protected_containers' => ['lab-tofu-test'],
+
     'incus_remote' => 'lab-env:',
 
     // Network the student containers are attached to on the compute plane.

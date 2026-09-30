@@ -28,7 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
 
-            ->brandName('IMNEHNET IaaS Portal')
+            ->brandName('IMNEHNET')
             ->favicon('favicon.ico')
 
             ->viteTheme('resources/css/filament/admin/theme.css')
