@@ -4,11 +4,13 @@ namespace App\Models;
 
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Observers\UserObserver;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -16,6 +18,10 @@ use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['name', 'email', 'password', 'role', 'status', 'must_change_password', 'last_login_at'])]
 #[Hidden(['password', 'remember_token'])]
+// Role and status changes are audited by the model itself, so the entry is
+// written whichever surface made the change. Declared here rather than in a
+// service provider because the attribute is applied exactly once.
+#[ObservedBy(UserObserver::class)]
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */

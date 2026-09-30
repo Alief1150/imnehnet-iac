@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\Users\Schemas;
 
 use App\Models\User;
-use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class UserInfolist
@@ -21,48 +21,51 @@ class UserInfolist
                         TextEntry::make('role')
                             ->label('Role')
                             ->badge()
-                            ->color(fn (string $state): string => $state === 'admin' ? 'teal' : 'gray'),
+                            ->formatStateUsing(fn (mixed $state): string => strtoupper(self::asString($state)))
+                            ->color(fn (User $record): string => $record->isAdmin() ? 'teal' : 'gray'),
                         TextEntry::make('status')
                             ->label('Status')
                             ->badge()
-                            ->color(fn (string $state): string => match ($state) {
-                                'active' => 'success',
-                                'disabled' => 'danger',
-                                default => 'gray',
-                            }),
+                            ->formatStateUsing(fn (mixed $state): string => strtoupper(self::asString($state)))
+                            ->color(fn (User $record): string => $record->isActive() ? 'success' : 'danger'),
                         TextEntry::make('last_login_at')
                             ->label('Last login')
                             ->since()
                             ->placeholder('Never signed in'),
                         TextEntry::make('must_change_password')
                             ->label('Password state')
-                            ->formatStateUsing(fn (bool $state): string => $state
+                            ->formatStateUsing(fn (mixed $state): string => $state
                                 ? 'A first-time password is still in use'
                                 : 'Password has been set by the user')
                             ->badge()
-                            ->color(fn (bool $state): string => $state ? 'warning' : 'success'),
+                            ->color(fn (mixed $state): string => $state ? 'warning' : 'success'),
                     ]),
 
                 Section::make('Lab Environment')
                     ->description('A student account exists before a lab is assigned. Provisioning is a separate action.')
                     ->columns(2)
                     ->schema([
-                        TextEntry::make('lab.name')
+                        // Read through the relation explicitly instead of
+                        // relying on dot notation, so a student with no lab
+                        // renders the placeholder instead of erroring.
+                        TextEntry::make('lab_name')
                             ->label('Lab name')
-                            ->placeholder('No Lab Environment')
-                            ->badge(fn (User $record): bool => $record->lab === null)
-                            ->color(fn (User $record): string => $record->lab ? 'success' : 'warning'),
-                        TextEntry::make('lab.container_name')
+                            ->state(fn (User $record): string => $record->lab?->name ?? 'No Lab Environment')
+                            ->badge()
+                            ->color(fn (User $record): string => $record->lab === null ? 'warning' : 'success'),
+                        TextEntry::make('lab_container_name')
                             ->label('Container')
-                            ->placeholder('—')
+                            ->state(fn (User $record): string => $record->lab?->container_name ?? '—')
                             ->fontFamily('mono'),
-                        TextEntry::make('lab.ip_address')
+                        TextEntry::make('lab_ip_address')
                             ->label('IP address')
-                            ->placeholder('Not assigned')
+                            ->state(fn (User $record): string => $record->lab?->ip_address ?? 'Not assigned')
                             ->fontFamily('mono'),
-                        TextEntry::make('lab.ssh_port')
+                        TextEntry::make('lab_ssh_port')
                             ->label('SSH port')
-                            ->placeholder('Not published'),
+                            ->state(fn (User $record): string => $record->lab?->ssh_port !== null
+                                ? (string) $record->lab->ssh_port
+                                : 'Not published'),
                     ]),
 
                 Section::make('Timestamps')
@@ -72,5 +75,10 @@ class UserInfolist
                         TextEntry::make('updated_at')->label('Updated')->dateTime(),
                     ]),
             ]);
+    }
+
+    private static function asString(mixed $state): string
+    {
+        return $state instanceof \BackedEnum ? (string) $state->value : (is_scalar($state) ? (string) $state : '');
     }
 }

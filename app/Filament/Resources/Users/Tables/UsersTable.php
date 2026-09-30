@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Models\User;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
@@ -26,31 +28,26 @@ class UsersTable
 
                 TextColumn::make('role')
                     ->badge()
-                    ->formatStateUsing(fn (BackedEnum $state): string => $state instanceof BackedEnum
-                        ? ucfirst($state->value)
-                        : (string) $state)
-                    ->color(fn (string $state): string => $state === 'admin' ? 'teal' : 'gray')
+                    // The column is cast to a UserRole enum, so the value is
+                    // unwrapped explicitly rather than assumed to be a string.
+                    ->formatStateUsing(fn (mixed $state): string => self::asString($state))
+                    ->color(fn (User $record): string => $record->isAdmin() ? 'teal' : 'gray')
                     ->sortable(),
 
                 TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'active' => 'success',
-                        'disabled' => 'danger',
-                        default => 'gray',
-                    })
+                    ->formatStateUsing(fn (mixed $state): string => self::asString($state))
+                    ->color(fn (User $record): string => $record->isActive() ? 'success' : 'danger')
                     ->sortable(),
 
-                TextColumn::make('lab')
+                // A computed column, so it is deliberately not sortable or
+                // searchable: there is no matching database column to query.
+                TextColumn::make('lab_container_name')
                     ->label('Lab Environment')
-                    // Mirrors the initial state in the specification: an
-                    // account exists before it is assigned a lab.
-                    ->state(fn (User $record): string => $record->lab
-                        ? $record->lab->container_name
-                        : 'No Lab Environment')
+                    ->state(fn (User $record): string => $record->lab?->container_name ?? 'No Lab Environment')
                     ->badge()
-                    ->color(fn (User $record): string => $record->lab ? 'success' : 'warning')
-                    ->searchable(),
+                    ->color(fn (User $record): string => $record->lab === null ? 'warning' : 'success')
+                    ->toggleable(),
 
                 TextColumn::make('last_login_at')
                     ->label('Last login')
@@ -84,5 +81,16 @@ class UsersTable
                 ViewAction::make(),
             ])
             ->paginated([10, 25, 50]);
+    }
+
+    /**
+     * Badge labels are rendered uppercase, so a role reads as ADMIN or STUDENT
+     * rather than Admin. Enum and null states are both handled.
+     */
+    private static function asString(mixed $state): string
+    {
+        $value = $state instanceof \BackedEnum ? (string) $state->value : (is_scalar($state) ? (string) $state : '');
+
+        return strtoupper($value);
     }
 }

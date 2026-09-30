@@ -4,12 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\LabProvisioner;
 use App\Infrastructure\Provision\IncusLabProvisioner;
-use App\Listeners\RecordPortalLogin;
-use App\Models\User;
-use App\Observers\UserObserver;
 use App\Services\LabPortAllocationService;
-use Illuminate\Auth\Events\Login;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -33,14 +28,15 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Bootstrap any application services.
+     *
+     * Nothing is registered here on purpose. The portal login listener is
+     * discovered from app/Listeners, and the user observer is declared on the
+     * model with #[ObservedBy]. Registering either manually from a provider
+     * risks double registration, which would write two identical audit rows
+     * for a single change.
      */
     public function boot(): void
     {
-        // Signing in is an audited event and also stamps last_login_at.
-        Event::listen(Login::class, RecordPortalLogin::class);
-
-        // Role and status changes are audited on the model, so the entry is
-        // written whichever surface made the change.
-        User::observe(UserObserver::class);
+        //
     }
 }
