@@ -80,6 +80,12 @@ The 2026-09-25 application-directory observation above was superseded by direct 
 - An unprivileged database-queue worker was started alongside the existing development server. This is not a persistent production service, and the mutation provider remains intentionally fail-closed with `not_configured`, so queued lifecycle requests cannot mutate Incus, OpenTofu, Ansible, or networking.
 - The Prometheus health validator was corrected under a RED-GREEN regression test to accept the observed standard response `Prometheus Server is Healthy.`. Fresh portal health results were Incus, MySQL, Prometheus, Grafana, and Blackbox `healthy`; automation `degraded` because its tools are available while live mutation remains disabled; and Wazuh `not_connected`.
 
+Verified again on 2026-10-01 after an `IAAS-MGMT` reboot:
+
+- The Laravel source tree, application key, compiled frontend assets, database migrations, and queue worker were present and healthy, but the manually started development web process had not returned after boot.
+- The unprivileged `php artisan serve --host=0.0.0.0 --port=8000` process was restored from the canonical `/home/iaas/projects/webportal-iaas` tree. `/` and `/up` returned HTTP 200 through both `192.168.100.10:8000` and the VM's Tailscale address `100.77.79.18:8000`.
+- The development listener remains nonpersistent. Apache port 80 still serves the Ubuntu default page; no Apache, firewall, routing, or Tailscale configuration was changed.
+
 This remains a single-environment proof of concept. Multi-user OpenTofu state strategy, Wazuh integration, web terminal, persistent production web/queue serving, live lifecycle mutation, and end-to-end micro-segmentation enforcement remain pending.
 
 ## Distributed infrastructure audit
