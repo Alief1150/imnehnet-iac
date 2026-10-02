@@ -35,6 +35,58 @@ fi
 echo "==> Reloading"
 systemctl reload apache2
 
+echo "==> Checking that the portal and its assets are both served"
+
+# Three checks, because each of these has been broken at a different point and
+# none of them shows up in the others.
+#
+#   /up                 the application runs at all
+#   /build/manifest.json  a static file is served rather than routed to PHP
+#   the theme stylesheet   the file the manifest actually points at
+#
+# The second and third are what catch a routing rule that sends everything to
+# index.php: the page still returns 200, so a status check on the page passes,
+# while the stylesheet quietly 404s and the portal renders unstyled.
+status_up=$(curl -s -o /dev/null -m 8 -w '%{http_code}' http://127.0.0.1/up)
+status_manifest=$(curl -s -o /dev/null -m 8 -w '%{http_code}' http://127.0.0.1/build/manifest.json)
+
+theme_path=$(curl -s -m 8 http://127.0.0.1/build/manifest.json \
+    | grep -oE 'assets/theme-[a-zA-Z0-9]+\.css' | head -1 || true)
+if [ -n "$theme_path" ]; then
+    status_theme=$(curl -s -o /dev/null -m 8 -w '%{http_code}' "http://127.0.0.1/build/$theme_path")
+else
+    status_theme="000"
+fi
+
+echo "    /up                     -> $status_up"
+echo "    /build/manifest.json    -> $status_manifest"
+echo "    /build/$theme_path -> $status_theme"
+
+if [ "$status_up" != "200" ]; then
+    echo "The application is not answering. Check that proxy_fcgi is enabled and that" >&2
+    echo "php-fpm is running; see the error log if it answers with 500." >&2
+    exit 1
+fi
+
+if [ "$status_manifest" != "200" ] || [ "$status_theme" != "200" ]; then
+    cat >&2 <<WARN
+Static files are not being served.
+
+A routing rule is most likely handing every request to index.php, so the
+application answers 404 for its own stylesheets and the portal renders with no
+styling while still returning 200 for the page itself.
+
+%REQUEST_FILENAME% is not reliably the filesystem path when a server-context
+rewrite runs, which makes the usual
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+
+always true in a VirtualHost. FallbackResource is consulted after the document
+root has been walked and does not have that problem.
+WARN
+    exit 1
+fi
+
 echo "==> Checking the terminal gate"
 # Without a leased slot every terminal path must be refused. A 503 here would
 # mean the request reached the proxy without a token, which is the bug this
