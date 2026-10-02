@@ -7,6 +7,7 @@ use App\Models\TerminalSession;
 use App\Models\User;
 use App\Services\TerminalService;
 use App\Support\EnvironmentWorkspace;
+use App\Support\TerminalSlotGrants;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\Process\Process;
@@ -42,7 +43,19 @@ function terminalService(): TerminalService
         portRange: [38100, 38150],
         logDirectory: storage_path('logs/terminal-test'),
         probeTimeoutSeconds: 3,
+        grants: new TerminalSlotGrants(slotMapPath()),
     );
+}
+
+/**
+ * Each test gets its own map file. Sharing one would let a grant written by one
+ * test satisfy another, and the tests would pass while the behaviour is wrong.
+ */
+function slotMapPath(): string
+{
+    $path = storage_path('framework/testing/slots-'.bin2hex(random_bytes(6)).'.map');
+
+    return $path;
 }
 
 test('the terminal is refused when the environment does not enable it', function () {

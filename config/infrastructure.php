@@ -139,10 +139,25 @@ return [
         'port_range_max' => (int) env('TERMINAL_PORT_RANGE_MAX', 38007),
         'log_directory' => env('TERMINAL_LOG_DIRECTORY', storage_path('logs/terminal')),
 
-        // Off by default. Turning this on opens a port that serves a shell.
-        'relay_enabled' => (bool) env('TERMINAL_RELAY_ENABLED', false),
-        'relay_bind' => env('TERMINAL_RELAY_BIND', '127.0.0.1'),
-        'relay_port' => (int) env('TERMINAL_RELAY_PORT', 38443),
+        // The file Apache reads to decide which slot is leased and with which
+        // token. Its directory has to be shared between the two: the portal
+        // writes it, Apache reads it. The vhost refuses a terminal path whose
+        // token is not in this file, so an unleased slot cannot be reached.
+        'slot_map_file' => env('TERMINAL_SLOT_MAP_FILE', '/var/lib/imnehnet/terminal/slots.map'),
+
+        // Whether the portal hands a browser a terminal address at all.
+        //
+        // This is the switch for exposing a shell, and it is off by default
+        // because getting it wrong means serving a shell rather than serving
+        // nothing. The prerequisites are listed rather than assumed, because
+        // enabling this on a host where they do not hold would produce a
+        // terminal that silently never connects:
+        //
+        //   - Apache has proxy_fcgi, proxy_wstunnel and rewrite enabled
+        //   - the vhost's slots match port_range_min..port_range_max
+        //   - this directory is writable by the portal and readable by Apache
+        //   - the host is on HTTPS, or the keystrokes cross the LAN in clear
+        'browser_access_enabled' => (bool) env('TERMINAL_BROWSER_ACCESS', false),
     ],
 
     'wazuh_api_url' => env('WAZUH_API_URL', 'https://127.0.0.1:55000'),

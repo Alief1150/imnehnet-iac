@@ -75,10 +75,26 @@ vhost lists slots `38000`–`38007`, and the portal lends them out one at a time
 `infrastructure.terminal.port_range_min` / `_max` in `config/infrastructure.php`.
 They have to agree, and a slot in the vhost with no ttyd behind it is a 502.
 
-Each slot is protected by HTTP basic auth whose password file the portal writes
-when a session starts and deletes when it ends, so a slot nobody has leased has
-no valid user. This is in addition to `ttyd`'s own credential, not instead of
-it: two independent gates rather than one.
+Each slot is protected by a token rather than by HTTP basic auth. The portal
+writes `slots.map` — one `port token` line per leased slot — when a session
+starts and removes the line when it ends, and Apache reads it through
+`RewriteMap` to decide whether a request carries the right token for the slot it
+is aimed at.
+
+Basic auth was the obvious alternative and does not work here: an iframe cannot
+be loaded with an `Authorization` header, so every terminal would raise a
+password prompt, which for an embedded terminal is unusable. A token in the
+query string can be, because the iframe's URL is what the portal hands over in
+the first place.
+
+A port with no line in the map matches nothing, so an unleased slot is refused
+rather than forwarded. That refusal is the `NONE` default in the allow rule: a
+missing entry compares as `NONE`, which never equals a real token.
+
+The file is replaced by renaming a temporary over it, so Apache reads either the
+previous map or the new one and never a half-written one. It is `0640`,
+`iaas:www-data`: the portal writes it, Apache reads it, and nobody else has any
+business looking at bearer values for live shells.
 
 ## TLS is deliberately not enabled here
 

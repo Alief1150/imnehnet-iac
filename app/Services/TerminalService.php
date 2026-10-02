@@ -6,6 +6,7 @@ use App\Models\LabEnvironment;
 use App\Models\TerminalSession;
 use App\Models\User;
 use App\Support\EnvironmentWorkspace;
+use App\Support\TerminalSlotGrants;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 
@@ -53,6 +54,7 @@ class TerminalService
         private readonly array $portRange,
         private readonly string $logDirectory,
         private readonly int $probeTimeoutSeconds,
+        private readonly TerminalSlotGrants $grants,
     ) {}
 
     public static function fromConfig(): self
@@ -69,6 +71,9 @@ class TerminalService
             ],
             logDirectory: (string) config('infrastructure.terminal.log_directory'),
             probeTimeoutSeconds: (int) config('infrastructure.probe_timeout_seconds', 3),
+            grants: new TerminalSlotGrants(
+                (string) config('infrastructure.terminal.slot_map_file'),
+            ),
         );
     }
 
@@ -111,7 +116,7 @@ class TerminalService
 
         $pid = $this->spawn($environment->container_name, $shellUid, $port, $credential);
 
-        return TerminalSession::query()->create([
+        $session = TerminalSession::query()->create([
             'user_id' => $user->id,
             'lab_environment_id' => $environment->id,
             'container_name' => $environment->container_name,
@@ -122,6 +127,14 @@ class TerminalService
             'shell_user' => $this->shellUser,
             'expires_at' => now()->addMinutes($this->sessionTtlMinutes),
         ]);
+
+        // The grant is written last, once the session row and the process both
+        // exist. Writing it first would let a browser reach a slot whose ttyd
+        // has not bound yet, which presents as a terminal that loads and then
+        // sits there empty.
+        $this->grants->grant($port, $credential);
+
+        return $session;
     }
 
     /**
@@ -138,6 +151,13 @@ class TerminalService
         }
 
         $this->terminate($session);
+
+        // Revoked after the process is gone, so the window in which the slot is
+        // granted but dead is smaller than the window in which it is withdrawn
+        // but still reachable.
+        if ($session->ttyd_port !== null && is_numeric($session->ttyd_port)) {
+            $this->grants->revoke((int) $session->ttyd_port);
+        }
     }
 
     /**
@@ -229,6 +249,32 @@ class TerminalService
         $uid = trim($process->getOutput());
 
         return ctype_digit($uid) && (int) $uid > 0 ? (int) $uid : null;
+    }
+
+    /**
+     * The address a browser uses to reach this session's terminal.
+     *
+     * The token travels in the query string rather than in the path so that
+     * Apache's per-slot ProxyPass can forward it untouched, and rather than in
+     * the URL's userinfo section because browsers refuse credentials embedded
+     * in a subresource. It is a bearer value for one leased slot for one short
+     * session, and it stops being accepted the moment the session closes.
+     */
+    public function browserUrl(TerminalSession $session): ?string
+    {
+        if (! $session->isUsable() || $session->ttyd_port === null || $session->credential === null) {
+            return null;
+        }
+
+        if (! config('infrastructure.terminal.relay_enabled')) {
+            return null;
+        }
+
+        return sprintf(
+            '/terminal/%s/?t=%s',
+            $session->ttyd_port,
+            $session->credential,
+        );
     }
 
     /**

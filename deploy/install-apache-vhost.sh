@@ -66,14 +66,36 @@ chmod o+x /home/iaas/projects
 
 echo "==> Preparing the terminal slot directory"
 install -d -o www-data -g iaas -m 0770 "$SLOT_DIR"
-# The portal runs as iaas and rewrites a slot's password file when a terminal
-# session starts. Apache reads them as www-data. The group is shared so one
-# directory serves both without either side being able to read the other's
-# private files elsewhere in the home directory.
+# The portal writes the grant map as iaas, Apache reads it as www-data. The
+# group is shared so one directory serves both without either side being able to
+# read the other's private files elsewhere in the home directory.
+
+# The map has to exist before Apache starts. RewriteMap reads it on every
+# terminal request, and a missing file is a 500 for the whole vhost rather than a
+# refused terminal, so the file is created empty rather than left to the portal.
+if [ ! -f "$SLOT_DIR/slots.map" ]; then
+    cat > "$SLOT_DIR/slots.map" <<'MAP'
+# IMNEHNET terminal slot grants. Written by the portal; read by Apache.
+# port token
+MAP
+fi
+chown iaas:www-data "$SLOT_DIR/slots.map"
+# Apache has to be able to read it, the portal has to be able to replace it, and
+# nobody else has any business looking at it: these are bearer values for live
+# shells.
+chmod 0640 "$SLOT_DIR/slots.map"
 
 echo "==> Checking storage is writable by php-fpm"
 chgrp -R www-data "$APP_DIR/storage" "$APP_DIR/bootstrap"
 find "$APP_DIR/storage" "$APP_DIR/bootstrap" -type d -exec chmod 2775 {} +
+
+echo "==> Pointing the portal at the shared slot map"
+# The map path lives in the portal's configuration, and the two have to agree:
+# Apache reads whatever this file says, and the portal writes wherever its
+# configuration says. If they drift, every terminal is refused while the portal
+# reports the session as healthy.
+grep -q '^TERMINAL_SLOT_MAP_FILE=' "$APP_DIR/.env" \
+    || echo 'TERMINAL_SLOT_MAP_FILE='"$SLOT_DIR"'/slots.map' >> "$APP_DIR/.env"
 
 echo "==> Installing the vhost"
 install -m 0644 "$VHOST_SRC" /etc/apache2/sites-available/imnehnet-portal.conf
