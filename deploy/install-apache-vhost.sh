@@ -44,7 +44,19 @@ echo "==> Enabling proxy modules"
 # out the others. headers is needed so the upgrade and connection headers can
 # be cleared, which is required before setting them again or Apache sends them
 # twice and the client refuses the connection.
-a2enmod proxy proxy_http proxy_wstunnel headers
+#
+# proxy_fcgi is the one that is easy to miss. a2enmod proxy does NOT enable it:
+# mod_proxy handles ordinary HTTP forwarding, and executing PHP through
+# php-fpm needs the FastCGI half as a separate module. Without it the vhost's
+# SetHandler names a handler that does not exist, and Apache serves every .php
+# file as plain text. The page still returns 200, so it looks like it is
+# working, while the response body is the application's own source code.
+a2enmod proxy proxy_http proxy_wstunnel headers proxy_fcgi
+
+# rewrite routes every path that is not a real file to index.php. Without it
+# /up and /admin/login return 404, because neither exists on disk, and the
+# failure reads as a broken application rather than a missing rule.
+a2enmod rewrite
 
 echo "==> Making the application reachable by www-data"
 # Traverse only. Without the x bit on the home directory Apache cannot get to
@@ -78,6 +90,14 @@ Done. Check it:
 
   sudo apache2ctl configtest
   curl -I http://127.0.0.1/up
+
+Two checks worth doing rather than trusting the first 200:
+
+  # the login page must be HTML, not PHP source
+  curl -s http://127.0.0.1/admin/login | head -1
+
+  # a terminal slot nobody has leased must be 401, and must stay 401
+  curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1/terminal/38000/
 
 Before the terminal works, the portal must be able to write a slot's password
 file, which is a feature that still has to be built. Until then /terminal/38000
