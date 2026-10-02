@@ -11,41 +11,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 /**
- * Reads a configuration value off an action that is not yet bound to a table.
- *
- * A standalone Action has no evaluation context, so the framework's own
- * evaluate() is not usable here and the property is read directly. The point
- * of the assertions that use this is that a confirmation requirement is part
- * of the action's definition, not something a table happens to add.
- */
-function actionProperty(Action $action, string $property): mixed
-{
-    // The property comes from a trait, so it is declared on a class further up
-    // the hierarchy rather than on the action itself. Reflecting on the action
-    // directly reports it as missing.
-    for ($class = new ReflectionObject($action); $class !== false; $class = $class->getParentClass()) {
-        if (! $class->hasProperty($property)) {
-            continue;
-        }
-
-        $reflection = $class->getProperty($property);
-        $reflection->setAccessible(true);
-
-        // A typed property with no default is uninitialised until something sets
-        // it, which reads as absent here rather than as false.
-        if (! $reflection->isInitialized($action)) {
-            return null;
-        }
-
-        $value = $reflection->getValue($action);
-
-        return $value instanceof Closure ? $value() : $value;
-    }
-
-    return null;
-}
-
-/**
  * The specification defines which actions appear from which state. Getting that
  * table wrong means offering an operator a button that either races an
  * operation already running, or, worse, a button on the protected reference
@@ -120,34 +85,30 @@ test('the protected reference environment offers only a refresh', function () {
     assertActions($record, ['refresh'], ['start', 'stop', 'reset', 'delete']);
 });
 
-test('reset and delete are declared as requiring confirmation', function () {
+test('a destructive action requires confirmation and a read-only one does not', function () {
     $byName = collect(EnvironmentActions::all())
         ->keyBy(fn ($action): string => $action->getName());
 
-    // The confirmation requirement lives on the action definition, so it is
-    // checked at the source rather than through the table. Filament stores it
-    // in an internal property whose name is not part of its public surface, so
-    // this asserts the thing that actually matters instead: that the two
-    // destructive actions behave differently from the read-only one once they
-    // are invoked.
-
-    expect(actionProperty($byName->get('reset'), 'confirmation') !== null
-        || actionProperty($byName->get('reset'), 'requiresConfirmation') !== null
-        || actionProperty($byName->get('reset'), 'modalHeading') !== null)->toBeTrue()
-        ->and(actionProperty($byName->get('delete'), 'modalHeading'))->not->toBeNull()
-        ->and(actionProperty($byName->get('refresh'), 'modalHeading'))->toBeNull();
+    // Read through the framework's own accessors. An earlier version of this
+    // test reached into the action's private properties and had to be rewritten
+    // four times as the internals moved; the public accessors say the same thing
+    // and will not break when a trait is reorganised.
+    expect($byName->get('reset')->isConfirmationRequired())->toBeTrue()
+        ->and($byName->get('delete')->isConfirmationRequired())->toBeTrue()
+        ->and($byName->get('start')->isConfirmationRequired())->toBeFalse()
+        ->and($byName->get('stop')->isConfirmationRequired())->toBeFalse()
+        ->and($byName->get('refresh')->isConfirmationRequired())->toBeFalse();
 });
 
 test('a reset says plainly that the address will change', function () {
     $reset = collect(EnvironmentActions::all())
         ->firstWhere(fn ($action): bool => $action->getName() === 'reset');
 
-    $text = '';
-
-    foreach (['modalHeading', 'modalDescription', 'modalSubmitActionLabel'] as $property) {
-        $value = actionProperty($reset, $property);
-        $text .= ' '.(is_scalar($value) ? (string) $value : '');
-    }
+    $text = implode(' ', [
+        (string) $reset->getModalHeading(),
+        (string) $reset->getModalDescription(),
+        (string) $reset->getModalSubmitActionLabel(),
+    ]);
 
     // A reset destroys and recreates the container, so its address changes.
     // Anything written down beforehand stops being true, and that has to be
@@ -160,12 +121,13 @@ test('a delete says the container goes before the record', function () {
     $delete = collect(EnvironmentActions::all())
         ->firstWhere(fn ($action): bool => $action->getName() === 'delete');
 
-    $text = '';
+    $text = implode(' ', [
+        (string) $delete->getModalHeading(),
+        (string) $delete->getModalDescription(),
+        (string) $delete->getModalSubmitActionLabel(),
+    ]);
 
-    foreach (['modalHeading', 'modalDescription', 'modalSubmitActionLabel'] as $property) {
-        $value = actionProperty($delete, $property);
-        $text .= ' '.(is_scalar($value) ? (string) $value : '');
-    }
-
+    // Deleting the record first would leave a running container with nothing
+    // tracking it, so the wording has to put the order straight.
     expect($text)->toContain('compute plane first');
 });

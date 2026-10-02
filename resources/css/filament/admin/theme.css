@@ -5,240 +5,471 @@
 
 /*
 |--------------------------------------------------------------------------
-| IMNEHNET theme
+| IMNEHNET — infrastructure control plane
 |--------------------------------------------------------------------------
-| Visual identity:
-| - Infrastructure / cybersecurity
-| - Clean enterprise interface
-| - Teal primary accent
-| - Slate neutral palette
-| - Dark-mode friendly
+| Built for an operator reading a screen to decide what to touch next, so
+| the visual rules are about density and hierarchy rather than decoration.
+|
+| What this deliberately does not do, per the specification:
+| - no gradients, no glow, no glassmorphism, no large decorative blocks
+| - no colour doing work that text does not already state
+|
+| Every status is carried by three things at once: a colour, an icon and a
+| word. Colour alone would leave the interface unreadable to a good share of
+| people and ambiguous in a screenshot printed in black and white.
 |--------------------------------------------------------------------------
 */
 
 /* =========================================================
-   IMNEHNET DESIGN TOKENS
+   PALETTE
+
+   Kept as raw values rather than Filament's generated shades so the
+   relationships are visible: near-black ground, graphite surfaces,
+   slate hairlines, teal accent.
    ========================================================= */
 
 :root {
-    --imnehnet-primary: #0f766e;
-    --imnehnet-primary-hover: #115e59;
-    --imnehnet-primary-light: #14b8a6;
+    --imnehnet-ground: #08090b;
+    --imnehnet-surface: #0e1013;
+    --imnehnet-raised: #14171b;
+    --imnehnet-sunken: #0a0c0e;
+    --imnehnet-line: #1e232a;
+    --imnehnet-line-strong: #2a3038;
 
-    --imnehnet-radius-sm: 0.5rem;
-    --imnehnet-radius-md: 0.75rem;
-    --imnehnet-radius-lg: 1rem;
+    --imnehnet-text: #e8eaed;
+    --imnehnet-text-muted: #9aa3ae;
+    --imnehnet-text-faint: #6b7480;
+
+    --imnehnet-accent: #14b8a6;
+    --imnehnet-accent-dim: #0f766e;
+
+    --imnehnet-ready: #22c55e;
+    --imnehnet-info: #3b82f6;
+    --imnehnet-warn: #f59e0b;
+    --imnehnet-danger: #ef4444;
+    --imnehnet-idle: #64748b;
 }
 
 /* =========================================================
-   GLOBAL BODY
+   GROUND
+
+   Flat. The previous version painted a radial highlight into the
+   background, which is decoration that carries no information and
+   shows up as a visible smudge in screenshots.
    ========================================================= */
 
 .fi-body {
-    background:
-        radial-gradient(
-            circle at 100% 0%,
-            rgba(20, 184, 166, 0.07),
-            transparent 28rem
-        ),
-        var(--gray-50);
+    background-color: var(--imnehnet-ground);
+    background-image: none;
+    color: var(--imnehnet-text);
 }
 
-/* Dark mode */
-
-.dark .fi-body {
-    background:
-        radial-gradient(
-            circle at 100% 0%,
-            rgba(20, 184, 166, 0.08),
-            transparent 30rem
-        ),
-        var(--gray-950);
+/* The shell sits on the same ground; separation comes from a hairline
+   rather than from a second background colour. */
+.fi-body-override,
+.fi-body > div {
+    background-color: var(--imnehnet-ground);
 }
 
 /* =========================================================
    SIDEBAR
+
+   Deep graphite with a faint teal cast, so the navigation reads as a
+   distinct plane without needing a border to prove it.
    ========================================================= */
 
 .fi-sidebar {
-    border-right: 1px solid var(--gray-200);
+    background-color: var(--imnehnet-surface);
+    border-inline-end: 1px solid var(--imnehnet-line);
 }
-
-.dark .fi-sidebar {
-    border-right-color: var(--gray-800);
-}
-
-/* Sidebar header */
 
 .fi-sidebar-header {
-    border-bottom: 1px solid var(--gray-200);
+    background-color: transparent;
+    border-block-end: 1px solid var(--imnehnet-line);
+    padding-block: 1rem;
 }
 
-.dark .fi-sidebar-header {
-    border-bottom-color: var(--gray-800);
+/* Brand text is the identity, so it is set in the accent and treated as
+   a label rather than as a heading competing with page titles. */
+.fi-sidebar-header .fi-sidebar-brand {
+    color: var(--imnehnet-accent);
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
-/* =========================================================
-   NAVIGATION
-   ========================================================= */
-
-.fi-sidebar-item {
-    border-radius: var(--imnehnet-radius-sm);
+.fi-sidebar-group-label {
+    color: var(--imnehnet-text-faint);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .fi-sidebar-item-button {
-    transition:
-        background-color 150ms ease,
-        color 150ms ease,
-        transform 150ms ease;
+    border-radius: 0.375rem;
+    color: var(--imnehnet-text-muted);
+    transition: background-color 120ms ease, color 120ms ease;
 }
 
 .fi-sidebar-item-button:hover {
-    transform: translateX(1px);
+    background-color: var(--imnehnet-raised);
+    color: var(--imnehnet-text);
 }
 
-/* =========================================================
-   BRANDING
-   Filament 5 has no brandSubtitle() API, so the product subtitle
-   from the specification is rendered beneath the brand name.
-   ========================================================= */
-
-.fi-sidebar-header .fi-sidebar-item-button {
-    align-items: flex-start;
-}
-
-.fi-sidebar-header .fi-sidebar-item-label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    line-height: 1.2;
-}
-
-.fi-sidebar-header .fi-sidebar-item-label::after {
-    content: 'Cybersecurity Infrastructure Control Plane';
-    font-size: 0.625rem;
+.fi-sidebar-item.is-active .fi-sidebar-item-button {
+    background-color: color-mix(in oklab, var(--imnehnet-accent) 12%, transparent);
+    color: var(--imnehnet-text);
     font-weight: 500;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--gray-500);
 }
 
-.dark .fi-sidebar-header .fi-sidebar-item-label::after {
-    color: var(--gray-400);
+/* The active marker is a rule, not a glow. */
+.fi-sidebar-item.is-active .fi-sidebar-item-button::before {
+    background-color: var(--imnehnet-accent);
 }
 
-/* =========================================================
-   TOPBAR
-   ========================================================= */
-
-.fi-topbar {
-    border-bottom: 1px solid var(--gray-200);
-}
-
-.dark .fi-topbar {
-    border-bottom-color: var(--gray-800);
+.fi-sidebar-item-icon svg,
+.fi-sidebar-group-icon svg {
+    width: 1.125rem;
+    height: 1.125rem;
 }
 
 /* =========================================================
-   CONTENT SECTIONS
+   TOP BAR
    ========================================================= */
 
-.fi-section {
-    border-radius: var(--imnehnet-radius-md);
+.fi-topbar > nav {
+    background-color: color-mix(in oklab, var(--imnehnet-ground) 88%, transparent);
+    border-block-end: 1px solid var(--imnehnet-line);
+    backdrop-filter: none;
+}
+
+/* =========================================================
+   SURFACES
+
+   Charcoal panels on a near-black ground, separated by a low-contrast
+   slate hairline. Enough contrast to see the edge, not enough to
+   draw attention to it.
+   ========================================================= */
+
+.fi-section,
+.fi-wi-stats-overview-stat,
+.fi-ta-ctn,
+.fi-dropdown-panel,
+.fi-modal-window {
+    background-color: var(--imnehnet-surface);
+    border: 1px solid var(--imnehnet-line);
+    border-radius: 0.5rem;
+    box-shadow: none;
+}
+
+.fi-section-header,
+.fi-wi-stats-overview-stat {
+    border-radius: 0.5rem;
+}
+
+.fi-section-header-ctn {
+    background-color: var(--imnehnet-raised);
+    border: 1px solid var(--imnehnet-line);
+    border-radius: 0.5rem;
+}
+
+.fi-modal-backdrop {
+    background-color: rgb(0 0 0 / 0.7);
+    backdrop-filter: none;
+}
+
+/* =========================================================
+   PAGE HEADING
+
+   One clear title per screen. The subheading is a single quiet line,
+   never a paragraph.
+   ========================================================= */
+
+.fi-header-heading {
+    color: var(--imnehnet-text);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.fi-header-subheading {
+    color: var(--imnehnet-text-faint);
+    font-size: 0.8125rem;
 }
 
 /* =========================================================
    TABLES
+
+   The operational screen. Rows are compact so more of them fit without
+   scrolling, and the identifiers an operator scans for are set in a
+   monospace face so digits line up and a mistyped address is visible.
    ========================================================= */
 
-.fi-ta-ctn {
-    border-radius: var(--imnehnet-radius-md);
-    overflow: hidden;
+.fi-ta-header-cell {
+    background-color: var(--imnehnet-raised);
+    color: var(--imnehnet-text-faint);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding-block: 0.5rem;
+    white-space: nowrap;
 }
 
-.fi-ta-header-cell {
-    font-weight: 600;
+.fi-ta-row {
+    border-color: var(--imnehnet-line);
+}
+
+.fi-ta-row:hover {
+    background-color: color-mix(in oklab, var(--imnehnet-raised) 60%, transparent);
+}
+
+.fi-ta-cell {
+    padding-block: 0.5rem;
+    color: var(--imnehnet-text-muted);
+    font-size: 0.8125rem;
+}
+
+/* Identifiers: addresses, workspaces, container names. */
+.fi-ta-cell .fi-ta-text-item-label[data-lenis-prevent],
+.font-mono,
+.fi-ta-cell code {
+    font-family: ui-monospace, 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
+    font-size: 0.8125rem;
+}
+
+.fi-ta-cell [data-mono='true'] {
+    color: var(--imnehnet-text);
 }
 
 /* =========================================================
-   FORMS
+   BADGES
+
+   Compact, bordered, no blur. A badge is a word plus a colour plus an
+   icon; the shape exists to separate it from ordinary text, not to
+   catch the eye on its own.
    ========================================================= */
 
-.fi-fo-field-wrp-label {
+.fi-badge {
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
     font-weight: 600;
+    letter-spacing: 0.02em;
+    padding-inline: 0.4375rem;
+    padding-block: 0.125rem;
+    border: 1px solid color-mix(in oklab, currentColor 30%, transparent);
+    background-color: color-mix(in oklab, currentColor 12%, transparent);
+}
+
+.fi-badge-icon svg {
+    width: 0.75rem;
+    height: 0.75rem;
 }
 
 /* =========================================================
    BUTTONS
+
+   One accent, used sparingly. Secondary actions stay neutral so the
+   single destructive or primary action on a screen is unambiguous.
    ========================================================= */
 
 .fi-btn {
-    border-radius: var(--imnehnet-radius-sm);
+    border-radius: 0.375rem;
+    font-weight: 500;
+    box-shadow: none;
+}
+
+.fi-btn.fi-color-primary,
+.fi-btn[class*='fi-color-primary'] {
+    background-color: var(--imnehnet-accent-dim);
+    border-color: var(--imnehnet-accent-dim);
+    color: #fff;
+}
+
+.fi-btn[class*='fi-color-primary']:hover {
+    background-color: var(--imnehnet-accent);
+    border-color: var(--imnehnet-accent);
+}
+
+/* Row actions are icon-only by design here: five verbs side by side need
+   less room as glyphs than as words, and each carries a tooltip. */
+.fi-ta-row .fi-btn {
+    padding-inline: 0.5rem;
 }
 
 /* =========================================================
-   WIDGETS / STAT CARDS
+   INPUTS
+   ========================================================= */
+
+.fi-input,
+.fi-select-input,
+.fi-input-wrp {
+    background-color: var(--imnehnet-sunken);
+    border-color: var(--imnehnet-line-strong);
+    border-radius: 0.375rem;
+    color: var(--imnehnet-text);
+}
+
+.fi-input-wrp:focus-within {
+    border-color: var(--imnehnet-accent);
+    box-shadow: 0 0 0 1px var(--imnehnet-accent);
+}
+
+.fi-input::placeholder {
+    color: var(--imnehnet-text-faint);
+}
+
+/* =========================================================
+   STAT TILES
+
+   Figures first, label second. The description is a single quiet line
+   of context, never a second figure competing with the first.
    ========================================================= */
 
 .fi-wi-stats-overview-stat {
-    border-radius: var(--imnehnet-radius-md);
+    padding: 0.875rem 1rem;
+}
+
+.fi-wi-stats-overview-stat-value {
+    color: var(--imnehnet-text);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.fi-wi-stats-overview-stat-label {
+    color: var(--imnehnet-text-faint);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.fi-wi-stats-overview-stat-description {
+    color: var(--imnehnet-text-muted);
+    font-size: 0.75rem;
+}
+
+.fi-wi-stats-overview-stat {
+    border-inline-start: 2px solid var(--imnehnet-line-strong);
+}
+
+.fi-wi-stats-overview-stat[data-color='success'] {
+    border-inline-start-color: var(--imnehnet-ready);
+}
+
+.fi-wi-stats-overview-stat[data-color='danger'] {
+    border-inline-start-color: var(--imnehnet-danger);
+}
+
+.fi-wi-stats-overview-stat[data-color='gray'] {
+    border-inline-start-color: var(--imnehnet-idle);
 }
 
 /* =========================================================
-   MODALS
+   TERMINAL
+
+   Black on near-black, monospace, no scroll interception. The terminal
+   has to feel like a terminal, and smooth scrolling in a shell makes
+   it feel like a web page.
    ========================================================= */
 
-.fi-modal-window {
-    border-radius: var(--imnehnet-radius-md);
+[data-terminal-surface],
+.xterm-viewport {
+    scroll-behavior: auto !important;
+}
+
+[data-lenis-prevent] {
+    overscroll-behavior: contain;
 }
 
 /* =========================================================
-   STATUS COLORS
-   Used later by Lab / Container resources.
+   MISCELLANEOUS
+
+   The parts that otherwise look borrowed from a component library.
    ========================================================= */
 
-.imnehnet-status-running {
-    color: #16a34a;
+.fi-badge-tabs,
+.fi-tabs {
+    border-color: var(--imnehnet-line);
 }
 
-.imnehnet-status-starting {
-    color: #d97706;
+.fi-tabs-item {
+    color: var(--imnehnet-text-muted);
 }
 
-.imnehnet-status-stopped {
-    color: #64748b;
+.fi-tabs-item.is-active {
+    color: var(--imnehnet-accent);
+    border-color: var(--imnehnet-accent);
 }
 
-.imnehnet-status-error {
-    color: #dc2626;
+.fi-dropdown-item {
+    color: var(--imnehnet-text-muted);
+}
+
+.fi-dropdown-item:hover {
+    background-color: var(--imnehnet-raised);
+    color: var(--imnehnet-text);
+}
+
+.fi-color-gray {
+    --fi-color-gray-50: var(--imnehnet-sunken);
+    --fi-color-gray-100: var(--imnehnet-surface);
+    --fi-color-gray-400: var(--imnehnet-text-faint);
+    --fi-color-gray-500: var(--imnehnet-text-muted);
+    --fi-color-gray-600: var(--imnehnet-text-muted);
+    --fi-color-gray-700: var(--imnehnet-line-strong);
+    --fi-color-gray-800: var(--imnehnet-raised);
+    --fi-color-gray-900: var(--imnehnet-surface);
+}
+
+.fi-color-primary {
+    --fi-color-primary-50: var(--imnehnet-accent);
+    --fi-color-primary-500: var(--imnehnet-accent);
+    --fi-color-primary-600: var(--imnehnet-accent-dim);
+}
+
+/* Scrollbars, so a long table does not introduce the one bright element
+   the palette was built to avoid. */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--imnehnet-sunken);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--imnehnet-line-strong);
+    border: 2px solid var(--imnehnet-sunken);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--imnehnet-text-faint);
 }
 
 /* =========================================================
-   FOCUS / ACCESSIBILITY
+   REDUCED MOTION
+
+   Motion in this interface is decorative, so removing it costs nothing.
    ========================================================= */
 
-:focus-visible {
-    outline: 2px solid var(--imnehnet-primary-light);
-    outline-offset: 2px;
-}
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 
-/* =========================================================
-   SCROLLBAR
-   ========================================================= */
-
-.fi-sidebar::-webkit-scrollbar {
-    width: 6px;
-}
-
-.fi-sidebar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.fi-sidebar::-webkit-scrollbar-thumb {
-    background: var(--gray-300);
-    border-radius: 999px;
-}
-
-.dark .fi-sidebar::-webkit-scrollbar-thumb {
-    background: var(--gray-700);
+    /* Any spinner standing in for "working" becomes a static symbol, because a
+       frozen animation reads as a hung application. */
+    .lucide-loader-circle,
+    [class*='animate-spin'] {
+        animation: none !important;
+    }
 }
