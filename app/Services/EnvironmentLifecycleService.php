@@ -135,8 +135,27 @@ class EnvironmentLifecycleService
         return $actions;
     }
 
+    /**
+     * Whether an action may be requested for this record right now.
+     *
+     * Create is decided separately, because it does not belong in the per-status
+     * table. It appears in JOB and IN_FLIGHT but was in no ALLOWED list, so
+     * allowedActions never returned it and request('create') was refused for every
+     * record in every state. The result was a form that recorded an environment
+     * and then refused to queue it, leaving a row claiming PROVISIONING with no
+     * job, no container and no address.
+     *
+     * Its rule is about history rather than status: create is available exactly
+     * while nothing has ever been provisioned for the record. Once
+     * provisioned_at is set the container exists, and its lifecycle is start,
+     * stop, reset or delete.
+     */
     public function isActionAllowed(LabEnvironment $environment, string $action): bool
     {
+        if ($action === 'create') {
+            return $environment->provisioned_at === null && $environment->isSettled();
+        }
+
         return in_array($action, $this->allowedActions($environment), true);
     }
 
@@ -228,8 +247,22 @@ class EnvironmentLifecycleService
             'runtime_status' => $this->runtimeFromOutputs($outputs, $action),
         ];
 
-        if (($outputs['container_ipv4'] ?? null) !== null) {
-            $attributes['internal_ip'] = $this->addressFromOutputs((string) $outputs['container_ipv4']);
+        // is_string rather than a cast: an output of an unexpected shape has to
+        // leave the record without an address, not throw while trying to store
+        // one. Losing the address is visible and recoverable; a throw here leaves
+        // the record stuck in an in-flight status for ever.
+        $address = $outputs['container_ipv4'] ?? null;
+        $observed = is_string($address) && $address !== '';
+
+        if ($observed) {
+            $attributes['internal_ip'] = $this->addressFromOutputs($address);
+        } elseif ($action === 'create' || $action === 'reset') {
+            // Both of these can hand the container a different address, and both
+            // read it from the infrastructure. Keeping whatever was stored before
+            // would mean showing an address the record can no longer vouch for,
+            // which is worse than showing none: an old address looks like a
+            // current one.
+            $attributes['internal_ip'] = null;
         }
 
         if ($action === 'create' || $action === 'reset') {
@@ -297,21 +330,42 @@ class EnvironmentLifecycleService
         $environment->update(['status' => EnvironmentStatus::Configuring]);
     }
 
+    /**
+     * @param  array<string, mixed>  $outputs  What the operation reported before
+     *                                          it failed, if anything.
+     */
     public function fail(
         ?User $actor,
         LabEnvironment $environment,
         string $action,
         ProcessResult $result,
+        array $outputs = [],
     ): LabEnvironment {
         // The message is sanitised before it is stored, because OpenTofu and
         // Ansible both print enough to leak a path or a token into a browser.
         $message = $result->summary();
 
-        $environment->update([
+        $attributes = [
             'status' => EnvironmentStatus::Error,
             'runtime_status' => RuntimeStatus::Unknown,
             'last_error' => mb_substr($message, 0, 500),
-        ]);
+        ];
+
+        // A failure is not a reason to forget what was observed.
+        //
+        // The bootstrap runs after the container exists, so a bootstrap failure
+        // arrives with the address the apply already reported. That address is
+        // real and it is exactly what an operator needs in order to look at the
+        // half-built container, so it is stored. Dropping it is what left records
+        // showing an address from before, or none at all, while a container with
+        // a known address was sitting there.
+        $address = $outputs['container_ipv4'] ?? null;
+
+        if (is_string($address) && $address !== '') {
+            $attributes['internal_ip'] = $this->addressFromOutputs($address);
+        }
+
+        $environment->update($attributes);
 
         $this->activity->record(
             actor: $actor,

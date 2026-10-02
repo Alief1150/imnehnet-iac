@@ -154,7 +154,51 @@ class OpenTofuService
 
         $decoded = json_decode($result->stdout, true);
 
-        return is_array($decoded) ? $decoded : [];
+        return is_array($decoded) ? self::flattenOutputs($decoded) : [];
+    }
+
+    /**
+     * Unwrap the envelope that "tofu output -json" puts around every value.
+     *
+     * The machine readable form is not a map of values, it is a map of
+     * descriptors:
+     *
+     *     "container_ipv4": { "sensitive": false, "type": "string", "value": "10.20.0.171" }
+     *
+     * Treating that as the value made the address an array, and casting it to a
+     * string raised "Array to string conversion". That exception was thrown
+     * inside settle(), which is where a result becomes state, so the address was
+     * never stored, the record stayed in PROVISIONING for ever, and the address
+     * the portal showed was "Not observed yet" while the container had one.
+     *
+     * The sensitive flag is honoured rather than ignored: a marked value is
+     * treated as absent rather than recorded, so nothing is kept that OpenTofu
+     * says should not be.
+     *
+     * @param  array<string, mixed>  $decoded
+     * @return array<string, mixed>
+     */
+    public static function flattenOutputs(array $decoded): array
+    {
+        $flat = [];
+
+        foreach ($decoded as $name => $entry) {
+            if (! is_array($entry) || ! array_key_exists('value', $entry)) {
+                $flat[$name] = $entry;
+
+                continue;
+            }
+
+            // A sensitive output has no readable value even with -json, and
+            // keeping it would be exactly the leak the flag exists to prevent.
+            if (($entry['sensitive'] ?? false) === true) {
+                continue;
+            }
+
+            $flat[$name] = $entry['value'];
+        }
+
+        return $flat;
     }
 
     /**

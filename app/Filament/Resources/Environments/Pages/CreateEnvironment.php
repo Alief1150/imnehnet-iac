@@ -36,10 +36,17 @@ class CreateEnvironment extends CreateRecord
     {
         $data['incus_remote'] = (string) config('infrastructure.incus_remote', 'lab-env:');
         $data['incus_project'] = 'default';
-        $data['status'] = EnvironmentStatus::Provisioning;
-        // Unknown until the infrastructure reports it, which is the honest
-        // value before the container exists.
-        $data['runtime_status'] = RuntimeStatus::Unknown;
+        // Stopped, not Provisioning. The lifecycle service is the only thing that
+        // writes an in-flight status, and it does so when it accepts the request.
+        // Setting Provisioning here made the record in-flight before anyone asked
+        // for it, which meant request('create') then refused it as an operation
+        // already running: the row was created and never queued, and stayed in
+        // PROVISIONING with no container and no address.
+        //
+        // Stopped is the honest starting point. Nothing exists yet, so nothing is
+        // running, and the record has never been provisioned.
+        $data['status'] = EnvironmentStatus::Stopped;
+        $data['runtime_status'] = RuntimeStatus::Stopped;
         $data['tofu_workspace'] = EnvironmentWorkspace::forContainer($data['container_name']);
         $data['terminal_enabled'] = true;
 
@@ -131,9 +138,18 @@ class CreateEnvironment extends CreateRecord
         try {
             app(EnvironmentLifecycleService::class)->request($this->actor(), $this->record, 'create');
         } catch (\DomainException $exception) {
+            // The record exists and the request did not, so the row now claims an
+            // environment that was never created. Say what that means and offer the
+            // one action that resolves it, rather than leaving an operator looking
+            // at a PROVISIONING row that will never move.
+            $this->record->forceFill([
+                'status' => EnvironmentStatus::Error,
+                'last_error' => 'The environment was recorded but never queued: '.$exception->getMessage(),
+            ])->save();
+
             Notification::make()
                 ->title('Environment was recorded but not queued')
-                ->body($exception->getMessage())
+                ->body('Nothing was created on the compute plane. The record is marked ERROR, so it can be deleted from the list.')
                 ->danger()
                 ->persistent()
                 ->send();
