@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\EnvironmentStatus;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\LabEnvironment;
@@ -28,32 +27,58 @@ test('only active accounts can access the filament panel', function () {
         ->and($disabledAdmin->canAccessPanel($panel))->toBeFalse();
 });
 
-test('an administrator may manage every environment and a student may manage none', function () {
+test('a student may create their own environment', function () {
     $policy = new LabEnvironmentPolicy;
-    $admin = User::factory()->create(['role' => UserRole::Admin]);
-    $student = User::factory()->create();
-    $environment = LabEnvironment::factory()->create();
+    $student = User::factory()->create(['role' => UserRole::Student]);
 
-    expect($policy->viewAny($admin))->toBeTrue()
-        ->and($policy->view($admin, $environment))->toBeTrue()
-        ->and($policy->create($admin))->toBeTrue()
-        ->and($policy->update($admin, $environment))->toBeTrue()
-        ->and($policy->delete($admin, $environment))->toBeTrue()
-        ->and($policy->reconcile($admin, $environment))->toBeTrue();
-
-    // The sprint is administrator only. Owning an environment does not grant
-    // anything yet, which is the rule rather than an omission.
-    expect($policy->viewAny($student))->toBeFalse()
-        ->and($policy->view($student, $environment))->toBeFalse()
-        ->and($policy->create($student))->toBeFalse()
-        ->and($policy->update($student, $environment))->toBeFalse()
-        ->and($policy->delete($student, $environment))->toBeFalse();
+    // Provisioning your own lab is the point of a student's account. An
+    // administrator role is not required for it, and no environment has to exist
+    // first: the record is created and becomes the student's at the same moment.
+    expect($policy->viewAny($student))->toBeTrue()
+        ->and($policy->create($student))->toBeTrue();
 });
 
-test('a disabled account cannot manage an environment even with the admin role', function () {
+test('a student may manage only the environments they own', function () {
+    $policy = new LabEnvironmentPolicy;
+    $student = User::factory()->create(['role' => UserRole::Student]);
+    $other = User::factory()->create(['role' => UserRole::Student]);
+
+    $own = LabEnvironment::factory()->create(['user_id' => $student->id]);
+    $someoneElses = LabEnvironment::factory()->create(['user_id' => $other->id]);
+    $unassigned = LabEnvironment::factory()->create(['user_id' => null]);
+
+    expect($policy->view($student, $own))->toBeTrue()
+        ->and($policy->update($student, $own))->toBeTrue()
+        ->and($policy->delete($student, $own))->toBeTrue();
+
+    expect($policy->view($student, $someoneElses))->toBeFalse()
+        ->and($policy->update($student, $someoneElses))->toBeFalse()
+        ->and($policy->delete($student, $someoneElses))->toBeFalse();
+
+    // An environment nobody owns is not anybody's. Leaving it reachable would
+    // make "mine" depend on who is asking.
+    expect($policy->view($student, $unassigned))->toBeFalse()
+        ->and($policy->delete($student, $unassigned))->toBeFalse();
+});
+
+test('an administrator may manage every environment', function () {
+    $policy = new LabEnvironmentPolicy;
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    $owned = LabEnvironment::factory()->create(['user_id' => null]);
+    $someoneElses = LabEnvironment::factory()->create(['user_id' => User::factory()->create()->id]);
+
+    foreach ([$owned, $someoneElses] as $environment) {
+        expect($policy->view($admin, $environment))->toBeTrue()
+            ->and($policy->update($admin, $environment))->toBeTrue()
+            ->and($policy->delete($admin, $environment))->toBeTrue();
+    }
+});
+
+test('a disabled account cannot manage anything even with the admin role', function () {
     // The panel already refuses these accounts, so this only matters for the
-    // callers that reach the policy without going through the panel: table
-    // action closures, queued jobs, and the lifecycle service itself.
+    // callers that reach the policy without going through the panel: table action
+    // closures, queued jobs, and the lifecycle service itself.
     $policy = new LabEnvironmentPolicy;
     $disabled = User::factory()->create([
         'role' => UserRole::Admin,
@@ -83,7 +108,6 @@ test('the protected reference environment can be read but never changed', functi
     $disposable = LabEnvironment::factory()->create([
         'container_name' => 'lab-web-smoke',
         'tofu_workspace' => 'env-lab-web-smoke',
-        'status' => EnvironmentStatus::Ready,
     ]);
 
     // Reading the actual state is the point of reconciliation existing, so it

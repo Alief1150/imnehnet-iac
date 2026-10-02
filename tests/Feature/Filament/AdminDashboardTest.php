@@ -20,26 +20,44 @@ test('infrastructure and admin resources are visible only to administrators', fu
     $this->actingAs($admin);
     expect(Infrastructure::canAccess())->toBeTrue()
         ->and(UserResource::canAccess())->toBeTrue()
-        ->and(ActivityLogResource::canAccess())->toBeTrue()
-        ->and(EnvironmentResource::canAccess())->toBeTrue();
+        ->and(ActivityLogResource::canAccess())->toBeTrue();
 
     $this->actingAs($student);
     expect(Infrastructure::canAccess())->toBeFalse()
         ->and(UserResource::canAccess())->toBeFalse()
-        ->and(ActivityLogResource::canAccess())->toBeFalse()
-        ->and(EnvironmentResource::canAccess())->toBeFalse();
+        ->and(ActivityLogResource::canAccess())->toBeFalse();
 });
 
-test('the environments resource is not reachable by a student at all', function () {
-    // Ownership scoping would be the next thing to add. Right now the sprint is
-    // administrator only, and a resource that quietly lists a student's own
-    // row would be a claim the sprint does not make.
-    $student = User::factory()->create();
+test('a student reaches the environments resource and sees only their own', function () {
+    // Scoped rather than closed. A student provisions their own lab, so refusing
+    // the resource outright would leave them with no way to start one; the query
+    // is what keeps them inside their own rows.
+    $student = User::factory()->create(['role' => UserRole::Student]);
 
-    $this->actingAs($student)
-        ->get(EnvironmentResource::getUrl('index', panel: 'admin'))
-        ->assertForbidden();
+    runningEnvFor($student, 'lab-mine');
+    runningEnvFor(User::factory()->create(), 'lab-someone-else');
+    runningEnvFor(null, 'lab-unassigned');
+
+    $this->actingAs($student);
+
+    $this->get(EnvironmentResource::getUrl('index', panel: 'admin'))
+        ->assertSuccessful()
+        ->assertSee('lab-mine')
+        ->assertDontSee('lab-someone-else')
+        ->assertDontSee('lab-unassigned');
 });
+
+/**
+ * @return LabEnvironment
+ */
+function runningEnvFor(?User $owner, string $name)
+{
+    return LabEnvironment::factory()->create([
+        'container_name' => $name,
+        'tofu_workspace' => 'env-'.str_replace('lab-', '', $name),
+        'user_id' => $owner?->getKey(),
+    ]);
+}
 
 test('activity log resource exposes list and view routes only', function () {
     // An audit trail that can be edited through the interface is not an audit

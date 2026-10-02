@@ -31,3 +31,8 @@ Thumbs.db
 storage/framework/queue-worker.pid
 storage/logs/*.log
 public/build/assets
+/storage/framework/*.pid
+/storage/framework/*.heartbeat
+/storage/framework/*.lock
+/storage/framework/locks
+/storage/logs/terminal

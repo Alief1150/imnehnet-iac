@@ -8,10 +8,15 @@ use App\Models\User;
 /**
  * Access rules for an environment record.
  *
- * The sprint is administrator only, so every lifecycle action is granted to an
- * administrator. The rule is written as a policy rather than hidden inside a
- * table action so the check exists even if the button is rendered somewhere
- * else: a button is presentation, and presentation is not a control.
+ * Written as a policy rather than hidden inside a table action so the check
+ * exists even if the button is rendered somewhere else: a button is presentation,
+ * and presentation is not a control.
+ *
+ * An administrator may manage everything except the protected reference
+ * environment. Everyone else may manage only what they own, and may create their
+ * own. Ownership is compared against the record rather than assumed, because the
+ * whole point of the session and record design is that nothing can be pointed
+ * somewhere it was not granted.
  */
 class LabEnvironmentPolicy
 {
@@ -31,36 +36,41 @@ class LabEnvironmentPolicy
 
     public function viewAny(User $user): bool
     {
-        return $this->mayManage($user);
+        return $user->isActive();
     }
 
     public function view(User $user, LabEnvironment $environment): bool
     {
-        return $this->mayManage($user);
+        return $user->isActive()
+            && ($user->isAdmin() || $this->owns($user, $environment));
     }
 
     /**
-     * Creating an environment is an administrative act. Students never create
-     * their own lab; an administrator provisions one for them.
+     * Creating an environment is not an administrative act.
+     *
+     * A student provisions their own lab and owns it from the moment the record
+     * exists. The owner is assigned by the create page from the session, never
+     * from the request, so the only environment a student can create is their
+     * own.
      */
     public function create(User $user): bool
     {
-        return $this->mayManage($user);
+        return $user->isActive();
     }
 
     /**
-     * Lifecycle actions additionally refuse the reference environment. The
-     * guard lives here as well as in the lifecycle service, so a caller that
-     * reaches the policy directly is refused too.
+     * Lifecycle actions additionally refuse the reference environment. The guard
+     * lives here as well as in the lifecycle service, so a caller that reaches
+     * the policy directly is refused too.
      */
     public function update(User $user, LabEnvironment $environment): bool
     {
-        return $this->mayManage($user) && ! $environment->isProtected();
+        return $this->view($user, $environment) && ! $environment->isProtected();
     }
 
     public function delete(User $user, LabEnvironment $environment): bool
     {
-        return $this->mayManage($user) && ! $environment->isProtected();
+        return $this->view($user, $environment) && ! $environment->isProtected();
     }
 
     /**
@@ -69,6 +79,12 @@ class LabEnvironmentPolicy
      */
     public function reconcile(User $user, LabEnvironment $environment): bool
     {
-        return $this->mayManage($user);
+        return $user->isActive();
+    }
+
+    private function owns(User $user, LabEnvironment $environment): bool
+    {
+        return $environment->user_id !== null
+            && (int) $environment->user_id === (int) $user->getKey();
     }
 }

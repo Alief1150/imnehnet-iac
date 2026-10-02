@@ -43,6 +43,17 @@ class CreateEnvironment extends CreateRecord
         $data['tofu_workspace'] = EnvironmentWorkspace::forContainer($data['container_name']);
         $data['terminal_enabled'] = true;
 
+        // The owner comes from the session, never from the form. A field for it
+        // would let whoever submits the form choose, and every access check for a
+        // student's environment rests on this value being trustworthy. Reading it
+        // from the session means the only environment a student can create is
+        // their own, and an administrator's is theirs.
+        $owner = auth()->id();
+
+        if ($owner !== null) {
+            $data['user_id'] = $owner;
+        }
+
         return $data;
     }
 

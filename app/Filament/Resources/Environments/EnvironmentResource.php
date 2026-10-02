@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * A student lab: one Linux system container inside Incus on the compute
@@ -69,5 +70,30 @@ class EnvironmentResource extends Resource
             'create' => CreateEnvironment::route('/create'),
             'view' => ViewEnvironment::route('/{record}'),
         ];
+    }
+
+    /**
+     * Everyone sees their own environments; an administrator sees all of them.
+     *
+     * Scoped in the query rather than filtered in the table, because a row that
+     * was fetched and then hidden has still been read. The owner check belongs
+     * here as well as in the policy: this is what stops the record existing in
+     * front of someone at all, and the policy is what stops them acting on it if
+     * they reach it another way.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        $user = auth()->user();
+
+        if ($user === null) {
+            // Nobody is signed in, so nothing is visible. Returning an impossible
+            // condition rather than an empty query keeps this a query rather than
+            // an early return, so a later caller cannot forget the check.
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $user->isAdmin() ? $query : $query->where('user_id', $user->getKey());
     }
 }
