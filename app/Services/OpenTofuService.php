@@ -157,11 +157,50 @@ class OpenTofuService
         return is_array($decoded) ? $decoded : [];
     }
 
+    /**
+     * Remove an environment's workspace once its container is gone.
+     *
+     * The selection moves first, and that is the whole point of the method.
+     * OpenTofu refuses to delete the workspace that is currently selected:
+     *
+     *     Error: Workspace "env-tes-123" is your active workspace
+     *     You cannot delete the currently active workspace.
+     *
+     * The delete flow has just selected that workspace in order to destroy
+     * through it, so without the switch the destroy succeeds and this fails. The
+     * result was that every deleted environment stayed in the inventory with its
+     * container already gone and a workspace that outlived it, which the
+     * interface could only report as a failure to delete something that was
+     * already destroyed.
+     *
+     * The destination is a protected workspace, which the assertion above has
+     * already confirmed the target is not, so the switch cannot land on the
+     * workspace being removed.
+     */
     public function deleteWorkspace(string $workspace): ProcessResult
     {
         EnvironmentWorkspace::assertUsable($workspace, 'irrelevant-for-workspace-delete');
 
+        $switched = $this->run(['workspace', 'select', $this->fallbackWorkspace()]);
+
+        if (! $switched->successful()) {
+            return $switched;
+        }
+
         return $this->run(['workspace', 'delete', $workspace]);
+    }
+
+    /**
+     * A workspace that is always safe to be sitting in.
+     *
+     * Taken from the protected list rather than hardcoded, so there is one place
+     * that knows which workspaces are off limits and this cannot drift from it.
+     */
+    private function fallbackWorkspace(): string
+    {
+        $protected = EnvironmentWorkspace::protectedWorkspaces();
+
+        return $protected[0] ?? 'default';
     }
 
     public function listWorkspaces(): ProcessResult

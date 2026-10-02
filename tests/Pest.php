@@ -16,7 +16,10 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
  // ->use(RefreshDatabase::class)
-    ->in('Feature');
+    ->in('Feature', 'Integration');
+// Unit tests deliberately get no application. The class under test there is
+// filesystem-only, and booting Laravel would add a way for those tests to fail
+// for reasons that have nothing to do with what they check.
 
 /*
 |--------------------------------------------------------------------------
