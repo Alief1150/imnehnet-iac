@@ -36,3 +36,17 @@ public/build/assets
 /storage/framework/*.lock
 /storage/framework/locks
 /storage/logs/terminal
+.env.*
+!.env.example
+*.tfstate
+*.tfstate.*
+*.tfplan
+/vendor/
+/node_modules/
+*.pem
+*.key
+*.p12
+*.crt
+/storage/framework/locks/
+/storage/logs/terminal/
+/public/build/
