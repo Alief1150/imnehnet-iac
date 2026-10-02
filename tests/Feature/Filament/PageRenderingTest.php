@@ -6,7 +6,7 @@ use App\Filament\Pages\Infrastructure;
 use App\Filament\Pages\Monitoring;
 use App\Filament\Pages\Security;
 use App\Filament\Resources\ActivityLogs\ActivityLogResource;
-use App\Filament\Resources\Labs\LabResource;
+use App\Filament\Resources\Environments\EnvironmentResource;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,7 +30,7 @@ test('every control plane page renders for an administrator without server error
 test('resource pages render for an administrator', function () {
     $admin = User::factory()->create(['role' => UserRole::Admin]);
 
-    foreach ([UserResource::class, LabResource::class, ActivityLogResource::class] as $resource) {
+    foreach ([UserResource::class, EnvironmentResource::class, ActivityLogResource::class] as $resource) {
         $response = $this->actingAs($admin)->get($resource::getUrl(panel: 'admin'));
 
         expect($response->status(), "{$resource} must not return a 5xx")->toBe(200);

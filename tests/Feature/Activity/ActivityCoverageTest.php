@@ -1,18 +1,15 @@
 <?php
 
-use App\Contracts\LabProvisioner;
-use App\Data\ProvisionedLab;
-use App\Enums\LabActualState;
-use App\Enums\LabOperationState;
+use App\Data\ProcessResult;
+use App\Enums\ActivityAction;
+use App\Enums\EnvironmentStatus;
 use App\Enums\UserRole;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
-use App\Jobs\ExecuteLabOperationJob;
 use App\Models\ActivityLog;
-use App\Models\Lab;
+use App\Models\LabEnvironment;
 use App\Models\User;
-use App\Services\ActivityLogService;
-use App\Services\LabLifecycleService;
+use App\Services\EnvironmentLifecycleService;
 use Filament\Auth\Pages\Login;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -162,98 +159,71 @@ test('the request context is recorded so an operator can see where it came from'
         ->and($log->user_agent)->not->toBeNull();
 });
 
-test('a lifecycle result records the state transition and the container', function () {
+test('a failed operation is audited as a failure, against the environment', function () {
+    // The successful path is asserted in EnvironmentLifecycleTest. What matters
+    // here is that a failure reaches the audit trail at all: an operation that
+    // quietly stopped would leave the record claiming progress that never
+    // finished, which is the failure mode an audit log exists to prevent.
     $admin = User::factory()->create(['role' => UserRole::Admin]);
-    $student = User::factory()->create();
-
-    // Delete is only valid for a container the compute plane still reports.
-    $lab = Lab::factory()->for($student, 'owner')->create([
-        'actual_state' => LabActualState::Running,
-        'operation_state' => LabOperationState::Idle,
+    $environment = LabEnvironment::factory()->provisioning()->create([
+        'container_name' => 'lab-web-smoke',
+        'tofu_workspace' => 'env-lab-web-smoke',
     ]);
 
-    $queued = app(LabLifecycleService::class)->request($admin, $lab, 'delete');
-
-    $provisioner = new class implements LabProvisioner
-    {
-        public function provision(Lab $lab): ProvisionedLab
-        {
-            return new ProvisionedLab(successful: true);
-        }
-
-        public function start(Lab $lab): ProvisionedLab
-        {
-            return new ProvisionedLab(successful: true);
-        }
-
-        public function stop(Lab $lab): ProvisionedLab
-        {
-            return new ProvisionedLab(successful: true);
-        }
-
-        public function reset(Lab $lab): ProvisionedLab
-        {
-            return new ProvisionedLab(successful: true);
-        }
-
-        public function destroy(Lab $lab): ProvisionedLab
-        {
-            return new ProvisionedLab(
-                successful: true,
-                containerName: $lab->container_name,
-                status: 'deleted',
-            );
-        }
-
-        public function observe(Lab $lab): ProvisionedLab
-        {
-            return new ProvisionedLab(successful: true);
-        }
-    };
-
-    (new ExecuteLabOperationJob($queued->id))->handle(
-        $provisioner,
-        app(ActivityLogService::class),
+    $result = new ProcessResult(
+        command: ['tofu', 'apply'],
+        exitCode: 1,
+        stdout: '',
+        stderr: 'Error: creating container: unable to bind address',
+        durationMs: 900.0,
     );
 
-    $log = ActivityLog::query()->where('action', 'DELETE_LAB_RESULT')->sole();
+    app(EnvironmentLifecycleService::class)->settle($admin, $environment, 'create', $result);
 
-    expect($log->metadata['from_state'])->toBe(LabActualState::Running->value)
-        ->and($log->metadata['container_name'])->toBe($lab->container_name)
-        ->and($log->description)->toContain($lab->container_name);
+    $log = ActivityLog::query()
+        ->where('action', ActivityAction::CreateFailed->value)
+        ->latest('id')
+        ->first();
+
+    expect($log)->not->toBeNull()
+        ->and($log->resource_type)->toBe(LabEnvironment::class)
+        ->and($log->resource_id)->toBe((string) $environment->getKey())
+        ->and($log->status)->toBe('failed')
+        ->and($log->metadata['container_name'] ?? null)->toBe('lab-web-smoke')
+        // The record agrees with the log. A log saying failed next to a record
+        // still saying PROVISIONING is the disagreement this catches.
+        ->and($environment->fresh()->status)->toBe(EnvironmentStatus::Error);
 });
-
-test('unknown metadata keys are dropped rather than persisted', function () {
-    $admin = User::factory()->create(['role' => UserRole::Admin]);
-
-    $log = app(ActivityLogService::class)->record(
-        actor: $admin,
-        action: 'TEST',
-        resource: $admin,
-        status: 'completed',
-        description: 'metadata filtering',
-        metadata: [
-            'container_name' => 'lab-test',
-            'password' => 'hunter2',
-            'api_token' => 'secret',
-        ],
-    );
-
-    expect($log->metadata)->toBe(['container_name' => 'lab-test']);
-});
-
-test('the events the specification lists are all recorded somewhere', function () {
-    $expectations = [
-        'CREATE_USER' => app_path('Filament/Resources/Users/Pages/CreateUser.php'),
-        'UPDATE_USER' => app_path('Observers/UserObserver.php'),
-        'LOGIN' => app_path('Listeners/RecordPortalLogin.php'),
+test('every action the specification lists exists and can be named', function () {
+    // The list is asserted rather than grepped out of the source. A test that
+    // searches files for strings passes as long as the strings are somewhere in
+    // the file, including inside a comment, and fails when an action is built by
+    // concatenation. Naming them makes the set exhaustive by construction.
+    $required = [
+        'CREATE_REQUESTED', 'CREATE_COMPLETED', 'CREATE_FAILED',
+        'START_REQUESTED', 'START_COMPLETED', 'START_FAILED',
+        'STOP_REQUESTED', 'STOP_COMPLETED', 'STOP_FAILED',
+        'RESET_REQUESTED', 'RESET_COMPLETED', 'RESET_FAILED',
+        'DELETE_REQUESTED', 'DELETE_COMPLETED', 'DELETE_FAILED',
+        'TERMINAL_OPENED',
+        'RECONCILIATION_DETECTED', 'RECONCILIATION_COMPLETED',
     ];
 
-    foreach ($expectations as $action => $file) {
-        expect(file_get_contents($file))->toContain($action);
-    }
+    $have = array_map(fn (ActivityAction $a): string => $a->value, ActivityAction::cases());
 
-    foreach (['provision', 'start', 'stop', 'reset', 'delete'] as $type) {
-        expect(file_get_contents(app_path('Jobs/ExecuteLabOperationJob.php')))->toContain("'{$type}' =>");
+    expect($have)->toContain(...$required);
+
+    foreach (ActivityAction::operations() as $operation) {
+        expect(ActivityAction::requested($operation)->value)->toBe(strtoupper($operation).'_REQUESTED')
+            ->and(ActivityAction::completed($operation)->value)->toBe(strtoupper($operation).'_COMPLETED')
+            ->and(ActivityAction::failed($operation)->value)->toBe(strtoupper($operation).'_FAILED');
     }
+});
+
+test('an unknown lifecycle operation is refused rather than logged as something generic', function () {
+    // Falling back would produce an audit entry that cannot be filtered by
+    // operation, which is worse than refusing: it would be discovered by whoever
+    // later needs to know what happened.
+    expect(fn () => ActivityAction::requested('reboot'))
+        ->toThrow(RuntimeException::class, 'Unknown lifecycle operation');
 });

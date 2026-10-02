@@ -39,14 +39,15 @@ class UsersTable
                     ->formatStateUsing(fn (mixed $state): string => self::asString($state))
                     ->color(fn (User $record): string => $record->isActive() ? 'success' : 'danger')
                     ->sortable(),
-
                 // A computed column, so it is deliberately not sortable or
                 // searchable: there is no matching database column to query.
-                TextColumn::make('lab_container_name')
-                    ->label('Lab Environment')
-                    ->state(fn (User $record): string => $record->lab?->container_name ?? 'No Lab Environment')
+                TextColumn::make('environments_summary')
+                    ->label('Environments')
+                    ->state(fn (User $record): string => $record->environments()->count() === 0
+                        ? 'None'
+                        : (string) $record->environments()->count())
                     ->badge()
-                    ->color(fn (User $record): string => $record->lab === null ? 'warning' : 'success')
+                    ->color(fn (User $record): string => $record->environments()->count() === 0 ? 'warning' : 'success')
                     ->toggleable(),
 
                 TextColumn::make('last_login_at')

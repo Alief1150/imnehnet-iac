@@ -2,14 +2,11 @@
 
 namespace App\Providers;
 
-use App\Contracts\LabProvisioner;
 use App\Contracts\LifecycleDriver;
 use App\Drivers\LiveLifecycleDriver;
-use App\Infrastructure\Provision\IncusLabProvisioner;
 use App\Models\LabEnvironment;
 use App\Policies\LabEnvironmentPolicy;
 use App\Services\AnsibleService;
-use App\Services\LabPortAllocationService;
 use App\Services\OpenTofuService;
 use App\Services\TerminalService;
 use Illuminate\Support\Facades\Gate;
@@ -22,13 +19,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(LabPortAllocationService::class);
-
         // Built from configuration rather than injected field by field, so the
         // working directory and the lock file live in exactly one place.
         $this->app->singleton(OpenTofuService::class, fn (): OpenTofuService => OpenTofuService::fromConfig());
         $this->app->singleton(AnsibleService::class, fn (): AnsibleService => AnsibleService::fromConfig());
-        $this->app->singleton(TerminalService::class, fn (): TerminalService => TerminalService::fromConfig());
+        $this->app->singleton(TerminalService::class, fn ($app): TerminalService => TerminalService::fromConfig($app));
 
         // The orchestration talks to this contract only, so the live driver can
         // be swapped for a double in a test without touching the lifecycle.
@@ -37,14 +32,6 @@ class AppServiceProvider extends ServiceProvider
             ansible: $app->make(AnsibleService::class),
         ));
 
-        $this->app->bind(
-            LabProvisioner::class,
-            fn ($app): LabProvisioner => new IncusLabProvisioner(
-                ports: $app->make(LabPortAllocationService::class),
-                remote: (string) config('infrastructure.incus_remote', 'lab-env:'),
-                network: (string) config('infrastructure.incus_network', 'incusbr0'),
-            ),
-        );
     }
 
     /**

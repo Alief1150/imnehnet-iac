@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Data\SecuritySummary;
-use App\Models\Lab;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -96,32 +95,25 @@ final class SecurityMonitoringService
         }
     }
 
+    /**
+     * Isolation is enforced on the lab hosts by packet filter rules, not by
+     * anything the portal stores.
+     *
+     * The inventory has no isolation column, so there is nothing here to read
+     * and reporting a count would mean inventing one. The honest answer is that
+     * the portal does not evaluate isolation, and saying so is more useful than
+     * a green card that would send an operator to check the wrong system.
+     */
     public function isolation(): SecuritySummary
     {
-        $total = Lab::query()->count();
-        $notConfigured = Lab::query()->where('isolation_status', 'not_configured')->count();
-
-        if ($total === 0) {
-            return new SecuritySummary(
-                key: 'isolation',
-                label: 'Student Isolation',
-                status: 'not_configured',
-                summary: 'No lab environments exist yet, so no isolation policy has been evaluated.',
-                source: 'labs.isolation_status',
-                checkedAt: Carbon::now(),
-            );
-        }
-
         return new SecuritySummary(
             key: 'isolation',
             label: 'Student Isolation',
-            status: $notConfigured === 0 ? 'healthy' : 'degraded',
-            summary: $notConfigured === 0
-                ? sprintf('All %d lab(s) report an applied isolation policy.', $total)
-                : sprintf('%d of %d lab(s) still report isolation status "not_configured".', $notConfigured, $total),
-            source: 'labs.isolation_status',
+            status: 'not_configured',
+            summary: 'Isolation is enforced on the lab hosts by their own packet filter rules. '
+                .'The portal holds no isolation state and does not evaluate it.',
+            source: 'lab hosts (outside this portal)',
             checkedAt: Carbon::now(),
-            alertCount: $notConfigured,
         );
     }
 

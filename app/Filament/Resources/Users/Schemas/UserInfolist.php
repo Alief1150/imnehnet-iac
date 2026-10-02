@@ -40,32 +40,25 @@ class UserInfolist
                             ->badge()
                             ->color(fn (mixed $state): string => $state ? 'warning' : 'success'),
                     ]),
-
-                Section::make('Lab Environment')
-                    ->description('A student account exists before a lab is assigned. Provisioning is a separate action.')
+                Section::make('Environments')
+                    ->description('A student account may exist before any environment is provisioned for it.')
                     ->columns(2)
                     ->schema([
-                        // Read through the relation explicitly instead of
-                        // relying on dot notation, so a student with no lab
-                        // renders the placeholder instead of erroring.
-                        TextEntry::make('lab_name')
-                            ->label('Lab name')
-                            ->state(fn (User $record): string => $record->lab?->name ?? 'No Lab Environment')
-                            ->badge()
-                            ->color(fn (User $record): string => $record->lab === null ? 'warning' : 'success'),
-                        TextEntry::make('lab_container_name')
-                            ->label('Container')
-                            ->state(fn (User $record): string => $record->lab?->container_name ?? '—')
-                            ->fontFamily('mono'),
-                        TextEntry::make('lab_ip_address')
-                            ->label('IP address')
-                            ->state(fn (User $record): string => $record->lab?->ip_address ?? 'Not assigned')
-                            ->fontFamily('mono'),
-                        TextEntry::make('lab_ssh_port')
-                            ->label('SSH port')
-                            ->state(fn (User $record): string => $record->lab?->ssh_port !== null
-                                ? (string) $record->lab->ssh_port
-                                : 'Not published'),
+                        // Read through the relation rather than dot notation on a
+                        // single lab: an account can own several, and an account
+                        // that owns none has to render a placeholder rather than
+                        // an error.
+                        TextEntry::make('environments_count')
+                            ->label('Environments')
+                            ->state(fn (User $record): string => (string) $record->environments()->count())
+                            ->badge(),
+                        TextEntry::make('environments_summary')
+                            ->label('Containers')
+                            ->state(fn (User $record): string => $record->environments()->count() === 0
+                                ? 'None provisioned'
+                                : $record->environments()->pluck('container_name')->implode(', '))
+                            ->fontFamily('mono')
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make('Timestamps')

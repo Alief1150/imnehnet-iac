@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -44,9 +44,20 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
-    public function lab(): HasOne
+    /**
+     * The environments this account owns.
+     *
+     * A student may own more than one: the inventory keys ownership on a
+     * nullable user_id, and an environment with no owner is an unassigned one
+     * rather than an ownerless user's. The relation crosses database
+     * connections on purpose, because the inventory lives in the infrastructure
+     * database and accounts live in the application one.
+     *
+     * @return HasMany<LabEnvironment, $this>
+     */
+    public function environments(): HasMany
     {
-        return $this->hasOne(Lab::class);
+        return $this->hasMany(LabEnvironment::class, 'user_id');
     }
 
     public function canAccessPanel(Panel $panel): bool

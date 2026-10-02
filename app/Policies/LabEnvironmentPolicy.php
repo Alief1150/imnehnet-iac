@@ -15,14 +15,28 @@ use App\Models\User;
  */
 class LabEnvironmentPolicy
 {
+    /**
+     * An administrator role is not on its own sufficient.
+     *
+     * The panel already refuses a disabled account, so this looks redundant
+     * until a caller reaches the policy from somewhere the panel middleware did
+     * not run: a table action closure, a queued job, or the lifecycle service
+     * itself. All three are covered by this, and a deactivated account should not
+     * be able to drive a compute plane through any of them.
+     */
+    private function mayManage(User $user): bool
+    {
+        return $user->isAdmin() && $user->isActive();
+    }
+
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin();
+        return $this->mayManage($user);
     }
 
     public function view(User $user, LabEnvironment $environment): bool
     {
-        return $user->isAdmin();
+        return $this->mayManage($user);
     }
 
     /**
@@ -31,7 +45,7 @@ class LabEnvironmentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->isAdmin();
+        return $this->mayManage($user);
     }
 
     /**
@@ -41,12 +55,12 @@ class LabEnvironmentPolicy
      */
     public function update(User $user, LabEnvironment $environment): bool
     {
-        return $user->isAdmin() && ! $environment->isProtected();
+        return $this->mayManage($user) && ! $environment->isProtected();
     }
 
     public function delete(User $user, LabEnvironment $environment): bool
     {
-        return $user->isAdmin() && ! $environment->isProtected();
+        return $this->mayManage($user) && ! $environment->isProtected();
     }
 
     /**
@@ -55,6 +69,6 @@ class LabEnvironmentPolicy
      */
     public function reconcile(User $user, LabEnvironment $environment): bool
     {
-        return $user->isAdmin();
+        return $this->mayManage($user);
     }
 }

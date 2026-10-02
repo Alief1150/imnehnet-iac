@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ActivityAction;
 use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -85,7 +86,7 @@ final class ActivityLogService
      */
     public function record(
         ?User $actor,
-        string $action,
+        ActivityAction|string $action,
         Model|string|null $resource,
         string $status,
         string $description,
@@ -96,7 +97,7 @@ final class ActivityLogService
 
         return ActivityLog::query()->create([
             'actor_id' => $actor?->getKey(),
-            'action' => $action,
+            'action' => $action instanceof ActivityAction ? $action->value : $action,
             'resource_type' => $resource instanceof Model ? $resource::class : $resource,
             'resource_id' => $resource instanceof Model ? (string) $resource->getKey() : null,
             'status' => $status,

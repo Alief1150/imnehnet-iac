@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Data\ProcessResult;
+use App\Enums\ActivityAction;
 use App\Enums\EnvironmentStatus;
 use App\Enums\RuntimeStatus;
 use App\Jobs\DeleteEnvironment;
@@ -180,7 +181,7 @@ class EnvironmentLifecycleService
 
         $this->activity->record(
             actor: $actor,
-            action: strtoupper($action).'_REQUESTED',
+            action: ActivityAction::requested($action),
             resource: $environment,
             status: 'requested',
             description: sprintf(
@@ -242,7 +243,7 @@ class EnvironmentLifecycleService
             $environment->delete();
             $this->activity->record(
                 actor: $actor,
-                action: 'DELETE_COMPLETED',
+                action: ActivityAction::DeleteCompleted,
                 resource: $environment,
                 status: 'completed',
                 description: sprintf(
@@ -264,7 +265,7 @@ class EnvironmentLifecycleService
 
         $this->activity->record(
             actor: $actor,
-            action: strtoupper($action).'_COMPLETED',
+            action: ActivityAction::completed($action),
             resource: $environment,
             status: 'completed',
             description: sprintf(
@@ -314,7 +315,7 @@ class EnvironmentLifecycleService
 
         $this->activity->record(
             actor: $actor,
-            action: strtoupper($action).'_FAILED',
+            action: ActivityAction::failed($action),
             resource: $environment,
             status: 'failed',
             description: $message,
@@ -341,7 +342,7 @@ class EnvironmentLifecycleService
         if (! $result->successful()) {
             $this->activity->record(
                 actor: auth()->user(),
-                action: 'RECONCILIATION_DETECTED',
+                action: ActivityAction::ReconciliationDetected,
                 resource: $environment,
                 status: 'failed',
                 description: 'Could not read the actual state: '.$result->summary(120),
@@ -363,9 +364,12 @@ class EnvironmentLifecycleService
             'internal_ip' => $outputs['container_ipv4'] ?? $environment->internal_ip,
         ]);
 
+        // A reconciliation that found a disagreement is recorded as detected
+        // rather than completed, so filtering the log for problems does not
+        // require reading the description to tell the two apart.
         $action = $mismatchBefore || $environment->hasStateMismatch()
-            ? 'RECONCILIATION_DETECTED'
-            : 'RECONCILIATION_COMPLETED';
+            ? ActivityAction::ReconciliationDetected
+            : ActivityAction::ReconciliationCompleted;
 
         $this->activity->record(
             actor: auth()->user(),

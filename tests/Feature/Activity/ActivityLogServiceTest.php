@@ -1,6 +1,7 @@
 <?php
 
-use App\Models\Lab;
+use App\Enums\ActivityAction;
+use App\Models\LabEnvironment;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -11,7 +12,7 @@ uses(RefreshDatabase::class);
 
 test('activity service records actor resource request context and sanitized metadata', function () {
     $actor = User::factory()->create();
-    $lab = Lab::factory()->create();
+    $environment = LabEnvironment::factory()->create();
     $request = Request::create('/', 'POST', server: [
         'REMOTE_ADDR' => '100.64.0.10',
         'HTTP_USER_AGENT' => 'IMNEHNET-Test-Agent',
@@ -19,12 +20,12 @@ test('activity service records actor resource request context and sanitized meta
 
     $log = app(ActivityLogService::class)->record(
         actor: $actor,
-        action: 'PROVISION_LAB',
-        resource: $lab,
+        action: ActivityAction::CreateRequested,
+        resource: $environment,
         status: 'requested',
-        description: 'Provision requested',
+        description: 'Create requested',
         metadata: [
-            'container_name' => $lab->container_name,
+            'container_name' => $environment->container_name,
             'password' => 'must-not-be-stored',
             'note' => 'generic-key-must-not-be-stored',
             'nested' => ['api_token' => 'must-not-be-stored', 'phase' => 'queued'],
@@ -33,10 +34,13 @@ test('activity service records actor resource request context and sanitized meta
     );
 
     expect($log->actor->is($actor))->toBeTrue()
-        ->and($log->resource_type)->toBe(Lab::class)
-        ->and($log->resource_id)->toBe((string) $lab->getKey())
+        // An enum rather than free text, so a typo in an action cannot reach the
+        // audit trail as a string nobody filters by.
+        ->and($log->action)->toBe('CREATE_REQUESTED')
+        ->and($log->resource_type)->toBe(LabEnvironment::class)
+        ->and($log->resource_id)->toBe((string) $environment->getKey())
         ->and($log->metadata)->toBe([
-            'container_name' => $lab->container_name,
+            'container_name' => $environment->container_name,
             'nested' => ['phase' => 'queued'],
         ])
         ->and($log->ip_address)->toBe('100.64.0.10')
@@ -46,7 +50,7 @@ test('activity service records actor resource request context and sanitized meta
 test('activity log model rejects updates and deletes', function () {
     $log = app(ActivityLogService::class)->record(
         actor: User::factory()->create(),
-        action: 'LOGIN',
+        action: ActivityAction::Login,
         resource: null,
         status: 'success',
         description: 'User logged in',

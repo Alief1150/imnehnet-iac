@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Enums\ActivityAction;
 use App\Models\LabEnvironment;
 use App\Models\TerminalSession;
 use App\Models\User;
 use App\Support\EnvironmentWorkspace;
 use App\Support\TerminalSlotGrants;
+use Illuminate\Contracts\Container\Container;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 
@@ -55,10 +57,13 @@ class TerminalService
         private readonly string $logDirectory,
         private readonly int $probeTimeoutSeconds,
         private readonly TerminalSlotGrants $grants,
+        private readonly ?ActivityLogService $activity = null,
     ) {}
 
-    public static function fromConfig(): self
+    public static function fromConfig(?Container $app = null): self
     {
+        $app ??= app();
+
         return new self(
             binary: (string) config('infrastructure.terminal.binary'),
             shellUser: (string) config('infrastructure.terminal.shell_user'),
@@ -74,6 +79,7 @@ class TerminalService
             grants: new TerminalSlotGrants(
                 (string) config('infrastructure.terminal.slot_map_file'),
             ),
+            activity: $app->make(ActivityLogService::class),
         );
     }
 
@@ -133,6 +139,26 @@ class TerminalService
         // has not bound yet, which presents as a terminal that loads and then
         // sits there empty.
         $this->grants->grant($port, $credential);
+
+        // Recorded after the grant exists, so the log never claims a shell was
+        // opened before the browser could actually have reached one.
+        $this->activity?->record(
+            actor: $user,
+            action: ActivityAction::TerminalOpened,
+            resource: $session,
+            status: 'completed',
+            description: sprintf(
+                'Opened a %s shell on %s for session %s.',
+                $this->shellUser,
+                (string) $environment->container_name,
+                (string) $session->id,
+            ),
+            metadata: [
+                'container_name' => (string) $environment->container_name,
+                'workspace' => (string) $environment->tofu_workspace,
+                'runtime_status' => $environment->runtime_status->value,
+            ],
+        );
 
         return $session;
     }
