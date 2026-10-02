@@ -68,6 +68,11 @@ return [
         'timeout_seconds' => (int) env('ANSIBLE_TIMEOUT_SECONDS', 600),
     ],
 
+    // The Incus client used for per-container operations such as resolving a
+    // uid inside a container. Kept next to the remote so the two are not set to
+    // different planes by accident.
+    'incus_binary' => env('INCUS_BINARY', 'incus'),
+
     'incus_remote' => 'lab-env:',
 
     // Network the student containers are attached to on the compute plane.
@@ -106,6 +111,35 @@ return [
 
     'grafana_health_url' => env('GRAFANA_HEALTH_URL', 'http://127.0.0.1:3000/api/health'),
     'blackbox_health_url' => env('BLACKBOX_HEALTH_URL', 'http://127.0.0.1:9115/-/healthy'),
+
+    /*
+     * The web terminal.
+     *
+     * ttyd serves a real shell, so it is bound to loopback and given a
+     * credential that is regenerated per session. Neither of those reaches the
+     * browser directly: the browser is meant to connect through a relay, and
+     * the relay is off unless it is deliberately switched on, because a
+     * listening port that serves a shell is not something to enable by
+     * accident.
+     *
+     * The shell user is the account inside the container, not on the management
+     * plane. Its uid is resolved from the container at session start and a
+     * missing account refuses the session rather than falling back to root.
+     */
+    'terminal' => [
+        'binary' => env('TERMINAL_BINARY', '/home/iaas/bin/ttyd'),
+        'shell_user' => env('TERMINAL_SHELL_USER', 'student'),
+        'session_ttl_minutes' => (int) env('TERMINAL_SESSION_TTL_MINUTES', 15),
+        'max_sessions_per_user' => (int) env('TERMINAL_MAX_SESSIONS_PER_USER', 2),
+        'port_range_min' => (int) env('TERMINAL_PORT_RANGE_MIN', 38000),
+        'port_range_max' => (int) env('TERMINAL_PORT_RANGE_MAX', 38999),
+        'log_directory' => env('TERMINAL_LOG_DIRECTORY', storage_path('logs/terminal')),
+
+        // Off by default. Turning this on opens a port that serves a shell.
+        'relay_enabled' => (bool) env('TERMINAL_RELAY_ENABLED', false),
+        'relay_bind' => env('TERMINAL_RELAY_BIND', '127.0.0.1'),
+        'relay_port' => (int) env('TERMINAL_RELAY_PORT', 38443),
+    ],
 
     'wazuh_api_url' => env('WAZUH_API_URL', 'https://127.0.0.1:55000'),
     'wazuh_api_username' => env('WAZUH_API_USERNAME'),
