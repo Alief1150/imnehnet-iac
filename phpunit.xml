@@ -11,6 +11,13 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!-- Runs the real OpenTofu client against a throwaway working
+             directory. The workspace deletion bug it covers was invisible to
+             the rest of the suite, so this directory has to be part of the
+             run or the coverage is decorative. -->
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
