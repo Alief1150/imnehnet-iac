@@ -69,3 +69,24 @@ load. Calling npm directly from a cron job or a deploy script therefore used the
 wrong Node and failed with an ESM loader error that never mentions the runtime
 version. The script loads nvm itself and refuses to build on the wrong version,
 so the result does not depend on who started it.
+
+## Applying code changes
+
+```bash
+bash scripts/reload-app.sh
+```
+
+The queue worker is a long-running process and holds the application classes it
+loaded at start. A change to a service, a job or a model is therefore not live
+until the worker restarts, and the browser is not the only thing serving stale
+code.
+
+This is not a theoretical concern. A fix to the workspace deletion step was
+committed, its integration test passed, and the delete still failed against the
+live server because the worker had been running since before the fix. The script
+uses `queue:restart`, so a lifecycle operation already in flight finishes before
+the worker exits; killing it outright would abandon an OpenTofu apply part way
+through.
+
+Front-end changes need `bash scripts/build-assets.sh` instead, and Apache
+configuration changes need `sudo bash deploy/reload-apache-vhost.sh`.
