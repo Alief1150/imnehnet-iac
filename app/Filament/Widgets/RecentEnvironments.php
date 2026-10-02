@@ -45,14 +45,14 @@ final class RecentEnvironments extends TableWidget
                 TextColumn::make('status')
                     ->label('Provisioning')
                     ->badge()
-                    ->formatStateUsing(fn ($state): string => $state->getLabel())
+                    ->formatStateUsing(fn ($state): string => $state->label())
                     ->color(fn ($state): string => $state->color())
                     ->icon(fn ($state): ?Htmlable => $state->icon()),
 
                 TextColumn::make('runtime_status')
                     ->label('Runtime')
                     ->badge()
-                    ->formatStateUsing(fn ($state): string => $state->getLabel())
+                    ->formatStateUsing(fn ($state): string => $state->label())
                     ->color(fn ($state): string => $state->color())
                     ->icon(fn ($state): ?Htmlable => $state->icon()),
 
