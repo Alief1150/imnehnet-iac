@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Models\LabEnvironment;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Database\Eloquent\Model;
@@ -59,6 +60,28 @@ final class UserObserver
      * Written only after the write reached the database, so the audit trail
      * never claims a change that was rolled back.
      */
+    /**
+     * An account's environments become unassigned rather than pointing at an
+     * account that no longer exists.
+     *
+     * Leaving the id behind would be a dangling reference: the row would keep
+     * claiming an owner that cannot be signed in to, and if that id were ever
+     * reused by a new account the new owner would silently inherit someone
+     * else's environment. Unassigning is also the safe direction, because the
+     * container keeps running and remains listed for an administrator to deal
+     * with, rather than being destroyed as a side effect of deleting a login.
+     *
+     * The inventory lives in a different database, so the connection is named
+     * explicitly. Going through the model would use the same connection, but
+     * saying it here is what makes the cross-database write visible.
+     */
+    public function deleting(User $user): void
+    {
+        LabEnvironment::query()
+            ->where('user_id', $user->getKey())
+            ->update(['user_id' => null]);
+    }
+
     public function updated(Model $model): void
     {
         if (! $model instanceof User) {

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users;
 
+use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Resources\Users\Schemas\UserForm;
@@ -42,6 +43,10 @@ class UserResource extends Resource
     {
         return [
             'index' => ListUsers::route('/'),
+            // Edit had a page but no route, so the only way to reach it was
+            // through the record page. That is a CRUD that looks like it is
+            // missing an edit button, which is what it was.
+            'edit' => EditUser::route('/{record}/edit'),
             'view' => ViewUser::route('/{record}'),
         ];
     }

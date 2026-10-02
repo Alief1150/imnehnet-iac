@@ -9,7 +9,6 @@ use App\Filament\Resources\Environments\Schemas\EnvironmentInfolist;
 use App\Filament\Resources\Environments\Tables\EnvironmentsTable;
 use App\Models\LabEnvironment;
 use App\Support\Lucide;
-use Filament\Navigation\NavigationItem;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -70,31 +69,5 @@ class EnvironmentResource extends Resource
             'create' => CreateEnvironment::route('/create'),
             'view' => ViewEnvironment::route('/{record}'),
         ];
-    }
-
-    /**
-     * The specification's sidebar lists Create Environment as its own entry
-     * under Environments, beside All Environments.
-     *
-     * It links to the resource's create page rather than repeating the form, so
-     * there is one create path in the application instead of two that could
-     * drift apart in their validation.
-     *
-     * @return array<NavigationItem>
-     */
-    public static function getNavigationItems(): array
-    {
-        $items = parent::getNavigationItems();
-
-        $create = NavigationItem::make('Create Environment')
-            ->url(static::getUrl('create'))
-            ->icon(Lucide::icon('plus'))
-            ->visible(fn (): bool => static::canCreate());
-
-        // Straight after the list, which is where an operator expects to reach
-        // it from: the two belong to the same group and are used together.
-        array_splice($items, 1, 0, [$create]);
-
-        return $items;
     }
 }
