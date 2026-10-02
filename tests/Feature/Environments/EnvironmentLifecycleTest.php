@@ -41,11 +41,13 @@ test('actions offered from a settled state follow the specification', function (
 
     $error = LabEnvironment::factory()->error()->create();
 
-    expect(lifecycle()->allowedActions($ready))->toBe(['start', 'stop', 'reset', 'delete', 'refresh'])
-        ->and(lifecycle()->allowedActions($stopped))->toBe(['start', 'reset', 'delete', 'refresh'])
-        // An environment that failed offers a read-only refresh and a delete,
-        // never a blind retry.
-        ->and(lifecycle()->allowedActions($error))->toBe(['refresh', 'delete']);
+    // Start and stop follow what the container is doing, not the lifecycle
+    // status: a container that is running is offered Stop and never Start.
+    expect(lifecycle()->allowedActions($ready))->toBe(['delete', 'refresh', 'reset', 'stop'])
+        ->and(lifecycle()->allowedActions($stopped))->toBe(['delete', 'refresh', 'reset', 'start'])
+        // A failed record is not asked to converge anywhere. Only the read-only
+        // refresh and the destructive delete are offered.
+        ->and(lifecycle()->allowedActions($error))->toBe(['delete', 'refresh']);
 });
 
 test('an in flight environment offers no lifecycle action at all', function () {
@@ -76,9 +78,10 @@ test('requesting an action marks the record in flight and queues the right job',
     Queue::fake();
 
     $admin = User::factory()->create(['role' => 'admin']);
+    // A stopped container, so Start is the action that makes sense.
     $environment = LabEnvironment::factory()->create([
-        'status' => EnvironmentStatus::Ready,
-        'runtime_status' => RuntimeStatus::Running,
+        'status' => EnvironmentStatus::Stopped,
+        'runtime_status' => RuntimeStatus::Stopped,
     ]);
 
     $queued = lifecycle()->request($admin, $environment, 'start');
@@ -92,7 +95,7 @@ test('requesting an action marks the record in flight and queues the right job',
     $log = ActivityLog::query()->where('action', 'START_REQUESTED')->latest('id')->first();
 
     expect($log)->not->toBeNull()
-        ->and($log->metadata['from_state'])->toBe('READY')
+        ->and($log->metadata['from_state'])->toBe('STOPPED')
         ->and($log->metadata['to_state'])->toBe('PROVISIONING')
         ->and($log->metadata['requested_action'])->toBe('start');
 });
@@ -106,6 +109,7 @@ test('each action dispatches its own job class', function () {
         ['reset', EnvironmentStatus::Ready, RuntimeStatus::Running, ResetEnvironment::class],
         ['delete', EnvironmentStatus::Ready, RuntimeStatus::Running, DeleteEnvironment::class],
         ['start', EnvironmentStatus::Stopped, RuntimeStatus::Stopped, StartEnvironment::class],
+        ['stop', EnvironmentStatus::Ready, RuntimeStatus::Running, StopEnvironment::class],
     ];
 
     foreach ($cases as [$action, $status, $runtime, $job]) {

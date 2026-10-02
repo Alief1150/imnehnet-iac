@@ -53,16 +53,22 @@ class EnvironmentLifecycleService
     ];
 
     /**
-     * Which actions are offered from which settled state. An in-flight record
-     * offers nothing, because a second operation on the same environment would
-     * race the first one through a shared OpenTofu workspace.
+     * Actions that do not depend on the container being up or down.
+     *
+     * @var list<string>
+     */
+    private const ALWAYS = ['reset', 'refresh'];
+
+    /**
+     * Extra actions allowed from a settled state, on top of the ones that are
+     * always available.
      *
      * @var array<string, list<string>>
      */
     private const ALLOWED = [
-        'READY' => ['start', 'stop', 'reset', 'delete', 'refresh'],
-        'STOPPED' => ['start', 'reset', 'delete', 'refresh'],
-        'ERROR' => ['refresh', 'delete'],
+        EnvironmentStatus::Ready->value => ['delete'],
+        EnvironmentStatus::Stopped->value => ['start', 'delete'],
+        EnvironmentStatus::Error->value => ['delete'],
     ];
 
     public function __construct(private readonly ActivityLogService $activity) {}
@@ -78,11 +84,54 @@ class EnvironmentLifecycleService
             return ['refresh'];
         }
 
+        // Nothing else is offered while an operation is in flight: a second
+        // operation would race the first through a shared OpenTofu working
+        // directory.
         if (! $environment->isSettled()) {
             return ['refresh'];
         }
 
-        return self::ALLOWED[$environment->status->value] ?? ['refresh'];
+        // A failed record is not asked to converge anywhere. Its runtime may be
+        // known, but the record itself is not trustworthy until an operator has
+        // read the error, so only the read-only refresh and the destructive
+        // delete are offered. Guessing from the runtime here would act on a
+        // record that is known to be wrong.
+        if ($environment->status === EnvironmentStatus::Error) {
+            return ['delete', 'refresh'];
+        }
+
+        $actions = self::ALWAYS;
+
+        foreach (self::ALLOWED[$environment->status->value] ?? [] as $action) {
+            $actions[] = $action;
+        }
+
+        // Start and stop follow what the container is actually doing, not the
+        // lifecycle status. Offering Start on a running container is a button
+        // that does nothing; offering Stop on a stopped one is worse than
+        // useless, because it looks like the container is under control when it
+        // is not.
+        //
+        // Exactly one of the two is offered. A record whose status and runtime
+        // disagree is a state mismatch, and two contradictory buttons for the
+        // same container would help nobody. When the runtime is unknown neither
+        // is offered, because the record cannot be trusted to say which one the
+        // container needs.
+        $runtime = $environment->runtime_status;
+
+        if ($runtime === RuntimeStatus::Running) {
+            $actions[] = 'stop';
+            $actions = array_diff($actions, ['start']);
+        } elseif ($runtime === RuntimeStatus::Stopped) {
+            $actions[] = 'start';
+            $actions = array_diff($actions, ['stop']);
+        }
+
+        $actions = array_values(array_unique($actions));
+
+        sort($actions);
+
+        return $actions;
     }
 
     public function isActionAllowed(LabEnvironment $environment, string $action): bool
