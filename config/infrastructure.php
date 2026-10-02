@@ -131,8 +131,12 @@ return [
         'shell_user' => env('TERMINAL_SHELL_USER', 'student'),
         'session_ttl_minutes' => (int) env('TERMINAL_SESSION_TTL_MINUTES', 15),
         'max_sessions_per_user' => (int) env('TERMINAL_MAX_SESSIONS_PER_USER', 2),
+        // These bounds must match the slots declared in deploy/apache/
+        // imnehnet-portal.conf. A port inside this range that the vhost does
+        // not proxy is a terminal that starts and then returns 502, so the two
+        // are one setting expressed in two places rather than two settings.
         'port_range_min' => (int) env('TERMINAL_PORT_RANGE_MIN', 38000),
-        'port_range_max' => (int) env('TERMINAL_PORT_RANGE_MAX', 38999),
+        'port_range_max' => (int) env('TERMINAL_PORT_RANGE_MAX', 38007),
         'log_directory' => env('TERMINAL_LOG_DIRECTORY', storage_path('logs/terminal')),
 
         // Off by default. Turning this on opens a port that serves a shell.
