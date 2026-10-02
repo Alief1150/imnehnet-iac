@@ -56,3 +56,16 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Building the front end
+
+```bash
+bash scripts/build-assets.sh
+```
+
+Not `npm run build`. The host's system Node is 18 and the build needs 24; the
+right version is installed through nvm, which only interactive and login shells
+load. Calling npm directly from a cron job or a deploy script therefore used the
+wrong Node and failed with an ESM loader error that never mentions the runtime
+version. The script loads nvm itself and refuses to build on the wrong version,
+so the result does not depend on who started it.

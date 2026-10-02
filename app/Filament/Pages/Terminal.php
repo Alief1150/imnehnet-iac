@@ -38,8 +38,6 @@ final class Terminal extends Page
 
     protected static ?int $navigationSort = 30;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Environments';
-
     public static function canAccess(): bool
     {
         $user = auth()->user();

@@ -1,10 +1,13 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Filament\Pages\ComputePlane;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Infrastructure;
+use App\Filament\Pages\ManagementPlane;
 use App\Filament\Pages\Monitoring;
 use App\Filament\Pages\Security;
+use App\Filament\Pages\Settings;
 use App\Filament\Pages\Terminal;
 use App\Models\User;
 use Filament\Facades\Filament;
@@ -53,6 +56,9 @@ test('every panel page and resource index answers without a server error', funct
         Monitoring::class,
         Security::class,
         Terminal::class,
+        Settings::class,
+        ManagementPlane::class,
+        ComputePlane::class,
     ] as $page) {
         $urls[$page::getUrl(panel: 'admin')] = $page;
     }
