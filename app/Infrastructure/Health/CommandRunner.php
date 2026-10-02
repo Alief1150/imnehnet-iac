@@ -12,10 +12,13 @@ class CommandRunner
      * @param  list<string>  $command
      * @return array{successful: bool, stdout: string, stderr: string}
      */
-    public function run(array $command, int $timeoutSeconds = 3): array
+    public function run(array $command, int $timeoutSeconds = 3, ?string $workingDirectory = null): array
     {
         try {
-            $process = new Process($command, env: [
+            // The working directory is part of what makes a command meaningful:
+            // running tofu in the wrong directory reports a healthy client while
+            // reading the wrong state. Optional so existing callers are unchanged.
+            $process = new Process($command, $workingDirectory, env: [
                 'LANG' => 'C.UTF-8',
                 'LC_ALL' => 'C.UTF-8',
             ]);

@@ -29,6 +29,7 @@ class AnsibleService
         private readonly string $playbook,
         private readonly string $inventoryGroup,
         private readonly int $timeoutSeconds,
+        private readonly string $pingBinary = 'ansible',
     ) {
         if (! is_dir($this->directory)) {
             throw new RuntimeException(sprintf('The Ansible directory "%s" is not available.', $this->directory));
@@ -43,6 +44,7 @@ class AnsibleService
             playbook: (string) config('infrastructure.ansible.playbook'),
             inventoryGroup: (string) config('infrastructure.ansible.inventory_group', 'lab_env'),
             timeoutSeconds: (int) config('infrastructure.ansible.timeout_seconds', 600),
+            pingBinary: (string) config('infrastructure.ansible.ping_binary', 'ansible'),
         );
     }
 
@@ -67,9 +69,41 @@ class AnsibleService
     /**
      * Read-only reachability check for the infrastructure health view.
      */
+    /**
+     * Reachability, run as an ad-hoc module rather than a playbook.
+     *
+     * Using ansible-playbook for this produces a usage error, which would be
+     * reported as "cannot reach the compute plane" when the real problem is
+     * that the wrong binary was invoked.
+     */
     public function ping(): ProcessResult
     {
-        return $this->run(['all', '-m', 'ping', '-o'], timeoutSeconds: 30);
+        $process = new Process(
+            [$this->pingBinary, 'all', '-m', 'ping', '-o'],
+            $this->directory
+        );
+        $process->setTimeout(30);
+
+        $startedAt = microtime(true);
+
+        try {
+            $process->run();
+        } catch (\Throwable $exception) {
+            return new ProcessResult(
+                command: [$this->pingBinary, 'all', '-m', 'ping', '-o'],
+                exitCode: -1,
+                stdout: '',
+                stderr: $exception->getMessage(),
+                durationMs: (microtime(true) - $startedAt) * 1000,
+                errorCode: 'not_started',
+            );
+        }
+
+        return ProcessResult::fromSymfonyProcess(
+            [$this->pingBinary, 'all', '-m', 'ping', '-o'],
+            $process,
+            (microtime(true) - $startedAt) * 1000,
+        );
     }
 
     public function version(): ProcessResult

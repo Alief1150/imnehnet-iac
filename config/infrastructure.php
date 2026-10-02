@@ -59,6 +59,10 @@ return [
     'ansible' => [
         'directory' => env('ANSIBLE_DIRECTORY', '/home/iaas/imnehnet-iac/ansible'),
         'binary' => env('ANSIBLE_BINARY', 'ansible-playbook'),
+        // A reachability check is an ad-hoc module run, not a playbook, so it
+        // needs the ad-hoc client. Running it through ansible-playbook produces
+        // a usage error, which would read as "cannot reach the compute plane".
+        'ping_binary' => env('ANSIBLE_PING_BINARY', 'ansible'),
         'playbook' => env('ANSIBLE_PLAYBOOK', 'playbooks/student-bootstrap.yml'),
         'inventory_group' => env('ANSIBLE_INVENTORY_GROUP', 'lab_env'),
         'timeout_seconds' => (int) env('ANSIBLE_TIMEOUT_SECONDS', 600),

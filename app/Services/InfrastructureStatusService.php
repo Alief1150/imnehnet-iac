@@ -37,6 +37,15 @@ final class InfrastructureStatusService
     {
         $timeout = (int) config('infrastructure.probe_timeout_seconds', 3);
 
+        // OpenTofu and Ansible get their own entries rather than only appearing
+        // inside the automation roll-up: they fail for different reasons, and an
+        // operator needs to know which one to go and look at. Each is executed
+        // once and its result feeds both its own entry and the roll-up, because
+        // probing twice would cost a second process spawn per dashboard load and
+        // could make the two answers disagree.
+        $openTofu = $this->openTofuHealth();
+        $ansible = $this->ansibleHealth();
+
         $services = [
             // The management plane and the compute plane are reported separately
             // so the dashboard can distinguish "the portal is down" from "the lab
@@ -72,7 +81,9 @@ final class InfrastructureStatusService
                 fn (Response $response): bool => str_contains(strtolower($response->body()), 'healthy'),
                 group: 'monitoring',
             ))->check(),
-            $this->automationHealth($timeout),
+            $openTofu,
+            $ansible,
+            $this->automationHealth($openTofu, $ansible),
             $this->securityHealth(),
         ];
 
@@ -151,22 +162,15 @@ final class InfrastructureStatusService
         }
     }
 
-    private function automationHealth(int $timeout): ServiceHealth
+    /**
+     * The roll-up both tools used to be folded into.
+     *
+     * Kept because it answers a question the separate entries do not: whether
+     * the automation path is usable end to end. Built from results already
+     * collected rather than by running the commands a second time.
+     */
+    private function automationHealth(ServiceHealth $tofu, ServiceHealth $ansible): ServiceHealth
     {
-        $tofu = (new LocalServiceHealthProvider(
-            $this->commands,
-            'opentofu',
-            'OpenTofu',
-            ['tofu', 'version'],
-        ))->check();
-
-        $ansible = (new LocalServiceHealthProvider(
-            $this->commands,
-            'ansible',
-            'Ansible',
-            ['ansible', '--version'],
-        ))->check();
-
         $available = $tofu->status === 'healthy' && $ansible->status === 'healthy';
 
         return new ServiceHealth(
@@ -182,6 +186,84 @@ final class InfrastructureStatusService
             version: implode(' | ', array_filter([$tofu->version, $ansible->version])),
             group: 'automation',
         );
+    }
+
+    private function openTofuHealth(): ServiceHealth
+    {
+        $directory = (string) config('infrastructure.tofu.directory');
+
+        if (! is_dir($directory)) {
+            return new ServiceHealth(
+                key: 'opentofu',
+                label: 'OpenTofu',
+                status: 'not_configured',
+                summary: 'The OpenTofu working directory does not exist.',
+                source: (string) config('infrastructure.tofu.binary', 'tofu'),
+                checkedAt: Carbon::now(),
+                group: 'automation',
+            );
+        }
+
+        $health = (new LocalServiceHealthProvider(
+            $this->commands,
+            'opentofu',
+            'OpenTofu',
+            [(string) config('infrastructure.tofu.binary', 'tofu'), 'version'],
+        ))->check();
+
+        if ($health->status !== 'healthy') {
+            return $health;
+        }
+
+        // The directory matters as much as the binary: it is where every
+        // environment's state lives and where the exclusive lock is taken, so a
+        // client that runs perfectly but cannot write there is not enough.
+        $lockFile = (string) config('infrastructure.tofu.lock_file');
+        $lockWritable = is_writable($lockFile) || is_writable(dirname($lockFile));
+
+        return new ServiceHealth(
+            key: 'opentofu',
+            label: 'OpenTofu',
+            status: $lockWritable ? 'healthy' : 'degraded',
+            summary: $lockWritable
+                ? 'The client runs and the directory lock is writable.'
+                : 'The client runs but the directory lock is not writable, so lifecycle actions cannot be serialised.',
+            source: $health->source,
+            checkedAt: $health->checkedAt,
+            latencyMs: $health->latencyMs,
+            version: $health->version,
+            group: 'automation',
+        );
+    }
+
+    /**
+     * Ansible, checked by whether its client runs at all.
+     *
+     * Reachability to the compute plane is a separate question, answered by
+     * AnsibleService::ping(), which the lifecycle and the terminal use. This
+     * probe only has to say whether the tool is present, so it does not repeat
+     * a multi-second inventory run every time the dashboard is opened.
+     */
+    private function ansibleHealth(): ServiceHealth
+    {
+        if (! is_dir((string) config('infrastructure.ansible.directory'))) {
+            return new ServiceHealth(
+                key: 'ansible',
+                label: 'Ansible',
+                status: 'not_configured',
+                summary: 'The Ansible directory does not exist.',
+                source: (string) config('infrastructure.ansible.ping_binary', 'ansible'),
+                checkedAt: Carbon::now(),
+                group: 'automation',
+            );
+        }
+
+        return (new LocalServiceHealthProvider(
+            $this->commands,
+            'ansible',
+            'Ansible',
+            [(string) config('infrastructure.ansible.ping_binary', 'ansible'), '--version'],
+        ))->check();
     }
 
     private function securityHealth(): ServiceHealth
