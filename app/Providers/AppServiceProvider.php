@@ -11,6 +11,7 @@ use App\Policies\LabEnvironmentPolicy;
 use App\Services\AnsibleService;
 use App\Services\LabPortAllocationService;
 use App\Services\OpenTofuService;
+use App\Services\TerminalService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -27,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
         // working directory and the lock file live in exactly one place.
         $this->app->singleton(OpenTofuService::class, fn (): OpenTofuService => OpenTofuService::fromConfig());
         $this->app->singleton(AnsibleService::class, fn (): AnsibleService => AnsibleService::fromConfig());
+        $this->app->singleton(TerminalService::class, fn (): TerminalService => TerminalService::fromConfig());
 
         // The orchestration talks to this contract only, so the live driver can
         // be swapped for a double in a test without touching the lifecycle.

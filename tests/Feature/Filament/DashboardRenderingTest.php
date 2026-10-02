@@ -5,6 +5,7 @@ use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Infrastructure;
 use App\Filament\Pages\Monitoring;
 use App\Filament\Pages\Security;
+use App\Filament\Pages\Terminal;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,6 +52,7 @@ test('every panel page and resource index answers without a server error', funct
         Infrastructure::class,
         Monitoring::class,
         Security::class,
+        Terminal::class,
     ] as $page) {
         $urls[$page::getUrl(panel: 'admin')] = $page;
     }
