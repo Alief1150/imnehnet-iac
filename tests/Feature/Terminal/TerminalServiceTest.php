@@ -94,9 +94,16 @@ test('the terminal is refused when the runtime is unknown rather than assumed st
 test('a missing student user refuses the session instead of falling back to a root shell', function () {
     $environment = runningEnvironment();
 
-    // There is no ttyd binary and no reachable Incus from the test suite, so the
-    // uid lookup fails and the session must be refused. The refusal is the point:
-    // a hardcoded fallback uid would silently hand out a root shell.
+    // The uid is looked up by running incus, so the lookup is pointed at a binary
+    // that does not exist to make it fail here. It used to pass because Incus was
+    // unreachable from the test suite, which is a property of the day rather than
+    // of the code: as soon as a real environment was created on the compute plane
+    // the lookup started succeeding, the guard was walked past, and the test failed
+    // further along for a reason it never described.
+    config()->set('infrastructure.incus_binary', '/nonexistent/incus-for-tests');
+
+    // The refusal is the point: a hardcoded fallback uid would silently hand out a
+    // root shell.
     expect(fn () => terminalService()->open(User::factory()->create(), $environment))
         ->toThrow(RuntimeException::class);
 });

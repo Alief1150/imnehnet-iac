@@ -29,11 +29,6 @@ class LabEnvironmentPolicy
      * itself. All three are covered by this, and a deactivated account should not
      * be able to drive a compute plane through any of them.
      */
-    private function mayManage(User $user): bool
-    {
-        return $user->isAdmin() && $user->isActive();
-    }
-
     public function viewAny(User $user): bool
     {
         return $user->isActive();

@@ -4,7 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Enums\EnvironmentStatus;
 use App\Enums\RuntimeStatus;
-use App\Models\LabEnvironment;
+use App\Filament\Resources\Environments\EnvironmentResource;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -33,25 +33,32 @@ final class EnvironmentStatsOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $total = LabEnvironment::query()->count();
+        // Counted through the resource query, not the model, so the figures
+        // describe the environments this viewer is allowed to see. Counting the
+        // model directly told a student how many environments other students own,
+        // which is precisely what the ownership rules keep to each owner. Cloning
+        // keeps the per-figure wheres from stacking onto one query.
+        $visible = EnvironmentResource::getEloquentQuery();
 
-        $running = LabEnvironment::query()
+        $total = (clone $visible)->count();
+
+        $running = (clone $visible)
             ->where('runtime_status', RuntimeStatus::Running->value)
             ->count();
 
-        $ready = LabEnvironment::query()
+        $ready = (clone $visible)
             ->where('status', EnvironmentStatus::Ready->value)
             ->count();
 
-        $stopped = LabEnvironment::query()
+        $stopped = (clone $visible)
             ->where('status', EnvironmentStatus::Stopped->value)
             ->count();
 
-        $errors = LabEnvironment::query()
+        $errors = (clone $visible)
             ->where('status', EnvironmentStatus::Error->value)
             ->count();
 
-        $inFlight = LabEnvironment::query()
+        $inFlight = (clone $visible)
             ->whereIn('status', [
                 EnvironmentStatus::Provisioning->value,
                 EnvironmentStatus::Configuring->value,

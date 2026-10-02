@@ -29,8 +29,14 @@ final class RecentEnvironments extends TableWidget
 
     public function table(Table $table): Table
     {
+        // Through the resource query rather than straight off the model. The
+        // resource already limits a non-admin to their own environments, and this
+        // widget bypassed it, so every student's container name and address was
+        // on the dashboard of every other student. The resource is the single
+        // place that decides who may see what, and a widget that needs the same
+        // answer has to ask the same place.
         return $table
-            ->query(LabEnvironment::query()->latest('updated_at'))
+            ->query(EnvironmentResource::getEloquentQuery()->latest('updated_at'))
             ->columns([
                 TextColumn::make('container_name')
                     ->label('Container')

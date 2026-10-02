@@ -2,6 +2,7 @@
 
 use App\Enums\EnvironmentStatus;
 use App\Enums\RuntimeStatus;
+use App\Enums\UserRole;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Infrastructure;
 use App\Filament\Pages\Monitoring;
@@ -166,6 +167,13 @@ test('the dashboard is titled IMNEHNET DASHBOARD with the control plane subheadi
 });
 
 test('the dashboard reports the five figures the specification names, from live data', function () {
+    // The tiles are scoped to what the viewer may see, and the specification asks
+    // for the five figures of the estate as a whole, which is the administrator's
+    // view. Asserting them without signing in counted nothing, and asserting them
+    // as a student would be asserting a smaller number than the specification
+    // names.
+    $this->actingAs(User::factory()->create(['role' => UserRole::Admin]));
+
     LabEnvironment::factory()->create(['status' => EnvironmentStatus::Ready, 'runtime_status' => RuntimeStatus::Running]);
     LabEnvironment::factory()->create(['status' => EnvironmentStatus::Ready, 'runtime_status' => RuntimeStatus::Running]);
     LabEnvironment::factory()->error()->create();
