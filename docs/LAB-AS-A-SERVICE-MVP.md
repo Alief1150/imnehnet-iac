@@ -292,3 +292,24 @@ Branch `feat/lab-provisioning`. Sprint commits:
 - `docs(lab): document LaaS MVP validation`
 
 No secrets are stored in the repository.
+
+## 13. Addendum (2026-10-01): host-IP hardening and Student A/B test labs
+
+During the Student A/B policy test provisioning, a gap was found and fixed:
+container-to-own-host traffic terminates in the INPUT chain, so the FORWARD
+enforcement never saw it. Both hosts now carry an additional `chain input`
+(priority 10) in `table inet laa-ctf`:
+
+- LAB-ATK: drops `10.30.0.0/24 -> 192.168.100.30` new connections
+  (attacker containers can no longer reach the host SSH on its mgmt IP;
+  DNS/DHCP to the bridge IP 10.30.0.1 are unaffected).
+- LAB-ENV: drops `@victim_demo -> 192.168.100.20` new connections
+  (scoped to student/demo victim IPs only; lab-test and lab-tofu-test
+  are unaffected).
+
+Both changes were validated with open-port TCP tests (host sshd :22)
+before/after, and policy-set updates for two additional lab pairs
+(Student A = last octet .102, Student B = .103) were applied the same way:
+extend `allowed_pairs` / `victim_demo`, then `systemctl restart
+laa-ctf-config.service`. Backups of the previous nft files are kept
+alongside (`*.bak-*`).
