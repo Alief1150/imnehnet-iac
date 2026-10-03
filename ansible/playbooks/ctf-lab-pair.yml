@@ -111,3 +111,12 @@
       ansible.builtin.command:
         cmd: "{{ incus_cmd }} exec atk-{{ lab_id }} -- which nmap curl nc dig"
       changed_when: false
+
+    # Students never get sudo. Network powers are granted per-binary via
+    # filesystem capabilities instead, so recon tools work unprivileged
+    # (ICMP, SYN scan, traceroute) while the student cannot escalate to
+    # root or touch the container system.
+    - name: Grant network capabilities to recon tools
+      ansible.builtin.shell: |
+        {{ incus_cmd }} exec atk-{{ lab_id }} -- bash -c 'setcap cap_net_raw=ep /usr/bin/ping; setcap cap_net_raw,cap_net_admin=ep /usr/bin/nmap; setcap cap_net_raw=ep $(readlink -f $(which traceroute))'
+      changed_when: true
