@@ -313,3 +313,20 @@ before/after, and policy-set updates for two additional lab pairs
 extend `allowed_pairs` / `victim_demo`, then `systemctl restart
 laa-ctf-config.service`. Backups of the previous nft files are kept
 alongside (`*.bak-*`).
+
+## 14. Addendum (2026-10-03): student privilege model
+
+Students do NOT receive sudo in attacker containers. Recon tools carry
+filesystem capabilities instead: `cap_net_raw=ep` on ping and traceroute,
+`cap_net_raw,cap_net_admin=ep` on nmap. This gives unprivileged students
+ICMP, SYN scanning and tracing while preventing root escalation, package
+installation and system modification inside the container (and therefore
+limits container-escape surface on the shared kernel host).
+
+Baked into `ctf-attacker-kali-base` (v2, fingerprint c022e7f18531) and
+enforced by the playbook. Policy test note: a cross-student ping from a
+student user now returns 100% packet loss (policy drop), distinct from
+the earlier "operation not permitted" (missing capability).
+
+Tool baseline: nmap, curl, wget, netcat-openbsd, dnsutils (dig/nslookup),
+traceroute, iproute2, iputils-ping.
