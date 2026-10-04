@@ -3,9 +3,38 @@
 Position, what is done, what is not, and the traps already paid for. Read this
 before changing anything.
 
-Last updated: 2026-10-04. Head at time of writing: `dfde7d2`.
+Last updated: 2026-10-04. The tree was clean at this commit.
+
+There is deliberately no commit hash here. A document cannot contain the hash of
+the commit that contains it, so every version of this line was one commit stale by
+the time it was read. `git log --oneline -1` answers the question for any moment.
 
 ---
+
+## 0. Picking this up again
+
+```
+ssh iaas                                     # IAAS-MGMT
+cd /home/iaas/projects/webportal-iaas
+bash scripts/verify.sh                       # the gate. Nothing is done until it is green.
+```
+
+The portal is at **http://192.168.100.20/** (Apache, port 80). `artisan serve` on 8000
+works too but is a single worker and will serialise two students on two terminals at
+once; port 80 will not.
+
+To see the course as a student: `ctf-student@imnehnet.test` / `Koral-Mekanisme-9917`.
+It owns a finished lab, so the page opens on the results — `Finish Lab` clears it back
+to a fresh run. The administrator is `imnehnetkelompok5@gmail.com`.
+
+Nothing here is held on a laptop. Every container, database row and process lives on
+IAAS-MGMT, LAB-ENV and LAB-ATK, so the machine this was written on can be switched off
+at any point without disturbing a running lab.
+
+The fastest way to see the whole course working again is to run it end to end against a
+live lab: drive the attacker container with the six commands the hints name, ask the
+validator between each, then submit the flag. Provisioning is about two minutes and
+solving is about ninety seconds.
 
 ## 1. Where the work stands
 
@@ -378,6 +407,6 @@ terminal token gate returning 403 on a bogus token. Port 80 is the one to use:
 terminals at once.
 
 A live guided lab is running against `ctf-student@imnehnet.test` (password
-`Koral-Mekanisme-9917`), owned by session `#15`. Its containers are the attacker
+`Koral-Mekanisme-9917`), owned by session `#16`. Its containers are the attacker
 `attacker-106` and the victim `victim-web-106` at `10.20.0.106`, permitted as a
 pair, with `ctf-http` active on the victim.
