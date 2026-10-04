@@ -86,9 +86,11 @@ return [
      * an attacker at 10.30.0.n. Both subnets are stated as prefixes because the
      * allocator appends the octet, and a pair is only ever drawn from these two.
      */
-    'victim_subnet' => env('VICTIM_SUBNET', '10.20.0.0'),
+    // Three octets, not four. The allocator appends the shared octet to this, so a
+    // value that already included the host part produced 10.20.0.0.100.
+    'victim_subnet' => env('VICTIM_SUBNET', '10.20.0'),
 
-    'attacker_subnet' => env('ATTACKER_SUBNET', '10.30.0.0'),
+    'attacker_subnet' => env('ATTACKER_SUBNET', '10.30.0'),
 
     'incus_attacker_remote' => env('INCUS_ATTACKER_REMOTE', 'lab-atk'),
 

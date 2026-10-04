@@ -67,7 +67,7 @@
                 </p>
 
                 <div class="mt-6">
-                    <x-filament::button size="lg" icon="lucide-play"
+                    <x-filament::button size="lg" :icon="Lucide::icon('play')"
                                          wire:click="startLab" wire:loading.attr="disabled">
                         Start lab
                     </x-filament::button>
@@ -225,7 +225,7 @@
                              logs on a timer would mean doing it constantly, for every
                              open page, for a verdict that rarely changes. --}}
                         <div class="mt-5 border-t border-gray-200 pt-4 dark:border-gray-800">
-                            <x-filament::button color="gray" size="sm" icon="lucide-scan-search"
+                            <x-filament::button color="gray" size="sm" :icon="Lucide::icon('circle-dot')"
                                                  wire:click="checkProgress" wire:loading.attr="disabled">
                                 Check my progress
                             </x-filament::button>
@@ -249,7 +249,7 @@
 
                         <div class="mt-4">
                             <x-filament::button tag="a" href="{{ \App\Filament\Pages\Terminal::getUrl(panel: 'student') }}"
-                                                 icon="lucide-terminal">
+                                                 :icon="Lucide::icon('terminal')">
                                 Open terminal
                             </x-filament::button>
                         </div>
@@ -279,12 +279,12 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <x-filament::button color="gray" size="sm" icon="lucide-rotate-cw"
+                    <x-filament::button color="gray" size="sm" :icon="Lucide::icon('rotate-ccw')"
                                          wire:click="$refresh" wire:loading.attr="disabled">
                         Refresh
                     </x-filament::button>
 
-                    <x-filament::button color="danger" size="sm" icon="lucide-square"
+                    <x-filament::button color="danger" size="sm" :icon="Lucide::icon('square')"
                                          wire:click="finishLab" wire:loading.attr="disabled"
                                          wire:confirm="Finish this lab? Your progress is kept and the containers are released.">
                         Stop lab

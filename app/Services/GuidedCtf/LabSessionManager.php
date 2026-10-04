@@ -68,7 +68,12 @@ class LabSessionManager
                 $victim = LabEnvironment::query()->create([
                     'user_id' => $user->getKey(),
                     'container_name' => $this->victimName($course, $pair['octet']),
-                    'incus_remote' => (string) config('infrastructure.incus_remote', 'lab-env'),
+                    // Stored as a remote name. The configuration carries the trailing
+                    // colon because that is how the Incus command line spells it, and
+                    // adding another colon when a target is built produced
+                    // "lab-env::victim-web-104" and a provisioning failure on the very
+                    // first command.
+                    'incus_remote' => rtrim((string) config('infrastructure.incus_remote', 'lab-env'), ':'),
                     'incus_project' => 'default',
                     'image' => (string) config('infrastructure.lab_image', 'images:ubuntu/24.04'),
                     'internal_ip' => $pair['victim_ip'],
@@ -98,7 +103,7 @@ class LabSessionManager
                 $attacker = LabEnvironment::query()->create([
                     'user_id' => $user->getKey(),
                     'container_name' => $this->attackerName($pair['octet']),
-                    'incus_remote' => (string) config('infrastructure.incus_attacker_remote', 'lab-atk'),
+                    'incus_remote' => rtrim((string) config('infrastructure.incus_attacker_remote', 'lab-atk'), ':'),
                     'incus_project' => 'default',
                     'image' => (string) config('infrastructure.attacker_image', 'images:kali'),
                     'internal_ip' => $pair['attacker_ip'],

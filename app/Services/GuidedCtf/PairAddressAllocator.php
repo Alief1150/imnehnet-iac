@@ -118,10 +118,12 @@ class PairAddressAllocator
         $octets = [];
 
         foreach ($decoded as $instance) {
-            $octet = $this->octetFromAddress((string) ($instance['state']['network']['incusbr0']['addresses'][0]['address'] ?? ''));
+            foreach ($this->addressesOf($instance) as $address) {
+                $octet = $this->octetFromAddress($address);
 
-            if ($octet !== null) {
-                $octets[] = $octet;
+                if ($octet !== null) {
+                    $octets[] = $octet;
+                }
             }
         }
 
@@ -129,21 +131,65 @@ class PairAddressAllocator
     }
 
     /**
-     * Octets the firewall currently permits.
+     * Every IPv4 address a container holds.
      *
-     * @return list<int>
+     * All interfaces, not one named after the bridge. Incus reports one entry per NIC
+     * under state.network and names them as the guest sees them, so eth0 is the usual
+     * name on a bridged container; looking for incusbr0 there finds nothing and every
+     * container reads as having no address. That is exactly what happened: the
+     * allocator believed every octet was free and handed out one already in use.
+     *
+     * Every address rather than the first, because a container with a second interface
+     * may carry the lab address on either.
+     *
+     * @param  array<string, mixed>  $instance
+     * @return list<string>
      */
+    private function addressesOf(array $instance): array
+    {
+        $network = $instance['state']['network'] ?? [];
+
+        if (! is_array($network)) {
+            return [];
+        }
+
+        $addresses = [];
+
+        foreach ($network as $interfaces) {
+            foreach ((array) ($interfaces['addresses'] ?? []) as $entry) {
+                if (($entry['family'] ?? null) !== 'inet') {
+                    continue;
+                }
+
+                $addresses[] = (string) ($entry['address'] ?? '');
+            }
+        }
+
+        return $addresses;
+    }
+
+    /**
+ * Octets the firewall currently permits.
+ *
+ * Read from the attacker's allowed_pairs set rather than from the Incus ACL. The ACL
+ * states the permitted network as a whole (10.20.0.0/24) and therefore says nothing
+ * about which octets are in use, so reading it and extracting an octet from a subnet
+ * produced a number that meant nothing — here the mask, 24.
+ *
+ * @return list<int>
+ */
     private function octetsInFirewall(): array
     {
         $result = $this->commands->run(
-            [$this->binary(), 'query', sprintf('%s:/1.0/network/acl/ctf-attacker', $this->attackerRemote())],
-            10,
+            ['ssh', $this->attackerSshAlias(), 'sudo', '-n',
+                '/usr/sbin/nft', 'list', 'set', 'inet', 'laa-ctf', 'allowed_pairs'],
+            20,
         );
 
-        // The firewall's state is read from the attacker plane over its API, which is
-        // where the rules live. A failure here is not fatal to allocation — the set
-        // is an input, not the source of truth — but it must not be silently empty,
-        // or an octet already permitted would be handed out again.
+        // A failure here is not fatal to allocation: the running containers are the
+        // source of truth for what exists, and this only makes the allocator more
+        // conservative. But it must not be silently empty, or an octet already
+        // permitted would be handed out again.
         if (! $result['successful']) {
             return [];
         }
@@ -158,28 +204,24 @@ class PairAddressAllocator
     }
 
     /**
+     * Octets from the permitted-pair set.
+     *
      * @return list<int>
      */
-    private function pairsFromFirewall(string $json): array
+    private function pairsFromFirewall(string $output): array
     {
-        $decoded = json_decode($json, true);
-
-        if (! is_array($decoded)) {
+        // The set is printed across several lines with a trailing comma on all but the
+        // last element, so the body is taken between the braces and split on commas
+        // rather than by line.
+        if (preg_match('/elements\s*=\s*\{(.*?)\}/s', $output, $matches) !== 1) {
             return [];
         }
 
         $octets = [];
 
-        foreach (['ingress', 'egress'] as $direction) {
-            foreach ((array) ($decoded[$direction] ?? []) as $rule) {
-                // The permitted pairs are expressed in the ACL as the concrete
-                // addresses a student may reach. Each ends in the shared octet, so
-                // the destination address is what identifies a pair in use.
-                $octet = $this->octetFromAddress((string) ($rule['destination'] ?? ''));
-
-                if ($octet !== null) {
-                    $octets[] = $octet;
-                }
+        foreach (explode(',', $matches[1]) as $pair) {
+            if (preg_match('/10\.30\.0\.(\d+)\s*\.\s*10\.20\.0\.\d+/', trim($pair), $found) === 1) {
+                $octets[] = (int) $found[1];
             }
         }
 
@@ -189,9 +231,26 @@ class PairAddressAllocator
     private function octetFromAddress(string $address): ?int
     {
         // Incus reports a CIDR form here as well as a bare address.
-        $address = strtok($address, '/');
+        //
+        // Assigned before strtok, because strtok takes its first argument by
+        // reference and passing it an expression is a warning rather than an error —
+        // and a warning here would be printed on every allocation.
+        $address = strtok(trim($address), '/');
 
-        if ($address === false || filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+        if ($address === false) {
+            return null;
+        }
+
+        $address = trim($address);
+
+        if (filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+            return null;
+        }
+
+        // A container's own loopback is reported in the same place as its lab address
+        // and yields an octet of 1, which would look like octet one being in use. It is
+        // not a lab address, so it is not counted as one.
+        if (str_starts_with($address, '127.')) {
             return null;
         }
 
@@ -203,8 +262,8 @@ class PairAddressAllocator
         return (string) config('infrastructure.incus_binary', 'incus');
     }
 
-    private function attackerRemote(): string
+    private function attackerSshAlias(): string
     {
-        return (string) config('infrastructure.incus_attacker_remote', 'lab-atk');
+        return (string) config('infrastructure.attacker_plane_ssh_alias', 'lab-atk');
     }
 }

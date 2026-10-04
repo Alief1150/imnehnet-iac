@@ -114,13 +114,53 @@ final class ProvisionLabSession implements ShouldQueue
 
             $sessions->markReady($session->refresh());
         } catch (RuntimeException $exception) {
-            // Said plainly and left for a human. A lab that half exists is worse than
-            // one that failed with a reason, because the student cannot tell which of
-            // the two containers is missing and neither can an operator from the page.
+            // Said plainly. A lab that half exists is worse than one that failed with a
+            // reason, because the student cannot tell which of the two containers is
+            // missing and neither can an operator from the page.
             $sessions->markFailed(
                 $session->refresh(),
                 'The lab could not be built: '.$exception->getMessage(),
             );
+
+            $this->undo($tofu, $firewall, $session->refresh(), $victim);
+        }
+    }
+
+    /**
+     * Put the compute planes back the way they were before this attempt.
+     *
+     * Runs after the failure has been recorded, and never throws: a cleanup that raises
+     * would replace the real reason for the failure with a second, later one, and the
+     * message that matters is the first.
+     *
+     * The workspaces are destroyed rather than deleted, so the containers they track go
+     * with them. Deleting a workspace that still tracks an instance only makes OpenTofu
+     * forget it, and the container keeps running, holds its address and blocks the next
+     * attempt with "already exists".
+     */
+    private function undo(
+        OpenTofuService $tofu,
+        LabFirewall $firewall,
+        LabSession $session,
+        LabEnvironment $victim,
+    ): void {
+        try {
+            $firewall->revoke($session);
+        } catch (\Throwable) {
+            // Recorded and moved past. A pair that stays permitted is bad, but a
+            // teardown that stops here leaves both containers behind as well.
+        }
+
+        $attacker = LabEnvironment::query()->find($session->attacker_environment_id);
+
+        foreach (array_filter([$victim->tofu_workspace, $attacker?->tofu_workspace]) as $workspace) {
+            try {
+                $tofu->selectOrCreateWorkspace($workspace);
+                $tofu->destroy();
+            } catch (\Throwable) {
+                // Same reasoning: a surviving container is recoverable, an abort here
+                // would leave the other one behind too.
+            }
         }
     }
 
