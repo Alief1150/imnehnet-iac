@@ -18,7 +18,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bad="$(git ls-files | grep -E '(^|/)(\.env($|\.)|.*\.tfstate($|\.)|.*\.tfplan$|id_rsa($|\.)|id_ed25519($|\.)|.*\.pem$|.*\.p12$|.*\.pfx$)' || true)"
+          bad="$(git ls-files | grep -E '(^|/)(\.env($|\.)|.*\.tfstate($|\.)|.*\.tfplan$|id_rsa($|\.)|id_ed25519($|\.)|.*\.pem$|.*\.p12$|.*\.pfx$)' | grep -Ev '(^|/)\.env\.example$' || true)"
           if [[ -n "$bad" ]]; then
             echo "Forbidden files are tracked:"
             echo "$bad"
@@ -30,7 +30,11 @@ jobs:
         run: |
           set -euo pipefail
           while IFS= read -r -d '' file; do
-            bash -n "$file"
+            first_line=""
+            IFS= read -r first_line < "$file" || true
+            if [[ "$file" == *.sh || "$first_line" == "#!/usr/bin/env bash" || "$first_line" == "#!/usr/bin/env sh" || "$first_line" == "#!/bin/bash" || "$first_line" == "#!/bin/sh" ]]; then
+              bash -n "$file"
+            fi
           done < <(find scripts .githooks -type f -print0 2>/dev/null || true)
 
   opentofu:
