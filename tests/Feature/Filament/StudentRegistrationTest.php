@@ -72,10 +72,15 @@ test('registering creates an active student and signs them in', function () {
         ->and($user->must_change_password)->toBeFalse()
         ->and(Hash::check(aStrongPassword(), $user->password))->toBeTrue();
 
-    // Signed in and sent to the panel, so a student does not land on the
-    // registration form they just submitted with a success message on it.
+    // Signed in and sent to the student's own panel. /admin said the account was
+    // an administrator the moment it was created, and put the new student in the
+    // administrative navigation to prove it.
     expect(Auth::check())->toBeTrue()
         ->and(Auth::user()->getKey())->toBe($user->getKey());
+
+    fillRegistration(Livewire::test(RegisterStudent::class), 'kedua@example.com')
+        ->call('register')
+        ->assertRedirect(route('filament.student.pages.dashboard'));
 });
 
 test('a self-registered account cannot be an administrator', function () {

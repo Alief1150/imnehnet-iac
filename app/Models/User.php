@@ -60,9 +60,32 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(LabEnvironment::class, 'user_id');
     }
 
+    /**
+     * Which panels this account may enter at all.
+     *
+     * There are two panels and they are not the same portal with a different
+     * menu: /admin is for the people who run the compute plane and /student is
+     * for the people practising on it. Checking only whether the account is active
+     * meant a self-registered student could sign in to /admin, land in the
+     * administrative navigation, and see infrastructure and audit pages they have
+     * no business looking at. The guards on those pages still held, but the
+     * registration flow put them there, which said student accounts are
+     * administrators.
+     *
+     * An unknown panel is refused rather than allowed, so adding a panel later
+     * does not silently open it to everybody.
+     */
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->status === UserStatus::Active;
+        if ($this->status !== UserStatus::Active) {
+            return false;
+        }
+
+        return match ($panel->getId()) {
+            'admin' => $this->isAdmin(),
+            'student' => ! $this->isAdmin(),
+            default => false,
+        };
     }
 
     public function isAdmin(): bool

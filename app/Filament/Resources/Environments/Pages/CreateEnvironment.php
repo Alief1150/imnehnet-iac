@@ -7,6 +7,7 @@ use App\Enums\RuntimeStatus;
 use App\Filament\Resources\Environments\EnvironmentResource;
 use App\Models\User;
 use App\Services\EnvironmentLifecycleService;
+use App\Support\CurrentPanel;
 use App\Support\EnvironmentWorkspace;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -88,7 +89,7 @@ class CreateEnvironment extends CreateRecord
             ->persistent()
             ->send();
 
-        $this->redirect(EnvironmentResource::getUrl('index', panel: 'admin'));
+        $this->redirect(EnvironmentResource::getUrl('index', panel: CurrentPanel::id()));
     }
 
     public function form(Schema $schema): Schema

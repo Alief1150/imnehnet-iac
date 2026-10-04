@@ -9,6 +9,7 @@ use App\Filament\Widgets\NeedsAttention;
 use App\Filament\Widgets\PeopleOverview;
 use App\Filament\Widgets\RecentEnvironments;
 use App\Services\EnvironmentQuota;
+use App\Support\CurrentPanel;
 use App\Support\Lucide;
 use Filament\Actions\Action;
 use Filament\Pages\Dashboard as BaseDashboard;
@@ -94,7 +95,7 @@ final class Dashboard extends BaseDashboard
                 // than one that is honestly absent, and the Environments page
                 // states the reason where the count is visible.
                 ->visible(fn (): bool => app(EnvironmentQuota::class)->allowsAnother($user))
-                ->url(fn (): string => EnvironmentResource::getUrl('create', panel: 'admin')),
+                ->url(fn (): string => EnvironmentResource::getUrl('create', panel: CurrentPanel::id())),
         ];
     }
 

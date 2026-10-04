@@ -38,9 +38,12 @@ test('a student reaches the environments resource and sees only their own', func
     runningEnvFor(User::factory()->create(), 'lab-someone-else');
     runningEnvFor(null, 'lab-unassigned');
 
+    // The student's own panel. Ownership is enforced inside the resource
+    // query, not by which panel is open, so this is asserted where a
+    // student actually lands.
     $this->actingAs($student);
 
-    $this->get(EnvironmentResource::getUrl('index', panel: 'admin'))
+    $this->get(EnvironmentResource::getUrl('index', panel: 'student'))
         ->assertSuccessful()
         ->assertSee('lab-mine')
         ->assertDontSee('lab-someone-else')

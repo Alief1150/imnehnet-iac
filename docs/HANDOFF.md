@@ -19,6 +19,7 @@ Last updated: 2026-10-02. Head at time of writing: `81e6dd7`.
 | Honest states, badges, error UX, reconciliation (§27–§33) | done |
 | E2E smoke test (§34) | **done and passed** — see §8 |
 | Student self-registration | done, at `/login/regist` |
+| Student panel | done, at `/student` — one panel per role |
 | Dashboard redesign | done — Recent Activity removed, two tiles added |
 | LAB-ATK guided CTF pair | **blocked on LAB-ATK access** — see §5 |
 | UI quality gate (§36) | not done; needs a real screenshot review |
@@ -222,6 +223,32 @@ properties of what is installed, not preferences.
 
 * **Tailwind only ships classes it saw when it built.** New Blade means
   `scripts/build-assets.sh`, or the page renders unstyled with no error anywhere.
+  `resources/css/app.css` used to scan only `storage/framework/views`, so a Blade
+  file that had never been rendered was invisible to it. It scans
+  `resources/views/**/*.blade.php` and `app/Filament` as well now.
+
+* **A Grep for a Tailwind class has to account for the escaping.** `bg-teal-600`
+  is written `.bg-teal-600` but `hover:text-teal-300` is written
+  `.hover\:text-teal-300`, and `tracking-[0.35em]` is
+  `.tracking-\[0\.35em\]`. Searching for the unescaped form finds nothing and
+  reads as a missing class. Search for the value, not the selector.
+
+* **Filament puts its own `Authenticate` ahead of the panel's middleware list.**
+  That middleware aborts with 403 as soon as `canAccessPanel` says no, so any
+  middleware added through `Panel::middleware()` runs *after* the refusal it was
+  meant to prevent, and appears to do nothing. Panel access redirects have to be
+  registered globally in `bootstrap/app.php`.
+
+* **Filament's login refuses an account that may not enter the current panel, and
+  reports it as "these credentials do not match our records."** With two panels
+  that is a lie for a student who typed a correct password into `/admin/login`,
+  and it sends them to reset a password that is fine. The login form here answers
+  yes and lets `RedirectToOwnPanel` decide where the account belongs.
+
+* **`Route::hasNamedRoute()` is not on the `Route` facade** in this Laravel
+  version; it forwards to the registrar and throws
+  `Attribute [hasNamedRoute] does not exist`. Use
+  `Route::getRoutes()->hasNamedRoute()`.
 
 * **Cache plain values, not objects.** A serialized object whose class has been
   renamed comes back as `__PHP_Incomplete_Class` and fails a type hint, taking the
@@ -296,10 +323,23 @@ tofu         workspace env-lab-web-smoke active; default holds lab-tofu-test
 The one warning is `TerminalSlotGrantsTest`, "writing a map to an unwritable
 location says so instead of failing". It is pre-existing and unrelated.
 
-Accounts: one, the administrator. Registration is live at `/login/regist` and
-creates active students, rate limited to five attempts per address pair per hour,
-counting attempts that fail validation. Each student may hold
-`STUDENT_ENVIRONMENT_LIMIT` environments, three by default.
+Accounts: one administrator and one student (`abdi@gmail.com`, self-registered).
+Registration is live at `/login/regist` and creates active students, rate limited
+to five attempts per address pair per hour, counting attempts that fail
+validation. Each student may hold `STUDENT_ENVIRONMENT_LIMIT` environments, three
+by default.
+
+There are **two panels**, one per role:
+
+| Panel | Path | Contains |
+|---|---|---|
+| admin | `/admin` | everything |
+| student | `/student` | dashboard, environments, terminal — nothing else |
+
+The administrative resources are not registered on the student panel at all, so
+they cannot be reached there whatever a permission changes to. The lists are
+written out by hand rather than discovered, which is the point: adding an
+administrative resource to a directory must not hand it to every student.
 
 `lab-web-smoke` is disposable: created and destroyed through the portal's own
 lifecycle during the smoke test, and left running because it is the only

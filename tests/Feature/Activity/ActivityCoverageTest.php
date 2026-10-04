@@ -10,7 +10,11 @@ use App\Models\ActivityLog;
 use App\Models\LabEnvironment;
 use App\Models\User;
 use App\Services\EnvironmentLifecycleService;
-use Filament\Auth\Pages\Login;
+// The form both panels use, rather than Filament's base class. The one
+// installed here answers yes to the panel check and lets
+// RedirectToOwnPanel decide where the account belongs, and a test of the
+// wrong class would pass while the real form behaved differently.
+use App\Filament\Auth\Pages\Login;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
@@ -107,36 +111,40 @@ test('an edit that changes no audited field writes no log', function () {
 });
 
 test('a sign in is audited and stamps the last login time', function () {
-    $student = User::factory()->create(['role' => 'student', 'last_login_at' => null]);
+    // An administrator, because this is the administrative sign-in form.
+    // A student's own form is the same class on the student panel.
+    $admin = User::factory()->create(['role' => UserRole::Admin, 'last_login_at' => null]);
 
     Livewire::test(Login::class)
         ->fillForm([
-            'email' => $student->email,
+            'email' => $admin->email,
             'password' => 'password',
         ])
         ->call('authenticate')
         ->assertHasNoFormErrors();
 
-    expect($student->fresh()->last_login_at)->not->toBeNull();
+    expect($admin->fresh()->last_login_at)->not->toBeNull();
 
     $log = ActivityLog::query()->where('action', 'LOGIN')->sole();
 
-    expect($log->actor_id)->toBe($student->id)
-        ->and($log->description)->toContain($student->email);
+    expect($log->actor_id)->toBe($admin->id)
+        ->and($log->description)->toContain($admin->email);
 });
 
 test('a wrong password is not recorded as a sign in', function () {
-    $student = User::factory()->create(['role' => 'student', 'last_login_at' => null]);
+    // An administrator, because this is the administrative sign-in form.
+    // A student's own form is the same class on the student panel.
+    $admin = User::factory()->create(['role' => UserRole::Admin, 'last_login_at' => null]);
 
     Livewire::test(Login::class)
         ->fillForm([
-            'email' => $student->email,
+            'email' => $admin->email,
             'password' => 'definitely-wrong',
         ])
         ->call('authenticate');
 
     expect(ActivityLog::query()->where('action', 'LOGIN')->count())->toBe(0)
-        ->and($student->fresh()->last_login_at)->toBeNull();
+        ->and($admin->fresh()->last_login_at)->toBeNull();
 });
 
 test('the request context is recorded so an operator can see where it came from', function () {

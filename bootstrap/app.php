@@ -13,7 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Global rather than panel middleware, and that placement is the whole
+        // point. Filament inserts its own Authenticate ahead of the panel's
+        // middleware list, and that one answers 403 as soon as canAccessPanel
+        // says no. As panel middleware the redirect therefore always ran after
+        // the refusal it existed to prevent. Global runs first.
+        $middleware->append(\App\Http\Middleware\RedirectToOwnPanel::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

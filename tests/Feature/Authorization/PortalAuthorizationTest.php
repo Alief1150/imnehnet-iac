@@ -15,16 +15,35 @@ uses(RefreshDatabase::class);
  * policy directly rather than through the interface. A hidden button is
  * presentation; the policy is the control.
  */
-test('only active accounts can access the filament panel', function () {
-    $panel = Panel::make()->id('admin');
-    $activeStudent = User::factory()->create();
+test('each role reaches its own panel and not the other one', function () {
+    // Two panels, one per role. Before this split canAccessPanel only asked
+    // whether the account was active, so a self-registered student could sign in
+    // to /admin and land in the administrative navigation.
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $student = User::factory()->create(['role' => UserRole::Student]);
     $disabledAdmin = User::factory()->create([
         'role' => UserRole::Admin,
         'status' => UserStatus::Disabled,
     ]);
 
-    expect($activeStudent->canAccessPanel($panel))->toBeTrue()
-        ->and($disabledAdmin->canAccessPanel($panel))->toBeFalse();
+    $adminPanel = Panel::make()->id('admin');
+    $studentPanel = Panel::make()->id('student');
+
+    expect($admin->canAccessPanel($adminPanel))->toBeTrue()
+        ->and($admin->canAccessPanel($studentPanel))->toBeFalse()
+        ->and($student->canAccessPanel($studentPanel))->toBeTrue()
+        ->and($student->canAccessPanel($adminPanel))->toBeFalse()
+        // Activity still gates both, so a disabled administrator is refused
+        // everywhere rather than merely losing the panel that matches their role.
+        ->and($disabledAdmin->canAccessPanel($adminPanel))->toBeFalse()
+        ->and($disabledAdmin->canAccessPanel($studentPanel))->toBeFalse();
+});
+
+test('a panel nobody has heard of is refused rather than opened', function () {
+    // So that adding a panel later does not silently admit everybody to it.
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+
+    expect($admin->canAccessPanel(Panel::make()->id('kelapa')))->toBeFalse();
 });
 
 test('a student may create their own environment', function () {

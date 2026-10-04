@@ -71,7 +71,7 @@ function dashboardTotalFor(User $viewer): int|string
 
 test('a student reaches the create page and is asked for what a lab needs', function () {
     $this->actingAs(aStudent())
-        ->get(EnvironmentResource::getUrl('create', panel: 'admin'))
+        ->get(EnvironmentResource::getUrl('create', panel: 'student'))
         ->assertSuccessful()
         ->assertSee('Container name')
         ->assertSee('Image')
@@ -162,7 +162,7 @@ test("another student's environment does not exist as far as this student is con
     // scoped query, so a record outside it is absent, and answering 403 would
     // confirm that somebody else's environment exists.
     $this->actingAs($student)
-        ->get(EnvironmentResource::getUrl('view', ['record' => $other], panel: 'admin'))
+        ->get(EnvironmentResource::getUrl('view', ['record' => $other], panel: 'student'))
         ->assertNotFound();
 });
 
@@ -172,7 +172,7 @@ test('a student reaches the terminal and is offered only their own labs', functi
     anEnvironmentFor(aStudent('student-delapan'), 'lab-terminal-milik-mereka', '10.20.0.281');
 
     $this->actingAs($student)
-        ->get(Terminal::getUrl(panel: 'admin'))
+        ->get(Terminal::getUrl(panel: 'student'))
         ->assertSuccessful()
         ->assertSee('lab-terminal-saya')
         ->assertDontSee('lab-terminal-milik-mereka');

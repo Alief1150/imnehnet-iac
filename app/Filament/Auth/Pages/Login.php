@@ -4,14 +4,26 @@ namespace App\Filament\Auth\Pages;
 
 use Filament\Actions\Action;
 use Filament\Auth\Pages\Login as BaseLogin;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
- * The panel sign-in, with a way to register.
+ * The sign-in form for both panels.
  *
- * Registration lives at /login/regist rather than under /admin, because a
- * student creating an account is not an administrator doing an administrative
- * task and should not appear to reach for one. This adds the only link to it,
- * so the form is reachable from where a first-time user actually starts.
+ * It is deliberately panel-blind about who may sign in.
+ *
+ * Filament's own check refuses an account that may not enter the current panel
+ * and reports it as "these credentials do not match our records". For a student
+ * who typed a correct password into /admin/login that is simply untrue: the
+ * password was right and the address was wrong, and telling them otherwise sends
+ * them off to reset a password that does not need resetting. So that check is
+ * answered yes here, and panel access is enforced on every subsequent request by
+ * RedirectToOwnPanel instead. Nothing is reachable that should not be; a student
+ * who signs in at the administrative address is simply redirected to their own
+ * panel before any page renders.
+ *
+ * The registration link is the other reason this class exists. Registration lives
+ * at /login/regist rather than under /admin, so a student creating an account is
+ * not made to look like they are reaching for an administrative task.
  */
 class Login extends BaseLogin
 {
@@ -29,5 +41,10 @@ class Login extends BaseLogin
                 ->link()
                 ->color('gray'),
         ];
+    }
+
+    protected function isUserAllowedToAccessPanel(Authenticatable $user): bool
+    {
+        return true;
     }
 }

@@ -91,8 +91,8 @@ test('a student at the limit cannot reach the create form', function () {
     // purpose: an unexplained 403 reads as a broken portal rather than as a
     // limit, and a student who is told only that they may not create an
     // environment has no way to tell the two apart.
-    $this->get(\App\Filament\Resources\Environments\EnvironmentResource::getUrl('create', panel: 'admin'))
-        ->assertRedirect(\App\Filament\Resources\Environments\EnvironmentResource::getUrl('index', panel: 'admin'));
+    $this->get(\App\Filament\Resources\Environments\EnvironmentResource::getUrl('create', panel: 'student'))
+        ->assertRedirect(\App\Filament\Resources\Environments\EnvironmentResource::getUrl('index', panel: 'student'));
 });
 
 test('an administrator reaches the create form regardless of the quota', function () {

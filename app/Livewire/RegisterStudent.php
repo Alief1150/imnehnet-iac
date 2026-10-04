@@ -81,9 +81,14 @@ final class RegisterStudent extends Component
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()],
+            'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()->symbols()],
         ], [
             'password.min' => 'Use at least 12 characters: this account reaches a machine that holds other people\' labs.',
+            // Stated one rule at a time, because "failed validation" on a field
+            // with four rules tells the student none of them.
+            'password.mixed' => 'Add at least one uppercase letter.',
+            'password.numbers' => 'Add at least one number.',
+            'password.symbols' => 'Add at least one symbol, such as # or $.',
         ]);
 
         // Assigned property by property. Nothing from the request reaches fill(),
@@ -114,7 +119,10 @@ final class RegisterStudent extends Component
 
         Auth::login($user);
 
-        $this->redirect(route('filament.admin.pages.dashboard'), navigate: false);
+        // /student, not /admin. The account created here is a student, and
+        // sending it to the administrative panel said otherwise the moment it
+        // was created.
+        $this->redirect(route('filament.student.pages.dashboard'), navigate: false);
     }
 
     private function throttleKey(string $email): string
