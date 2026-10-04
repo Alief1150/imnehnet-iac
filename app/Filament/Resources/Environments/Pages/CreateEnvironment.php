@@ -51,6 +51,19 @@ class CreateEnvironment extends CreateRecord
         $data['tofu_workspace'] = EnvironmentWorkspace::forContainer($data['container_name']);
         $data['terminal_enabled'] = true;
 
+        /*
+         * Resource limits are the portal's decision, applied here rather than
+         * asked for. There is no field for them on purpose: the person filling in
+         * this form chooses whether an environment exists, and an environment the
+         * portal creates is sized the way the portal sizes them. Writing them
+         * before the record is saved means the lifecycle service receives a
+         * complete row and never has to supply a default of its own, which would
+         * be a second place where the same number is decided.
+         */
+        $data['cpu_limit'] = (int) config('infrastructure.default_cpu_limit', 2);
+        $data['memory_limit_mb'] = (int) config('infrastructure.default_memory_limit_mb', 2048);
+        $data['disk_limit_gb'] = (int) config('infrastructure.default_disk_limit_gb', 8);
+
         // The owner comes from the session, never from the form. A field for it
         // would let whoever submits the form choose, and every access check for a
         // student's environment rests on this value being trustworthy. Reading it
@@ -130,23 +143,6 @@ class CreateEnvironment extends CreateRecord
                 ->default('images:ubuntu/24.04')
                 ->required()
                 ->native(false),
-
-            TextInput::make('cpu_limit')
-                ->label('CPU limit (cores)')
-                ->numeric()
-                ->default(1)
-                ->minValue(1)
-                ->maxValue(4)
-                ->required(),
-
-            TextInput::make('memory_limit_mb')
-                ->label('Memory limit (MiB)')
-                ->numeric()
-                ->default(1024)
-                ->minValue(256)
-                ->maxValue(8192)
-                ->helperText('1024 MiB is 1 GiB.')
-                ->required(),
         ];
     }
 
