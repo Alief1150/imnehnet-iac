@@ -107,8 +107,15 @@ if [ -z "$SUMMARY" ]; then
 else
     printf '%s\n' "$SUMMARY" | sed 's/^/       /'
 
-    if printf '%s' "$SUITE" | sed 's/\x1b\[[0-9;]*m//g' | grep -qE '^\s+\S*⨯'; then
-        bad "ada test yang gagal"
+    # Read the summary rather than matching the marker Pest prints beside each
+    # failure. The marker check passed on a run with 31 failing tests, so it is not
+    # trusted here: character-matching a progress line fails silently, and a check
+    # that quietly stops working is indistinguishable from one that never worked.
+    #
+    # The suite counts a warning as neither a pass nor a failure, so the check is for
+    # the word "failed" and not for anything other than "passed".
+    if printf '%s' "$SUMMARY" | grep -q 'failed'; then
+        bad "$(printf '%s' "$SUMMARY" | sed -e 's/^ *//' -e 's/Tests: */Tests: /')"
     else
         ok "$(printf '%s' "$SUMMARY" | sed 's/^ *//')"
     fi

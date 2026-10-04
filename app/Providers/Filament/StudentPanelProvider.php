@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\GuidedCtf;
 use App\Filament\Pages\Terminal;
 use App\Filament\Resources\Environments\EnvironmentResource;
 use App\Http\Middleware\RedirectToOwnPanel;
@@ -66,6 +67,9 @@ class StudentPanelProvider extends PanelProvider
             ])
             ->pages([
                 Dashboard::class,
+                // The guided lab comes before the terminal: it is where a student goes
+                // to start work, and the terminal is reached from there.
+                GuidedCtf::class,
                 Terminal::class,
             ])
             ->widgets([
