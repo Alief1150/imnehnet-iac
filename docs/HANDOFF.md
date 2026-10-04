@@ -18,6 +18,8 @@ Last updated: 2026-10-02. Head at time of writing: `81e6dd7`.
 | Web terminal (§24–§26) | built; **Apache gate still unloaded** |
 | Honest states, badges, error UX, reconciliation (§27–§33) | done |
 | E2E smoke test (§34) | **done and passed** — see §8 |
+| Student self-registration | done, at `/login/regist` |
+| Dashboard redesign | done — Recent Activity removed, two tiles added |
 | LAB-ATK guided CTF pair | **blocked on LAB-ATK access** — see §5 |
 | UI quality gate (§36) | not done; needs a real screenshot review |
 
@@ -83,18 +85,39 @@ The lab pair contract is in `imnehnet-iac/docs/LAB-AS-A-SERVICE-MVP.md`.
 
 ## 5. What is left
 
-1. **Reload the Apache vhost.** Requires the operator's password:
+1. **Five containers are running with no portal record.** The Needs attention
+   tile now names them, and it is the only part of the portal that could ever
+   have found them, because every other view asks the database what exists:
 
-   ```bash
-   cd /home/iaas/projects/webportal-iaas && sudo bash deploy/reload-apache-vhost.sh
+   ```
+   lab-test             10.20.0.31    leftover from an earlier debugging session
+   victim-demo-a        10.20.0.100   from the LaaS demo pair
+   victim-demo-b        10.20.0.101   from the LaaS demo pair
+   student-a-victim     10.20.0.102   built by hand, has full CTF content
+   student-b-victim     10.20.0.103   built by hand, has full CTF content
    ```
 
-   Until this runs, every static file 404s on port 80 and the terminal token
-   gate answers 503 instead of 403. The script refuses to report success unless
-   `/up` is 200, `/build/manifest.json` is 200, the manifest's theme CSS is 200,
-   and `/terminal/38000/` is 403.
+   The last two matter: somebody already built CTF victims by hand, with the
+   `student` account, `/opt/ctf` and `ctf-http` running. That is the victim half of
+   `ctf-lab-pair.yml` working in practice, so the pair model is worth finishing
+   once LAB-ATK is reachable.
 
-2. **LAB-ATK access. This is the blocker for the whole guided CTF pair.**
+   Decide per container: register it, or delete it. Do not leave them unowned.
+
+2. **Reload the Apache vhost after touching it.** The installed copy was older
+   than the repository, so the terminal token gate was not the deployed
+   behaviour even though the reload script had been run. Compare content, not
+   modification time. Current verified state on port 80:
+
+   ```
+   /up                            200
+   /build/manifest.json           200
+   /build/assets/theme-*.css      200
+   /terminal/<slot>/              403   (stable, and with a bogus token)
+   /login/regist                  200
+   ```
+
+3. **LAB-ATK access. This is the blocker for the whole guided CTF pair.**
 
    Measured from IAAS-MGMT, both refused:
 
@@ -138,10 +161,15 @@ The lab pair contract is in `imnehnet-iac/docs/LAB-AS-A-SERVICE-MVP.md`.
    * Address allocation: the `.100+n` convention has `victim-demo-a`/`.100` and
      `victim-demo-b`/`.101` taken, so the next free pair is `.102`.
 
-3. **Review the student-facing pages with eyes, not just tests.** The flow is
+4. **Review the student-facing pages with eyes, not just tests.** The flow is
    proven by HTTP tests, but nobody has looked at the rendering. Item §36.
 
-4. **Reconsider `APP_ENV=local` / `APP_DEBUG=true`** before wider exposure.
+5. **Reconsider `APP_ENV=local` / `APP_DEBUG=true`** before wider exposure.
+
+6. **The web terminal is disabled by default.** `infrastructure.terminal.browser_access_enabled`
+   reads `TERMINAL_BROWSER_ACCESS`, which is unset, so the portal hands out no
+   terminal address at all. The machinery is built and the gate works; it is one
+   environment variable away from being on.
 
 ## 6. Traps already paid for
 
@@ -177,6 +205,33 @@ properties of what is installed, not preferences.
 
 * **A record outside a resource's scoped query returns 404, not 403.** That is
   the better answer: a 403 would confirm that someone else's record exists.
+
+* **The vhost's deny list must not cover Vite's outputs.** `\.json` in
+  `<FilesMatch>` denied `manifest.json`, so every built asset was requested as a
+  path the application could not resolve and the portal rendered unstyled — while
+  the reload script asserted that same manifest was 200, which could never be
+  true while the rule was in place.
+
+* **An installed config file can be older than the one in the repository.**
+  Checking them by modification time reported them as identical. They were not.
+  Compare content.
+
+* **Pointing a route at a Livewire component class makes it look for a layout
+  named `layouts`.** Use `Route::view()` with a Blade layout that calls
+  `@livewire(...)`.
+
+* **Tailwind only ships classes it saw when it built.** New Blade means
+  `scripts/build-assets.sh`, or the page renders unstyled with no error anywhere.
+
+* **Cache plain values, not objects.** A serialized object whose class has been
+  renamed comes back as `__PHP_Incomplete_Class` and fails a type hint, taking the
+  page down. This happened once on the Monitoring page and healed itself only
+  because the entry had 10 seconds left. `ComputePlaneInventory` caches an array
+  of strings for exactly this reason.
+
+* **Rate limits must be checked before validation and counted on every
+  attempt.** Counting only successful attempts let a script submit addresses that
+  fail the uniqueness rule for ever and never reach the limit.
 
 * **A test must not depend on real infrastructure being unreachable.** One
   terminal test asserted a refusal that only happened because Incus was
@@ -229,8 +284,8 @@ the only way back to a known good state.
 ## 8. State at the time of writing
 
 ```
-tests        168 passed (621 assertions), 1 pre-existing warning
-HEAD         81e6dd7, working tree clean
+tests        190 passed (707 assertions), 1 pre-existing warning
+HEAD         10281ba, working tree clean
 queue worker supervised by scripts/queue-supervisor.sh, started by @reboot cron
 Incus lab-env   lab-test 10.20.0.31
                 lab-tofu-test 10.20.0.202  (protected, untouched)
@@ -240,6 +295,11 @@ tofu         workspace env-lab-web-smoke active; default holds lab-tofu-test
 
 The one warning is `TerminalSlotGrantsTest`, "writing a map to an unwritable
 location says so instead of failing". It is pre-existing and unrelated.
+
+Accounts: one, the administrator. Registration is live at `/login/regist` and
+creates active students, rate limited to five attempts per address pair per hour,
+counting attempts that fail validation. Each student may hold
+`STUDENT_ENVIRONMENT_LIMIT` environments, three by default.
 
 `lab-web-smoke` is disposable: created and destroyed through the portal's own
 lifecycle during the smoke test, and left running because it is the only

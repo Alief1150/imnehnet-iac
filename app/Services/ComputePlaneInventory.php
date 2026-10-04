@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Infrastructure\Health\CommandRunner;
 use App\Models\LabEnvironment;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * What is actually running on the compute plane, as opposed to what the portal
@@ -34,29 +35,47 @@ final class ComputePlaneInventory
      */
     public function containers(): array
     {
-        $result = $this->commands->run(['incus', 'list', $this->remote, '--format=json'], 5);
+        // Cached, because this runs on every dashboard load and the Incus health
+        // probe on the same page already shells out to the same daemon.
+        //
+        // What is cached is this array of plain strings, not an object. Caching an
+        // object means storing it serialized, and a cached value whose class has
+        // since been renamed comes back as __PHP_Incomplete_Class and takes the
+        // page down with a type error. A cache of strings cannot fail that way.
+        return Cache::remember(
+            'infrastructure.compute_plane.containers',
+            now()->addSeconds($this->cacheSeconds()),
+            function (): array {
+                $result = $this->commands->run(['incus', 'list', $this->remote, '--format=json'], 5);
 
-        if (! $result['successful']) {
-            return ['names' => [], 'reachable' => false];
-        }
+                if (! $result['successful']) {
+                    return ['names' => [], 'reachable' => false];
+                }
 
-        $decoded = json_decode($result['stdout'], true);
+                $decoded = json_decode($result['stdout'], true);
 
-        if (! is_array($decoded)) {
-            return ['names' => [], 'reachable' => false];
-        }
+                if (! is_array($decoded)) {
+                    return ['names' => [], 'reachable' => false];
+                }
 
-        $names = [];
+                $names = [];
 
-        foreach ($decoded as $instance) {
-            if (is_array($instance) && is_string($instance['name'] ?? null) && $instance['name'] !== '') {
-                $names[] = $instance['name'];
-            }
-        }
+                foreach ($decoded as $instance) {
+                    if (is_array($instance) && is_string($instance['name'] ?? null) && $instance['name'] !== '') {
+                        $names[] = $instance['name'];
+                    }
+                }
 
-        sort($names);
+                sort($names);
 
-        return ['names' => $names, 'reachable' => true];
+                return ['names' => $names, 'reachable' => true];
+            },
+        );
+    }
+
+    private function cacheSeconds(): int
+    {
+        return max(1, (int) config('infrastructure.resource_cache_seconds', 10));
     }
 
     /**
