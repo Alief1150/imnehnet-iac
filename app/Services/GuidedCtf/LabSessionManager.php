@@ -150,12 +150,39 @@ class LabSessionManager
 
     /**
      * Mark a session ready once both containers exist and the pair is permitted.
+     *
+     * Also switches both terminals on, which is the last thing standing between a
+     * student and a shell. They are created with terminal_enabled false because the
+     * terminal resolves the shell account's uid inside the container, and a container
+     * that is not there yet fails in a way that reads as a broken terminal rather than
+     * as a lab that is still being built. Nothing ever switched them on, so the
+     * workspace told a student their terminal would open on a lab that was ready.
+     *
+     * Here rather than at creation, because this is the one place that knows the
+     * container exists — and the flag is a statement about the container, so it is set
+     * when the container is real.
      */
     public function markReady(LabSession $session): LabSession
     {
+        foreach (
+            [$session->attacker_environment_id, $session->victim_environment_id] as $id
+        ) {
+            $environment = $id === null ? null : LabEnvironment::query()->find($id);
+
+            if ($environment !== null && ! $environment->terminal_enabled) {
+                $environment->forceFill(['terminal_enabled' => true])->save();
+            }
+        }
+
         $session->forceFill(['status' => LabSessionStatus::Ready])->save();
 
-        $this->activity->record($session->user, 'LAB_READY', $session, 'completed', 'Guided CTF lab is ready.');
+        $this->activity->record(
+            $session->owner(),
+            'LAB_READY',
+            $session,
+            'completed',
+            'Guided CTF lab is ready.',
+        );
 
         return $session;
     }

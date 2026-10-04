@@ -38,66 +38,10 @@ class LabSession extends Model
         ];
     }
 
-    /**
-     * The Incus target for the victim, spelled the way the command line wants it.
-     *
-     * One place adds the colon. Six call sites each spelling it out is six places for
-     * one of them to be wrong, and two of them were: a session stored "lab-env:" and a
-     * target built by appending another colon, giving "lab-env::victim-web-104" and a
-     * provisioning failure on the first command.
-     *
-     * The record holds a name, not a command-line fragment. A trailing colon is
-     * tolerated on the way in because configuration in this project has always carried
-     * it, but it is not stored.
-     */
-    public function victimTarget(): string
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
-        return static::remoteTarget($this->victim_remote, $this->victim_container);
-    }
-
-    /** The Incus target for the attacker, spelled the same way. */
-    public function attackerTarget(): string
-    {
-        return static::remoteTarget($this->attacker_remote, $this->attacker_container);
-    }
-
-    /**
-     * A remote and a container, with the remote normalised either way.
-     *
-     * Accepts "lab-env", "lab-env:" and "lab-env" with the container already appended,
-     * so a caller cannot produce a target with two colons.
-     */
-    public static function remoteTarget(?string $remote, ?string $container): string
-    {
-        $remote = rtrim((string) $remote, ':');
-
-        return $remote === '' ? (string) $container : $remote.':'.$container;
-    }
-
-    /**
-     * The user who owns this session.
-     *
-     * A method, not a relation, and deliberately so. A session lives in the
-     * infrastructure database alongside lab_environments, and the users table is not
-     * there. Eloquent cannot express that as a relation: newRelatedInstance copies the
-     * parent's connection onto the related model when it has none of its own, so
-     * belongsTo always asks the wrong database, and passing a pre-configured instance
-     * does not help because it builds a fresh one anyway.
-     *
-     * So this asks the portal's own database directly. User resolves on
-     * database.default, which is where users live.
-     *
-     * The cost is eager loading, and it is not paid: a session has one owner, it is
-     * read when something is recorded rather than when a list is drawn, and the portal
-     * already has the signed-in user in hand.
-     */
-    public function owner(): ?User
-    {
-        if ($this->user_id === null) {
-            return null;
-        }
-
-        return User::query()->find($this->user_id);
+        return $this->belongsTo(User::class);
     }
 
     /** @return BelongsTo<Course, $this> */
@@ -110,6 +54,21 @@ class LabSession extends Model
     public function victimEnvironment(): BelongsTo
     {
         return $this->belongsTo(LabEnvironment::class, 'victim_environment_id');
+    }
+
+    /**
+     * The attacker, as an environment the terminal can open.
+     *
+     * The attacker is recorded as an environment so the terminal machinery needs no
+     * second code path for it: the shell is opened by container name, and both halves
+     * of a lab are containers this portal knows how to open a shell in. incus_remote is
+     * what distinguishes them and needs no column of its own to do it.
+     *
+     * @return BelongsTo<LabEnvironment, $this>
+     */
+    public function attackerEnvironment(): BelongsTo
+    {
+        return $this->belongsTo(LabEnvironment::class, 'attacker_environment_id');
     }
 
     /** @return HasMany<ObjectiveProgress, $this> */
