@@ -47,7 +47,8 @@ Master prompt acceptance list: 25 of 26, item 36 outstanding.
 ```bash
 cd /home/iaas/projects/webportal-iaas
 
-php artisan test                 # must stay green; 168 tests
+bash scripts/verify.sh           # the gate. Run this before calling anything done.
+php artisan test                 # a subset of what verify.sh checks; see below
 npm run build                    # needs Node 24; use scripts/build-assets.sh
 bash scripts/reload-app.sh       # required after EVERY code change
 bash scripts/build-assets.sh     # required after every asset change
@@ -244,9 +245,17 @@ properties of what is installed, not preferences.
   replaces that middleware rather than sitting beside it.
 
 * **A subclass of a framework middleware must reproduce the parent's signature
-  exactly.** `handle($request, Closure $next, ...$guards)` — leaving the variadic
-  off is a fatal declaration error, not a warning, and it takes down every page of
-  both panels at once.
+  and visibility exactly.** `handle($request, Closure $next, ...$guards)` —
+  leaving the variadic off is a fatal declaration error, not a warning, and so is
+  narrowing a public method to protected. Both take down every page of both panels.
+
+* **`php -l` and `php artisan test` both miss class-loading fatals, for different
+  reasons, and neither can be made to catch them.** `php -l` parses a file and a
+  class that cannot be loaded still parses. The suite is worse: the class is loaded
+  while the application boots, so the fatal happens before the first test and the
+  suite dies printing no `Tests:` line at all. `scripts/verify.sh` exists because
+  of this — it loads every class in a subprocess first, where the fault is an exit
+  code rather than a corpse. Use it, not `php artisan test` alone.
 
 * **`actingAs()` cannot catch a middleware-ordering bug.** It puts the user
   straight on the guard, so a test that signs a user in never goes through the
@@ -343,7 +352,7 @@ the only way back to a known good state.
 ## 8. State at the time of writing
 
 ```
-tests        201 passed (755 assertions), 1 pre-existing warning
+tests        213 passed (804 assertions), 1 pre-existing warning
 HEAD         see git log, working tree clean
 queue worker supervised by scripts/queue-supervisor.sh, started by @reboot cron
 Incus lab-env   lab-test 10.20.0.31
