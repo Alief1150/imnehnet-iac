@@ -254,7 +254,21 @@ class PairAddressAllocator
             return null;
         }
 
-        return (int) array_pop(explode('.', $address));
+        // Same reason strtok above is given a variable: array_pop takes its argument by
+        // reference, and handing it the return value of explode() is the identical
+        // mistake one line further up. It is worth naming that this one was not a
+        // warning but an ErrorException, which under Laravel's error handler became a
+        // thrown error and therefore took out the whole allocation.
+        //
+        // That is what it did: every call that reached this method while an existing
+        // address was being checked raised, and the exception escaped rather than
+        // skipping the address. Allocation only appeared to work because the octet it
+        // needed was usually still free on a plane with a hundred addresses, so the
+        // collision path — the one this method exists for — was the only one that
+        // failed, and it failed silently in a way that only showed up in the log.
+        $octets = explode('.', $address);
+
+        return (int) array_pop($octets);
     }
 
     private function binary(): string
