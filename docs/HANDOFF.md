@@ -342,6 +342,30 @@ properties of what is installed, not preferences.
 
 * **Redaction has to happen where text leaves the process.**
 
+### Passing a function's return value to a by-reference parameter
+
+`array_pop(explode('.', $address))` raised on every call. `array_pop` takes its argument
+by reference; so do `array_shift`, `sort`, `rsort`, `usort`, `settype`. Handing any of
+them the result of a function call is the mistake, and unlike `strtok` — which only
+warns — it becomes a thrown `ErrorException` under Laravel's error handler.
+
+It cost more than a line. `octetFromAddress()` in `PairAddressAllocator` exists to report
+which octets are already taken, so the exception fired on the collision path and nowhere
+else. Provisioning looked healthy for as long as it did because a plane with a hundred
+free addresses never reaches the broken case. The first two students to collide would
+not have been given a different octet; they would have stopped provisioning.
+
+Give the value a variable first:
+
+```php
+$octets = explode('.', $address);
+return (int) array_pop($octets);
+```
+
+Worth knowing that the log check in `scripts/verify.sh` is what found this. Everything
+the student touches passed. The gate reads the error log, and that is the only reason a
+bug outside every user-visible path ever surfaces.
+
 ## 7. Safety net
 
 ```bash
