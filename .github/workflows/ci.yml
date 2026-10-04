@@ -60,6 +60,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Lint Ansible when playbooks/roles exist
         shell: bash
+        env:
+          ANSIBLE_ROLES_PATH: ansible/roles
         run: |
           set -euo pipefail
           if find ansible -type f \( -name '*.yml' -o -name '*.yaml' \) -print -quit | grep -q .; then
