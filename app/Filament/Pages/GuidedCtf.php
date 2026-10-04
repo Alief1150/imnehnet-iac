@@ -3,6 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Enums\LabSessionStatus;
+use App\Enums\ObjectiveStatus;
+use App\Jobs\ResetLabSession;
 use App\Models\Course;
 use App\Models\LabEnvironment;
 use App\Models\LabSession;
@@ -13,6 +15,7 @@ use App\Services\GuidedCtf\ObjectiveVerdict;
 use App\Jobs\ProvisionLabSession;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Queue;
 
 /**
@@ -29,24 +32,6 @@ use Illuminate\Support\Facades\Queue;
  */
 class GuidedCtf extends Page
 {
-    /**
-     * Property types must match the parent's exactly.
-     *
-     * Narrowing any of these to string is a fatal declaration error, not a warning,
-     * and it is raised while the class is loaded — so the panel fails to boot and
-     * every page on the site returns 500, including the health check. php -l passes
-     * the file because nothing about the syntax is wrong, and a test suite cannot
-     * report it either, because the class is loaded before the first test runs.
-     *
-     * Two rounds of this, one property at a time. scripts/verify.sh caught both, and
-     * the whole site was down for each.
-     *
-     * No navigationIcon is declared. Filament's own glyph is used, because this page's
-     * icon goes through blade-icons by name while the icons this project ships are
-     * inline SVG rendered by App\Support\Lucide. Naming one that blade-icons does not
-     * hold produced an SvgNotFound on every page that renders the sidebar — which is
-     * most of them, and not only this page.
-     */
     protected static ?string $navigationLabel = 'Guided CTF';
 
     protected static ?string $title = 'Guided CTF';
@@ -62,9 +47,9 @@ class GuidedCtf extends Page
      * The session being worked on, or null before the lab exists.
      *
      * Resolved on every render from the signed-in user rather than held in a public
-     * property. A public property would be settable from a request, which is exactly
-     * the shape of the bug the specification warns about: a student naming somebody
-     * else's lab session.
+     * property. A public property would be settable from a request, which is exactly the
+     * shape of the bug the specification warns about: a student naming somebody else's
+     * lab session.
      */
     public function session(): ?LabSession
     {
@@ -79,6 +64,27 @@ class GuidedCtf extends Page
         return $course === null
             ? null
             : app(LabSessionManager::class)->activeSessionFor($user, $course);
+    }
+
+    /**
+     * Every session this student has run, newest first.
+     *
+     * Shown rather than assumed away, because a lab that failed is something a student
+     * needs to be able to see and understand rather than find replaced by a fresh one.
+     */
+    public function history(): Collection
+    {
+        $user = auth()->user();
+
+        if ($user === null) {
+            return collect();
+        }
+
+        return LabSession::query()
+            ->where('user_id', $user->getKey())
+            ->latest('id')
+            ->limit(20)
+            ->get();
     }
 
     public function course(): ?Course
@@ -106,7 +112,7 @@ class GuidedCtf extends Page
 
         Notification::make()
             ->title('Building your lab')
-            ->body('Two containers and a network rule. This page will show the lab when it is ready.')
+            ->body('Two containers and a network rule. This page will show the objectives and the terminal when it is ready.')
             ->info()
             ->persistent()
             ->send();
@@ -139,11 +145,7 @@ class GuidedCtf extends Page
             return;
         }
 
-        Notification::make()
-            ->title('Not yet')
-            ->body($verdict->reason ?? 'The validator found no evidence for this objective yet.')
-            ->warning()
-            ->send();
+        $this->notice($verdict->reason ?? 'The validator found no evidence for this objective yet.');
     }
 
     /**
@@ -165,15 +167,15 @@ class GuidedCtf extends Page
 
         $verdict = app(LabSessionManager::class)->submitFlag($session, $this->flag);
 
-        // Cleared either way. Leaving it in the field after a wrong answer puts the
-        // student's guess on screen, and leaving it after a right one puts the answer
-        // there — which is the one thing the flag must never do.
+        // Cleared either way. Leaving it after a wrong answer puts the student's guess on
+        // screen, and leaving it after a right one puts the answer there — which is the
+        // one thing the flag must never do.
         $this->flag = '';
 
         if ($verdict->proven) {
             Notification::make()
-                ->title('Correct')
-                ->body('The course is complete.')
+                ->title('Course completed')
+                ->body('All six objectives are complete.')
                 ->success()
                 ->persistent()
                 ->send();
@@ -182,6 +184,31 @@ class GuidedCtf extends Page
         }
 
         $this->failure($verdict->reason ?? 'That is not the flag.');
+    }
+
+    /**
+     * Return the lab to its starting state.
+     *
+     * Progress is kept, as the specification decides for the MVP: a student who damages
+     * the victim does not lose the objectives they already earned, and the flag stays
+     * the same one they already submitted.
+     */
+    public function resetLab(): void
+    {
+        $session = $this->session();
+
+        if ($session === null || ! $session->status->acceptsOperation()) {
+            return;
+        }
+
+        Queue::push(new ResetLabSession($session->getKey()));
+
+        Notification::make()
+            ->title('Resetting your lab')
+            ->body('Your objective progress is kept. This will show the lab being reset.')
+            ->info()
+            ->persistent()
+            ->send();
     }
 
     /**
@@ -205,21 +232,31 @@ class GuidedCtf extends Page
     }
 
     /**
-     * The victim, as an environment the terminal can open.
+     * The attacker, as an environment the terminal can open.
      */
     public function attackerEnvironment(): ?LabEnvironment
     {
-        $session = $this->session();
-
-        return $session?->attackerEnvironment;
+        return $this->session()?->attackerEnvironment;
     }
 
     /**
-     * The objectives with the state each is in for this session.
+     * The victim, for the read-only pane.
      *
-     * @return \Illuminate\Support\Collection<int, array{objective: Objective, status: string, payload: array<string, mixed>}>
+     * The specification shows the student's own shell and a view of the target side by
+     * side. The victim's terminal is opened as its own account rather than through the
+     * attacker, so it is a genuine second shell and not a transcript of the first.
      */
-    public function objectiveList()
+    public function victimEnvironment(): ?LabEnvironment
+    {
+        return $this->session()?->victimEnvironment;
+    }
+
+    /**
+     * The objectives with the state each is in, for this session.
+     *
+     * @return Collection<int, array{objective: Objective, status: ObjectiveStatus, payload: array<string, mixed>}>
+     */
+    public function objectiveList(): Collection
     {
         $session = $this->session();
 
@@ -229,22 +266,47 @@ class GuidedCtf extends Page
 
         $progress = $session->progress()->get()->keyBy('objective_id');
 
-        return $session->course
-            ->objectives
-            ->map(function (Objective $objective) use ($progress): array {
-                $status = $progress->get($objective->getKey())?->status
-                    ?? \App\Enums\ObjectiveStatus::Locked;
+        return $session->course->objectives->map(
+            fn (Objective $objective): array => [
+                'objective' => $objective,
+                'status' => $progress->get($objective->getKey())?->status ?? ObjectiveStatus::Locked,
+                // Goes through the model's own gate, which withholds the evidence value
+                // for a locked objective. That is the specification's disclosure rule,
+                // enforced in one place rather than by remembering to hide things in
+                // the view.
+                'payload' => $objective->toPublicArray($progress->get($objective->getKey())?->status ?? ObjectiveStatus::Locked),
+            ],
+        );
+    }
 
-                return [
-                    'objective' => $objective,
-                    'status' => $status,
-                    // Goes through the model's own gate, which withholds the evidence
-                    // value for a locked objective. That is the disclosure rule from
-                    // the specification, and it is enforced in one place rather than by
-                    // remembering to hide things in the view.
-                    'payload' => $objective->toPublicArray($status),
-                ];
-            });
+    /**
+     * A hint with this lab's own target address in it.
+     *
+     * The course is shared and every student has a different target, so a command that
+     * needs the address is stored with a placeholder. It is substituted here rather than
+     * in the view so that there is one place that knows a lab's address is disclosable —
+     * and this one checks that first.
+     */
+    public function hintFor(?string $hint): ?string
+    {
+        if ($hint === null || $hint === '') {
+            return null;
+        }
+
+        if (! str_contains($hint, '{target}')) {
+            return $hint;
+        }
+
+        $session = $this->session();
+
+        if ($session === null || ! $session->targetIsDisclosable()) {
+            // The command is withheld rather than shown with a blank address. A student
+            // who cannot read the target yet is not yet at the objective that needs it,
+            // and a command with nothing in it is a thing to copy and be confused by.
+            return null;
+        }
+
+        return str_replace('{target}', (string) $session->victim_ip, $hint);
     }
 
     /**
@@ -253,10 +315,10 @@ class GuidedCtf extends Page
     public function headline(LabSession $session): string
     {
         return match ($session->status) {
-            LabSessionStatus::Creating, LabSessionStatus::Provisioning,
-            LabSessionStatus::Configuring => 'Building your lab',
-            LabSessionStatus::Ready => 'Lab ready',
-            LabSessionStatus::Running => 'Lab ready',
+            LabSessionStatus::Creating,
+            LabSessionStatus::Provisioning,
+            LabSessionStatus::Configuring => 'Provisioning your lab',
+            LabSessionStatus::Ready, LabSessionStatus::Running => 'Lab ready',
             LabSessionStatus::Completed => 'Course completed',
             LabSessionStatus::Failed => 'Lab failed',
             LabSessionStatus::Stopped => 'Lab finished',
@@ -270,12 +332,84 @@ class GuidedCtf extends Page
         return $session->status->allowsTerminal();
     }
 
+    /**
+     * The stages a lab goes through, so provisioning shows what is happening rather
+     * than only that something is.
+     *
+     * Derived from the session's own state rather than from the job, because the job
+     * runs on another process and the page has no way to watch it. The stages it cannot
+     * yet confirm are said to be pending rather than shown as done.
+     *
+     * @return list<array{label: string, state: string}>
+     */
+    public function stages(LabSession $session): array
+    {
+        $order = [
+            LabSessionStatus::Creating,
+            LabSessionStatus::Provisioning,
+            LabSessionStatus::Configuring,
+            LabSessionStatus::Ready,
+            LabSessionStatus::Running,
+            LabSessionStatus::Completed,
+        ];
+
+        $current = array_search($session->status, $order, true);
+
+        $labels = [
+            'Lab session created',
+            'Provisioning the attacker container',
+            'Provisioning the victim container',
+            'Permitting the route between them',
+            'Preparing the target application',
+            'Lab ready',
+        ];
+
+        $stages = [];
+
+        foreach ($order as $index => $state) {
+            $stages[] = [
+                'label' => $labels[$index] ?? $state->value,
+                'state' => match (true) {
+                    $session->status === $state => 'current',
+                    $current !== false && $index < $current => 'done',
+                    default => 'pending',
+                },
+            ];
+        }
+
+        return $stages;
+    }
+
+    /**
+     * When the course was finished, in a form a student can read.
+     */
+    public function duration(LabSession $session): ?string
+    {
+        $seconds = $session->durationSeconds();
+
+        if ($seconds === null) {
+            return null;
+        }
+
+        return sprintf('%02d:%02d:%02d', intdiv($seconds, 3600), intdiv($seconds % 3600, 60), $seconds % 60);
+    }
+
     private function failure(string $message): void
     {
         Notification::make()
             ->title('Not accepted')
             ->body($message)
             ->danger()
+            ->persistent()
+            ->send();
+    }
+
+    private function notice(string $message): void
+    {
+        Notification::make()
+            ->title('Not yet')
+            ->body($message)
+            ->warning()
             ->persistent()
             ->send();
     }

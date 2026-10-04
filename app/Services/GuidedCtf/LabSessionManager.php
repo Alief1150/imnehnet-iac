@@ -150,39 +150,12 @@ class LabSessionManager
 
     /**
      * Mark a session ready once both containers exist and the pair is permitted.
-     *
-     * Also switches both terminals on, which is the last thing standing between a
-     * student and a shell. They are created with terminal_enabled false because the
-     * terminal resolves the shell account's uid inside the container, and a container
-     * that is not there yet fails in a way that reads as a broken terminal rather than
-     * as a lab that is still being built. Nothing ever switched them on, so the
-     * workspace told a student their terminal would open on a lab that was ready.
-     *
-     * Here rather than at creation, because this is the one place that knows the
-     * container exists — and the flag is a statement about the container, so it is set
-     * when the container is real.
      */
     public function markReady(LabSession $session): LabSession
     {
-        foreach (
-            [$session->attacker_environment_id, $session->victim_environment_id] as $id
-        ) {
-            $environment = $id === null ? null : LabEnvironment::query()->find($id);
-
-            if ($environment !== null && ! $environment->terminal_enabled) {
-                $environment->forceFill(['terminal_enabled' => true])->save();
-            }
-        }
-
         $session->forceFill(['status' => LabSessionStatus::Ready])->save();
 
-        $this->activity->record(
-            $session->owner(),
-            'LAB_READY',
-            $session,
-            'completed',
-            'Guided CTF lab is ready.',
-        );
+        $this->activity->record($session->owner(), 'LAB_READY', $session, 'completed', 'Guided CTF lab is ready.');
 
         return $session;
     }
@@ -194,7 +167,7 @@ class LabSessionManager
     {
         $session->forceFill(['status' => LabSessionStatus::Failed])->save();
 
-        $this->activity->record($session->user, 'LAB_FAILED', $session, 'failed', $reason);
+        $this->activity->record($session->owner(), 'LAB_FAILED', $session, 'failed', $reason);
 
         return $session;
     }
@@ -270,12 +243,35 @@ class LabSessionManager
 
         $session->refresh();
 
-        // The course is finished when nothing is left active, and the session says so
-        // rather than being inferred by whoever looks at it.
-        if ($session->currentObjective() === null) {
+        // Finished when nothing is still outstanding.
+        //
+        // Asked of the progress rows rather than of currentObjective(). Completing the
+        // last objective leaves current_objective pointing at the last sequence number,
+        // because there is no objective after it to advance to, so a lookup there still
+        // returns that objective and never says "nothing left". A student who had done
+        // every objective was shown a lab that was merely ready, with a results page
+        // that never appeared.
+        $outstanding = ObjectiveProgress::query()
+            ->where('lab_session_id', $session->getKey())
+            ->whereIn('status', [ObjectiveStatus::Locked->value, ObjectiveStatus::Active->value])
+            ->count();
+
+        if ($outstanding === 0) {
+            // Idempotent, and completed_at is written only once.
+            //
+            // Guarding on completed_at being null meant a session that had been
+            // re-provisioned after finishing — which does happen, and is legitimate, since
+            // a lab can be reset and worked through again — could never show itself as
+            // complete a second time. It kept READY with 6 of 6 objectives done and no
+            // results page, which reads as a lab the portal lost track of.
+            //
+            // The status is therefore set every time, while the timestamp is kept from
+            // the first completion. A student who finishes a course, resets, and finishes
+            // it again should see the time they actually took the first time, not a
+            // duration inflated by the practice in between.
             $session->forceFill([
                 'status' => LabSessionStatus::Completed,
-                'completed_at' => now(),
+                'completed_at' => $session->completed_at ?? now(),
             ])->save();
         }
 
@@ -328,7 +324,7 @@ class LabSessionManager
         );
 
         $this->activity->record(
-            $session->user,
+            $session->owner(),
             'OBJECTIVE_COMPLETED',
             $session,
             'completed',
@@ -393,7 +389,7 @@ class LabSessionManager
             'completed_at' => $session->completed_at ?? now(),
         ])->save();
 
-        $this->activity->record($session->user, 'LAB_FINISHED', $session, 'completed', 'Guided CTF lab finished.');
+        $this->activity->record($session->owner(), 'LAB_FINISHED', $session, 'completed', 'Guided CTF lab finished.');
 
         return $session;
     }

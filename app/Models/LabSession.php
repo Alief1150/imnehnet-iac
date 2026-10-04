@@ -38,10 +38,71 @@ class LabSession extends Model
         ];
     }
 
-    /** @return BelongsTo<User, $this> */
-    public function user(): BelongsTo
+    /**
+     * The user who owns this session.
+     *
+     * A method, not a relation, and deliberately so. A session lives in the
+     * infrastructure database alongside lab_environments, and the users table is not
+     * there. Eloquent cannot express that as a relation: newRelatedInstance copies the
+     * parent's connection onto the related model when it has none of its own, so
+     * belongsTo always asks the wrong database, and passing a pre-configured instance
+     * does not help because it builds a fresh one anyway. There is no setConnection on
+     * Relation to reach for either.
+     *
+     * So this asks the portal's own database directly. User resolves on
+     * database.default, which is where users live.
+     *
+     * The cost is eager loading, and it is not paid: a session has one owner, it is read
+     * when something is recorded rather than when a list is drawn, and the portal already
+     * has the signed-in user in hand.
+     *
+     * This mattered more than it looks. markFailed asked the session for its user, that
+     * raised a query exception, and so a lab that failed to provision could not be
+     * recorded as failed — the one moment the portal most needed to say something.
+     */
+    public function owner(): ?User
     {
-        return $this->belongsTo(User::class);
+        if ($this->user_id === null) {
+            return null;
+        }
+
+        return User::query()->find($this->user_id);
+    }
+
+    /**
+     * The Incus target for the victim, spelled the way the command line wants it.
+     *
+     * One place adds the colon. Six call sites each spelling it out is six places for one
+     * of them to be wrong, and two of them were: a session stored "lab-env:" and a target
+     * built by appending another colon, giving "lab-env::victim-web-104" and a
+     * provisioning failure on the very first command.
+     *
+     * The record holds a remote name, not a command-line fragment. A trailing colon is
+     * tolerated on the way in because configuration in this project has always carried
+     * it, but it is not stored.
+     */
+    public function victimTarget(): string
+    {
+        return self::remoteTarget($this->victim_remote, $this->victim_container);
+    }
+
+    /** The Incus target for the attacker, spelled the same way. */
+    public function attackerTarget(): string
+    {
+        return self::remoteTarget($this->attacker_remote, $this->attacker_container);
+    }
+
+    /**
+     * A remote and a container, with the remote normalised either way.
+     *
+     * Accepts "lab-env", "lab-env:" and "lab-env" with the container already appended,
+     * so no caller can produce a target with two colons.
+     */
+    public static function remoteTarget(?string $remote, ?string $container): string
+    {
+        $remote = rtrim((string) $remote, ':');
+
+        return $remote === '' ? (string) $container : $remote.':'.$container;
     }
 
     /** @return BelongsTo<Course, $this> */
@@ -94,13 +155,30 @@ class LabSession extends Model
     /**
      * Whether the address may be shown to the student.
      *
-     * The specification says the target is disclosed once the lab is ready, so a
-     * session that is not ready has no address to disclose even if a row happens
-     * to carry one from a previous run.
+     * The gate is that the lab's infrastructure exists, not that it is currently
+     * usable. Those are not the same question, and treating them as one left a student
+     * who had finished the course looking at a results page that said its target was
+     * withheld — for a lab they had just worked through for six objectives, whose
+     * address they had typed into commands themselves the whole time.
+     *
+     * What is actually secret in this course is the hidden directory in objective four,
+     * and Objective::toPublicArray withholds that against the objective's own state.
+     * The address is not a secret. It is the student's own target, resolved from their
+     * own session, and it exists from the moment provisioning records it.
+     *
+     * So a session that got far enough to have an address may show it — including
+     * after completion, after a reset, and after a failure, since in every one of those
+     * the student has already been told.
      */
     public function targetIsDisclosable(): bool
     {
-        return $this->status->allowsTerminal() && filled($this->victim_ip);
+        return filled($this->victim_ip)
+            && ! in_array($this->status, [
+                LabSessionStatus::Creating,
+                LabSessionStatus::Provisioning,
+                LabSessionStatus::Failed,
+                LabSessionStatus::Deleting,
+            ], true);
     }
 
     /**
