@@ -78,6 +78,21 @@ return [
     // Network the student containers are attached to on the compute plane.
     'incus_network' => env('INCUS_NETWORK', 'incusbr0'),
 
+    /*
+     * Container resource limits are decided by the portal, not by the student.
+     *
+     * A student chooses whether an environment exists, not how large it is. The
+     * create form used to expose CPU and memory as inputs, which is both contrary
+     * to that and a way for one student to ask for more than the compute plane
+     * holds. These values are applied to every environment the portal creates.
+     *
+     * The disk limit was never a form field but is set here too, so all three
+     * limits are stated together and cannot drift apart.
+     */
+    'default_cpu_limit' => (int) env('DEFAULT_CPU_LIMIT', 2),
+    'default_memory_limit_mb' => (int) env('DEFAULT_MEMORY_LIMIT_MB', 2048),
+    'default_disk_limit_gb' => (int) env('DEFAULT_DISK_LIMIT_GB', 8),
+
     // Management plane (this host) and compute plane (LAB-ENV) are probed
     // separately so an operator can tell which side of the split is failing.
     'iaas_health_url' => env('IAAS_HEALTH_URL', 'http://127.0.0.1:8000/up'),

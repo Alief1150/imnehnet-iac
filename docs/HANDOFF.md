@@ -21,7 +21,7 @@ Last updated: 2026-10-02. Head at time of writing: `81e6dd7`.
 | Student self-registration | done, at `/login/regist` |
 | Student panel | done, at `/student` — one panel per role |
 | Dashboard redesign | done — Recent Activity removed, two tiles added |
-| LAB-ATK guided CTF pair | **blocked on LAB-ATK access** — see §5 |
+| LAB-ATK guided CTF pair | remote reachable; **pair model and CTF validation still to build** |
 | UI quality gate (§36) | not done; needs a real screenshot review |
 
 Master prompt acceptance list: 25 of 26, item 36 outstanding.
@@ -119,49 +119,76 @@ The lab pair contract is in `imnehnet-iac/docs/LAB-AS-A-SERVICE-MVP.md`.
    /login/regist                  200
    ```
 
-3. **LAB-ATK access. This is the blocker for the whole guided CTF pair.**
+3. **LAB-ATK is open. The pair model is now buildable, and is the next thing
+   to build.**
 
-   Measured from IAAS-MGMT, both refused:
+   Measured state, both remotes registered on the management plane:
 
-   | Path | Result |
-   |---|---|
-   | `incus` API 192.168.100.30:8443 | closed |
-   | `incus` API 100.108.204.76:8443 | closed |
-   | SSH, both keys held here | denied |
-   | SSH, password, 6 usernames | denied |
-
-   The sshd offers `publickey,password`, so password auth is enabled and the
-   supplied password is simply not valid for any account tried. LAB-ENV is
-   reachable the whole time on 192.168.100.20:8443, so the tooling is not the
-   problem.
-
-   Three commands on the LAB-ATK console are enough to unblock the API, after
-   which OpenTofu can create the attacker container without SSH at all:
-
-   ```bash
-   sudo incus config set core.https_address 192.168.100.30:8443
-   sudo systemctl restart incus
-   sudo incus config trust add-token    # send the printed token back
+   ```
+   incus remote list
+     lab-atk   https://192.168.100.30:8443   incus   tls
+     lab-env   https://192.168.100.20:8443   incus   tls
    ```
 
-   If `restart incus` fails with "Unit not found", Incus is not installed there
-   and it is a different problem.
+   What had to be true, because none of it was:
 
-   Then, still needing SSH: the Ansible bootstrap for the `student` account, and
-   adding each pair to the `allowed_pairs` set on LAB-ATK and `victim_demo` on
-   LAB-ENV. `ctf-lab-pair.yml` launches the containers but never touches those
-   sets — the document itself calls that a manual step, and one click per student
-   has to automate it.
+   * `core.https_address` on LAB-ATK was empty, which is why nothing listened on
+     8443 and the portal could not provision an attacker container there. It is
+     now `192.168.100.30:8443` — the LAN address, not the Tailscale one.
 
-   Code that has to change once reachable:
+   * **SSH was open on port 22 the whole time.** Only the credential was missing.
+     The account is `labatk`, in the `sudo` group, reachable with `sshpass` from
+     IAAS-MGMT. The password tried before it was rejected for every account
+     attempted, which is exactly why this looked like a network block rather than
+     an authentication one. A closed 8443 plus an open 22 that refuses every
+     credential reads as "host unreachable" and is not.
+
+   * Restarting incus did not stop the running containers. All five attacker
+     containers survived it.
+
+   Four things that each cost an attempt, all now known:
+
+   * `incus config trust add <name>` issues the token by itself. There is no
+     `add-token` subcommand in Incus 7; that is an LXD spelling.
+   * The token comes back as raw base64, not in the `IMNEHNET...` prefixed form,
+     so a check for that prefix rejects a valid token.
+   * The token goes to `incus remote add` as `--token`, not as a positional
+     argument. Given positionally it prints its usage and refuses.
+   * `--accept-certificate` is required. Without it the client waits for a human
+     to confirm the certificate and never returns — this one hung for fifteen
+     minutes before it was given a timeout.
+
+   The attacker containers were already there and already paired with the victims
+   by matching last octet:
+
+   ```
+   student-a-attacker  10.30.0.102  <->  student-a-victim  10.20.0.102
+   student-b-attacker  10.30.0.103  <->  student-b-victim  10.20.0.103
+   ```
+
+   so this completed a half-built arrangement rather than starting a new one. The
+   access log on `student-a-victim` already shows 192.168.100.30 — LAB-ATK's LAN
+   address — enumerating the victim and then fetching the flag. **The pair works,
+   and has been working.** Only the portal's knowledge of it was missing.
+
+   What that log makes possible, and why it matters for the CTF design: the victim
+   records the request that fetched the flag, with the source address, the path
+   and the status. That is real evidence, so a submitted flag can be checked
+   against what actually happened on the machine rather than believed.
+
+   Code that still has to change now that the remote exists:
    * `tofu/main.tf` hardcodes `remote = "lab-env"`, has no static IP and no ACL.
      The remote needs to be a variable; the attacker needs a `nic` device with
-     `ipv4.address` and `security.acls = ctf-attacker` (LAB-ATK is Incus 7.0.1
-     and does support ACLs, unlike LAB-ENV at 6.0.0).
-   * `ansible/inventory/hosts.ini` has no `lab_atk` group at all, and
-     `ansible.cfg` sets `host_key_checking = True`.
-   * Address allocation: the `.100+n` convention has `victim-demo-a`/`.100` and
-     `victim-demo-b`/`.101` taken, so the next free pair is `.102`.
+     `ipv4.address` and `security.acls = ctf-attacker`. LAB-ATK is Incus 7.0.1 and
+     does support ACLs, unlike LAB-ENV at 6.0.0.
+   * `ansible/inventory/hosts.ini` has no `lab_atk` group, and `ansible.cfg` sets
+     `host_key_checking = True`, which will refuse the host on first contact.
+   * Each pair still has to be added to the `allowed_pairs` set on LAB-ATK and to
+     `victim_demo` on LAB-ENV. `ctf-lab-pair.yml` launches the containers and
+     never touches those sets — the document calls that a manual step, and one
+     click per student has to automate it.
+   * Address allocation: `.100`/`.101` are the demo pair and `.102`/`.103` are
+     taken by the hand-built pair, so the next free pair is `.104`.
 
 4. **Review the student-facing pages with eyes, not just tests.** The flow is
    proven by HTTP tests, but nobody has looked at the rendering. Item §36.
