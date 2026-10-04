@@ -3,7 +3,7 @@
 Position, what is done, what is not, and the traps already paid for. Read this
 before changing anything.
 
-Last updated: 2026-10-02. Head at time of writing: `81e6dd7`.
+Last updated: 2026-10-04. Head at time of writing: `dfde7d2`.
 
 ---
 
@@ -15,13 +15,15 @@ Last updated: 2026-10-02. Head at time of writing: `81e6dd7`.
 | Dark theme, Lucide icons, scoped Lenis (§14–§16) | done |
 | Dashboard, sidebar, environment table, detail page (§17–§22) | done |
 | Live infrastructure probes (§23) | done, 11 components |
-| Web terminal (§24–§26) | built; **Apache gate still unloaded** |
+| Web terminal (§24–§26) | done — Apache gate loaded and verified on port 80 |
 | Honest states, badges, error UX, reconciliation (§27–§33) | done |
 | E2E smoke test (§34) | **done and passed** — see §8 |
 | Student self-registration | done, at `/login/regist` |
 | Student panel | done, at `/student` — one panel per role |
 | Dashboard redesign | done — Recent Activity removed, two tiles added |
-| LAB-ATK guided CTF pair | remote reachable; **pair model and CTF validation still to build** |
+| LAB-ATK guided CTF pair | **done** — both halves provisioned, validated, and reachable |
+| Guided CTF course | **done** — 6 objectives, real validator, flag, results page |
+| Guided CTF tests | **none** — see §5 item 2 |
 | UI quality gate (§36) | not done; needs a real screenshot review |
 
 Master prompt acceptance list: 25 of 26, item 36 outstanding.
@@ -87,118 +89,64 @@ The lab pair contract is in `imnehnet-iac/docs/LAB-AS-A-SERVICE-MVP.md`.
 
 ## 5. What is left
 
-1. **Five containers are running with no portal record.** The Needs attention
-   tile now names them, and it is the only part of the portal that could ever
-   have found them, because every other view asks the database what exists:
+The course runs end to end. One session, two containers, six objectives, a flag,
+a results page. What follows is what is not finished.
 
-   ```
-   lab-test             10.20.0.31    leftover from an earlier debugging session
-   victim-demo-a        10.20.0.100   from the LaaS demo pair
-   victim-demo-b        10.20.0.101   from the LaaS demo pair
-   student-a-victim     10.20.0.102   built by hand, has full CTF content
-   student-b-victim     10.20.0.103   built by hand, has full CTF content
-   ```
+### 1. Five containers are running with no portal record
 
-   The last two matter: somebody already built CTF victims by hand, with the
-   `student` account, `/opt/ctf` and `ctf-http` running. That is the victim half of
-   `ctf-lab-pair.yml` working in practice, so the pair model is worth finishing
-   once LAB-ATK is reachable.
+```
+lab-test             10.20.0.31    leftover from an earlier debugging session
+victim-demo-a        10.20.0.100   from the LaaS demo pair
+victim-demo-b        10.20.0.101   from the LaaS demo pair
+student-a-victim     10.20.0.102   built by hand, has full CTF content
+student-b-victim     10.20.0.103   built by hand, has full CTF content
+```
 
-   Decide per container: register it, or delete it. Do not leave them unowned.
+Every view asks the database what exists, so nothing else in the portal would ever
+have found them. Decide per container: register it, or delete it. Do not leave them
+unowned. `student-a-victim` and `student-b-victim` prove the victim half of
+`ctf-lab-pair.yml` works by hand, which is now redundant.
 
-2. **Reload the Apache vhost after touching it.** The installed copy was older
-   than the repository, so the terminal token gate was not the deployed
-   behaviour even though the reload script had been run. Compare content, not
-   modification time. Current verified state on port 80:
+### 2. No tests for the CTF domain
 
-   ```
-   /up                            200
-   /build/manifest.json           200
-   /build/assets/theme-*.css      200
-   /terminal/<slot>/              403   (stable, and with a bogus token)
-   /login/regist                  200
-   ```
+227 tests pass but none of them exercise the guided CTF. Missing:
 
-3. **LAB-ATK is open. The pair model is now buildable, and is the next thing
-   to build.**
+* validator verdicts per `EvidenceType`, including the negative case
+* sequential progression — that objective 3 cannot be proven while 2 is locked
+* flag comparison, and that a wrong flag changes nothing
+* the IDOR property from the specification: that a student cannot obtain another
+  session's attacker. This is the one that matters most and it is the one with no
+  coverage. The design prevents it — the session is resolved from the signed-in
+  user, no request names a target — and none of that is tested.
 
-   Measured state, both remotes registered on the management plane:
+### 3. No admin view of lab sessions or validation outcomes
 
-   ```
-   incus remote list
-     lab-atk   https://192.168.100.30:8443   incus   tls
-     lab-env   https://192.168.100.20:8443   incus   tls
-   ```
+An administrator can read the database but not the portal. §15 wants sessions,
+their states, and what the validator concluded. Worth building before the first
+student, not after.
 
-   What had to be true, because none of it was:
+### 4. The dual terminal is described, not embedded
 
-   * `core.https_address` on LAB-ATK was empty, which is why nothing listened on
-     8443 and the portal could not provision an attacker container there. It is
-     now `192.168.100.30:8443` — the LAN address, not the Tailscale one.
+The workspace shows both container names and links to the existing terminal page.
+The supplied design has them side by side. The link was the cheaper half of the
+job: the terminal page already owns opening a session, resolving the shell uid and
+rendering the frame, and reproducing that inline would be a second copy of the
+question "whose session is this", which is the question that has to have one answer.
 
-   * **SSH was open on port 22 the whole time.** Only the credential was missing.
-     The account is `labatk`, in the `sudo` group, reachable with `sshpass` from
-     IAAS-MGMT. The password tried before it was rejected for every account
-     attempted, which is exactly why this looked like a network block rather than
-     an authentication one. A closed 8443 plus an open 22 that refuses every
-     credential reads as "host unreachable" and is not.
+### 5. The victim terminal is read-only by construction
 
-   * Restarting incus did not stop the running containers. All five attacker
-     containers survived it.
+The workspace labels the victim's side read-only and the attacker shell is the only
+one wired to a PTY. If the design wants a genuine second interactive shell, that is
+`TerminalService` pointed at the victim's environment with the victim's own account,
+which the attacker container cannot do — it has no way in.
 
-   Four things that each cost an attempt, all now known:
+### 6. Follow-ups, low priority
 
-   * `incus config trust add <name>` issues the token by itself. There is no
-     `add-token` subcommand in Incus 7; that is an LXD spelling.
-   * The token comes back as raw base64, not in the `IMNEHNET...` prefixed form,
-     so a check for that prefix rejects a valid token.
-   * The token goes to `incus remote add` as `--token`, not as a positional
-     argument. Given positionally it prints its usage and refuses.
-   * `--accept-certificate` is required. Without it the client waits for a human
-     to confirm the certificate and never returns — this one hung for fifteen
-     minutes before it was given a timeout.
-
-   The attacker containers were already there and already paired with the victims
-   by matching last octet:
-
-   ```
-   student-a-attacker  10.30.0.102  <->  student-a-victim  10.20.0.102
-   student-b-attacker  10.30.0.103  <->  student-b-victim  10.20.0.103
-   ```
-
-   so this completed a half-built arrangement rather than starting a new one. The
-   access log on `student-a-victim` already shows 192.168.100.30 — LAB-ATK's LAN
-   address — enumerating the victim and then fetching the flag. **The pair works,
-   and has been working.** Only the portal's knowledge of it was missing.
-
-   What that log makes possible, and why it matters for the CTF design: the victim
-   records the request that fetched the flag, with the source address, the path
-   and the status. That is real evidence, so a submitted flag can be checked
-   against what actually happened on the machine rather than believed.
-
-   Code that still has to change now that the remote exists:
-   * `tofu/main.tf` hardcodes `remote = "lab-env"`, has no static IP and no ACL.
-     The remote needs to be a variable; the attacker needs a `nic` device with
-     `ipv4.address` and `security.acls = ctf-attacker`. LAB-ATK is Incus 7.0.1 and
-     does support ACLs, unlike LAB-ENV at 6.0.0.
-   * `ansible/inventory/hosts.ini` has no `lab_atk` group, and `ansible.cfg` sets
-     `host_key_checking = True`, which will refuse the host on first contact.
-   * Each pair still has to be added to the `allowed_pairs` set on LAB-ATK and to
-     `victim_demo` on LAB-ENV. `ctf-lab-pair.yml` launches the containers and
-     never touches those sets — the document calls that a manual step, and one
-     click per student has to automate it.
-   * Address allocation: `.100`/`.101` are the demo pair and `.102`/`.103` are
-     taken by the hand-built pair, so the next free pair is `.104`.
-
-4. **Review the student-facing pages with eyes, not just tests.** The flow is
-   proven by HTTP tests, but nobody has looked at the rendering. Item §36.
-
-5. **Reconsider `APP_ENV=local` / `APP_DEBUG=true`** before wider exposure.
-
-6. **The web terminal is disabled by default.** `infrastructure.terminal.browser_access_enabled`
-   reads `TERMINAL_BROWSER_ACCESS`, which is unset, so the portal hands out no
-   terminal address at all. The machinery is built and the gate works; it is one
-   environment variable away from being on.
+* Ansible playbook for the scenario. The scenario is deployed over Incus with shell
+  and stdin, because that is the path proven against real containers.
+* `terminal_enabled` is `false` on the attacker as created and turned on by
+  `markReady()`. Worth folding into the create path so the state is never briefly
+  wrong.
 
 ## 6. Traps already paid for
 
@@ -379,12 +327,13 @@ the only way back to a known good state.
 ## 8. State at the time of writing
 
 ```
-tests        213 passed (804 assertions), 1 pre-existing warning
+tests        227 passed (837 assertions), 1 pre-existing warning
 HEAD         see git log, working tree clean
 queue worker supervised by scripts/queue-supervisor.sh, started by @reboot cron
 Incus lab-env   lab-test 10.20.0.31
                 lab-tofu-test 10.20.0.202  (protected, untouched)
                 lab-web-smoke 10.20.0.217  (disposable smoke environment, student uid 1001)
+Incus lab-atk   reachable at https://192.168.100.30:8443, remote name `lab-atk`
 tofu         workspace env-lab-web-smoke active; default holds lab-tofu-test
 ```
 
@@ -422,6 +371,13 @@ Changes made **outside** this repository, for the next session to know about:
 * `~/.ssh/known_hosts` extended with the MagicDNS names `lab-atk` and `lab-env`;
   a backup of the original is at `~/.ssh/known_hosts.bak-20261002-190410`.
 
-The web process is Apache on port 80 plus `php artisan serve` on 8000. Apache's
-vhost is installed but stale, so `:8000` currently serves correctly while port 80
-serves unstyled pages. See §5 item 1.
+The web process is Apache on port 80 plus `php artisan serve` on 8000. Both
+serve correctly; the Apache vhost has been reloaded and verified, including the
+terminal token gate returning 403 on a bogus token. Port 80 is the one to use:
+`artisan serve` is a single worker and serialises two students talking to two
+terminals at once.
+
+A live guided lab is running against `ctf-student@imnehnet.test` (password
+`Koral-Mekanisme-9917`), owned by session `#15`. Its containers are the attacker
+`attacker-106` and the victim `victim-web-106` at `10.20.0.106`, permitted as a
+pair, with `ctf-http` active on the victim.
