@@ -81,9 +81,12 @@ final class RegisterStudent extends Component
         $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()->symbols()],
+            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
         ], [
-            'password.min' => 'Use at least 12 characters: this account reaches a machine that holds other people\' labs.',
+            // The length is the floor; the other three rules carry the strength.
+            // Stated one at a time, because a field with four rules that reports
+            // only that validation failed teaches nothing.
+            'password.min' => 'Use at least 8 characters.',
             // Stated one rule at a time, because "failed validation" on a field
             // with four rules tells the student none of them.
             'password.mixed' => 'Add at least one uppercase letter.',

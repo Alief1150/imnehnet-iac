@@ -11,33 +11,28 @@
 
         @fonts
 
+        {{-- The panel theme as well as app.css. The registration form and the
+             sign-in form are the same product reached two ways, and they share
+             one stylesheet for exactly that reason: the colour tokens live in the
+             panel theme and are not defined in app.css. --}}
         @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-            @vite(['resources/css/app.css', 'resources/js/app.js'])
+            @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/css/filament/admin/theme.css'])
         @endif
 
         <style>
             /* Alpine's x-show leaves an element visible until it initialises, which
-               shows both password icons for a moment on every page load. */
+               would show both password icons for a moment on every page load. */
             [x-cloak] {
                 display: none !important;
             }
         </style>
     </head>
 
-    <body class="bg-gray-950 text-gray-100 min-h-screen flex items-center justify-center px-4 py-10">
-        {{-- A faint teal wash in the corner, so the page reads as part of the same
-             product as the panel it leads into rather than a form bolted on. --}}
-        <div
-            class="pointer-events-none fixed inset-0 bg-[radial-gradient(60rem_40rem_at_top_left,rgba(13,148,136,0.10),transparent_60%)]"
-            aria-hidden="true"
-        ></div>
+    <body class="imnehnet-auth-page">
+        <div class="imnehnet-auth-glow" aria-hidden="true"></div>
 
-        <div class="relative w-full max-w-md">
-            <p class="mb-6 text-center text-sm font-semibold tracking-[0.4em] text-gray-200 uppercase">
-                IMNEHNET
-            </p>
-
+        <main class="imnehnet-auth-shell">
             @livewire('register-student')
-        </div>
+        </main>
     </body>
 </html>

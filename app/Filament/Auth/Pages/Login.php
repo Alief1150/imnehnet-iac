@@ -5,6 +5,7 @@ namespace App\Filament\Auth\Pages;
 use Filament\Actions\Action;
 use Filament\Auth\Pages\Login as BaseLogin;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Support\Htmlable;
 
 /**
  * The sign-in form for both panels.
@@ -46,5 +47,17 @@ class Login extends BaseLogin
     protected function isUserAllowedToAccessPanel(Authenticatable $user): bool
     {
         return true;
+    }
+
+    /**
+     * The same line the registration form carries under its title.
+     *
+     * It is the subheading rather than part of the wordmark because the wordmark
+     * also appears in the sidebar, where a second line would be clipped by the
+     * logo box's fixed height.
+     */
+    public function getSubHeading(): string | Htmlable | null
+    {
+        return \App\Support\Wordmark::tagline();
     }
 }

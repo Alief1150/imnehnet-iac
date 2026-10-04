@@ -29,6 +29,9 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
 
             ->brandName('IMNEHNET')
+            // The same wordmark on both panels and on the registration form,
+            // so the name is written down in exactly one place.
+            ->brandLogo(\App\Support\Wordmark::make())
             ->favicon('favicon.ico')
 
             ->viteTheme('resources/css/filament/admin/theme.css')

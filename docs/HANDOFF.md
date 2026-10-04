@@ -266,6 +266,22 @@ properties of what is installed, not preferences.
   `Attribute [hasNamedRoute] does not exist`. Use
   `Route::getRoutes()->hasNamedRoute()`.
 
+* **Overriding a parent method's visibility is a fatal at class load, not at
+  parse time, so `php -l` passes.** Two of these happened in one session:
+  `getSubHeading()` is public on Filament's Login, and the middleware's
+  `handle()` carries a variadic the subclass had dropped. Both took every page
+  of both panels down.
+
+* **A Livewire component may have only one root element.** Three sibling
+  elements is a `MultipleRootElementsDetectedException`, not a warning.
+
+* **The sign-in form and the registration form share one stylesheet.** The colour
+  tokens live in `theme.css`, so the registration page loads it alongside
+  `app.css`. When it loaded only `app.css` it had no tokens and fell back to
+  utility classes, and the two pages became visibly different products. The
+  shared classes are `.imnehnet-auth-*`; the sign-in form gets the same result by
+  overriding Filament's own selectors.
+
 * **Cache plain values, not objects.** A serialized object whose class has been
   renamed comes back as `__PHP_Incomplete_Class` and fails a type hint, taking the
   page down. This happened once on the Monitoring page and healed itself only

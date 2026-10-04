@@ -450,6 +450,320 @@
     background: var(--imnehnet-text-faint);
 }
 
+    /* =========================================================
+       FORMS: SHARED BY SIGN IN AND REGISTRATION
+
+       The sign-in form is Filament's and the registration form is a plain Livewire
+       page, and when each was styled on its own they became two different products:
+       one in the panel palette, one in whatever utility classes were to hand. They
+       are the same product reached two ways, so they are styled here once.
+
+       The registration page loads this stylesheet alongside app.css, which is what
+       lets the same classes serve both.
+       ========================================================= */
+
+    .imnehnet-auth-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1rem;
+        background-color: var(--imnehnet-ground);
+        color: var(--imnehnet-text);
+    }
+
+    /* A very faint wash in the corner. Kept almost invisible: the palette was built
+       to avoid decoration, and a strong one would be the brightest thing on screen. */
+    .imnehnet-auth-glow {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(60rem 40rem at top left, rgba(20, 184, 166, 0.08), transparent 60%);
+    }
+
+    .imnehnet-auth-shell {
+        position: relative;
+        width: 100%;
+        max-width: 26rem;
+    }
+
+    .imnehnet-auth-card {
+        background-color: var(--imnehnet-raised);
+        border: 1px solid var(--imnehnet-line);
+        border-radius: 0.875rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+        padding: 1.75rem;
+        overflow: hidden;
+    }
+
+    /* The hairline along the top edge, which is the only decoration on either form. */
+    .imnehnet-auth-edge {
+        height: 1px;
+        background: linear-gradient(
+            to right,
+            transparent,
+            rgba(20, 184, 166, 0.5),
+            transparent
+        );
+    }
+
+    .imnehnet-auth-head {
+        text-align: center;
+        margin-bottom: 1.75rem;
+    }
+
+    .imnehnet-auth-wordmark {
+        display: flex;
+        justify-content: center;
+    }
+
+    .imnehnet-auth-tagline {
+        margin-top: 0.65rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--imnehnet-accent);
+        opacity: 0.85;
+    }
+
+    .imnehnet-auth-title {
+        margin-top: 0.9rem;
+        font-size: 1.375rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: #fff;
+    }
+
+    .imnehnet-auth-lede {
+        margin-top: 0.4rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        color: var(--imnehnet-text-muted);
+    }
+
+    .imnehnet-auth-field {
+        margin-bottom: 1.15rem;
+    }
+
+    .imnehnet-auth-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        /* The theme's own text colour rather than a picked slate, so the two
+           forms cannot end up with different greys for the same label. */
+        color: var(--imnehnet-text);
+    }
+
+    .imnehnet-auth-input {
+        display: block;
+        width: 100%;
+        margin-top: 0.375rem;
+        padding: 0.625rem 0.75rem;
+        font-size: 0.875rem;
+        color: var(--imnehnet-text);
+        background-color: var(--imnehnet-sunken);
+        border: 1px solid var(--imnehnet-line);
+        border-radius: 0.5rem;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .imnehnet-auth-input::placeholder {
+        color: var(--imnehnet-text-faint);
+    }
+
+    .imnehnet-auth-input:focus {
+        outline: none;
+        border-color: var(--imnehnet-accent);
+        box-shadow: 0 0 0 1px var(--imnehnet-accent);
+    }
+
+    /* Room for the reveal button on the right, applied only where there is one. */
+    .imnehnet-auth-input-has-reveal {
+        padding-right: 2.75rem;
+    }
+
+    .imnehnet-auth-reveal-wrap {
+        position: relative;
+    }
+
+    .imnehnet-auth-reveal {
+        position: absolute;
+        inset-block: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        padding-inline: 0.75rem;
+        color: var(--imnehnet-text-faint);
+        background: none;
+        border: 0;
+        cursor: pointer;
+        transition: color 0.15s;
+    }
+
+    .imnehnet-auth-reveal:hover,
+    .imnehnet-auth-reveal:focus-visible {
+        color: var(--imnehnet-accent);
+        outline: none;
+    }
+
+    .imnehnet-auth-error {
+        margin-top: 0.375rem;
+        font-size: 0.75rem;
+        color: var(--imnehnet-danger);
+    }
+
+    .imnehnet-auth-button {
+        display: block;
+        width: 100%;
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #fff;
+        background-color: var(--imnehnet-accent-dim);
+        border: 1px solid transparent;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.15s;
+    }
+
+    .imnehnet-auth-button:hover {
+        background-color: var(--imnehnet-accent);
+    }
+
+    .imnehnet-auth-button:focus-visible {
+        outline: 2px solid var(--imnehnet-accent);
+        outline-offset: 2px;
+    }
+
+    .imnehnet-auth-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+
+    /* The four password rules. They state what the server enforces, so a student can
+       see what is missing rather than submitting and being told only that
+       validation failed. */
+    .imnehnet-auth-checks {
+        margin-top: 0.75rem;
+        display: grid;
+        gap: 0.375rem;
+        font-size: 0.75rem;
+    }
+
+    .imnehnet-auth-check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--imnehnet-text-faint);
+        transition: color 0.15s;
+    }
+
+    .imnehnet-auth-check[data-met='true'] {
+        color: var(--imnehnet-accent);
+    }
+
+    .imnehnet-auth-check svg {
+        flex-shrink: 0;
+        opacity: 0.4;
+        transition: opacity 0.15s;
+    }
+
+    .imnehnet-auth-check[data-met='true'] svg {
+        opacity: 1;
+    }
+
+    .imnehnet-auth-foot {
+        margin-top: 1.5rem;
+        text-align: center;
+        font-size: 0.875rem;
+        color: var(--imnehnet-text-muted);
+    }
+
+    .imnehnet-auth-note {
+        margin-top: 1rem;
+        text-align: center;
+        font-size: 0.6875rem;
+        color: var(--imnehnet-text-faint);
+    }
+
+    .imnehnet-auth-link {
+        font-weight: 500;
+        color: var(--imnehnet-accent);
+        text-decoration: none;
+    }
+
+    .imnehnet-auth-link:hover {
+        text-decoration: underline;
+    }
+
+    /* =========================================================
+       FILAMENT'S OWN FORM, RESTYLED TO MATCH
+
+       The sign-in form is Filament's component, so its classes are overridden here
+       rather than replaced. The selectors are the ones Filament renders; if an
+       upgrade renames them the overrides simply stop applying and the form falls
+       back to Filament's own styling, which is the safe direction to fail in.
+       ========================================================= */
+
+    /* Filament's own card. The sign-in form lives inside it, so it is given the
+       same surface, border, radius and shadow as the registration card rather
+       than the two being allowed to differ. */
+    .fi-simple-page {
+        max-width: 26rem;
+        margin-inline: auto;
+        background-color: var(--imnehnet-raised);
+        border: 1px solid var(--imnehnet-line);
+        border-radius: 0.875rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+        padding: 1.75rem;
+    }
+
+    .fi-simple-header {
+        text-align: center;
+        margin-bottom: 1.75rem;
+    }
+
+    /* Filament centres the brand by default on this page already, but the mark is
+       now the wordmark component, so it is set here too rather than left to chance. */
+    .fi-simple-header .fi-logo,
+    .fi-simple-page .fi-logo {
+        display: flex;
+        justify-content: center;
+        height: auto;
+    }
+
+    .fi-simple-header-heading {
+        margin-top: 0.9rem;
+        font-size: 1.375rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: #fff;
+    }
+
+    /* The tagline sits above the title on both forms, so it is injected as a
+       separate block rather than as Filament's subheading, which renders below. */
+    /* Filament rounds its own controls more tightly and pads them less than the
+       registration form does. Both were visible differences between two pages
+       that are meant to look like the same thing, so both are set here rather
+       than left to whichever component happened to render. */
+    .fi-simple-page .fi-btn {
+        border-radius: 0.5rem;
+        font-weight: 600;
+        padding: 0.625rem 1rem;
+    }
+
+    .fi-simple-page .fi-input,
+    .fi-simple-page .fi-input-wrp {
+        border-radius: 0.5rem;
+    }
+
+    .fi-simple-header-subheading {
+        margin-top: 0.4rem;
+        font-size: 0.875rem;
+        color: var(--imnehnet-text-muted);
+    }
+
 /* =========================================================
    REDUCED MOTION
 
