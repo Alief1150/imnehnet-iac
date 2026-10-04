@@ -79,6 +79,43 @@ return [
     'incus_network' => env('INCUS_NETWORK', 'incusbr0'),
 
     /*
+     * The lab pair.
+     *
+     * A lab is two containers on two machines, and the two halves share a last octet
+     * so that a pair is recognisable at a glance in a log: a victim at 10.20.0.n and
+     * an attacker at 10.30.0.n. Both subnets are stated as prefixes because the
+     * allocator appends the octet, and a pair is only ever drawn from these two.
+     */
+    'victim_subnet' => env('VICTIM_SUBNET', '10.20.0.0'),
+
+    'attacker_subnet' => env('ATTACKER_SUBNET', '10.30.0.0'),
+
+    'incus_attacker_remote' => env('INCUS_ATTACKER_REMOTE', 'lab-atk'),
+
+    /*
+     * The attacker plane, reached over SSH.
+     *
+     * The lab firewall lives on LAB-ATK rather than here, so permitting a pair means
+     * running nft over there. The alias resolves to a key-based entry in ~/.ssh/config
+     * rather than to a password, because a host credential stored for the portal to
+     * read would be a credential in the repository.
+     */
+    'attacker_plane_ssh_alias' => env('ATTACKER_PLANE_SSH_ALIAS', 'lab-atk'),
+
+    /*
+     * Where the firewall ruleset lives on the attacker plane.
+     *
+     * Named because laa-ctf-config.service loads this file at boot. A pair added to
+     * the running set and not written here is a pair that stops existing at the next
+     * restart, and the lab it belongs to then silently cannot reach its own victim.
+     */
+    'firewall_ruleset_path' => env('FIREWALL_RULESET_PATH', '/etc/laa-ctf/laa-ctf.nft'),
+
+    // How long a command against the attacker plane may take before it is abandoned.
+    // Generous, because nft --check on the full ruleset is not instantaneous.
+    'attacker_plane_timeout_seconds' => (int) env('ATTACKER_PLANE_TIMEOUT_SECONDS', 20),
+
+    /*
      * Container resource limits are decided by the portal, not by the student.
      *
      * A student chooses whether an environment exists, not how large it is. The
