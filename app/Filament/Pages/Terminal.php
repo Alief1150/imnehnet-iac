@@ -171,14 +171,35 @@ final class Terminal extends Page
             );
         }
 
-        if (! $environment->runtime_status->isRunning()) {
+        /*
+         * runtime_status is nullable, and a row can exist before anything has read
+         * it: an environment record is written when the environment is requested,
+         * which is before the control plane has observed it running. Calling
+         * isRunning() on that null took the whole page down with a fatal.
+         *
+         * The honest answer is UNKNOWN, which is what RuntimeStatus::Unknown is for.
+         * "NOT RUNNING" would be actionable and would be a lie: nothing has said
+         * this container is stopped, only that nobody has looked.
+         */
+        $runtime = $environment->runtime_status;
+
+        if ($runtime === null) {
+            return $this->state(
+                'runtime_unknown',
+                'UNKNOWN',
+                'warning',
+                'The runtime state of this container has never been read, so whether it is running is not known. Reconcile it before opening a terminal.',
+            );
+        }
+
+        if (! $runtime->isRunning()) {
             return $this->state(
                 'not_running',
                 'NOT RUNNING',
                 'danger',
                 sprintf(
                     'The container is %s. Start it before opening a terminal.',
-                    $environment->runtime_status->label(),
+                    $runtime->label(),
                 ),
             );
         }
