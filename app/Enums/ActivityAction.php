@@ -47,6 +47,12 @@ enum ActivityAction: string
 
     // Portal administration, outside the environment lifecycle. Present here so
     // that anything reading the audit log has one closed set to work with.
+    // Distinct from CreateUser on purpose: an administrator making a student
+    // account and a student arriving of their own accord are different events,
+    // and an operator reading the trail should not have to open the record to
+    // tell them apart.
+    case Registered = 'REGISTERED';
+
     case Login = 'LOGIN';
     case CreateUser = 'CREATE_USER';
     case UpdateUser = 'UPDATE_USER';

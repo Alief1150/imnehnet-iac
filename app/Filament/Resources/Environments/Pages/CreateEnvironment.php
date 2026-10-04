@@ -64,6 +64,33 @@ class CreateEnvironment extends CreateRecord
         return $data;
     }
 
+    /**
+     * Refuse the page with a reason rather than letting it 403.
+     *
+     * The policy already hides the create action once the quota is reached, so a
+     * student should not get here from the interface. Someone can still reach the
+     * URL, and an unexplained 403 reads as a broken portal rather than as a
+     * limit, so the page says which limit and what to do about it.
+     */
+    public function mount(): void
+    {
+        $user = $this->actor();
+        $quota = app(\App\Services\EnvironmentQuota::class);
+
+        if ($user === null || $quota->allowsAnother($user)) {
+            return;
+        }
+
+        Notification::make()
+            ->title('You have reached your environment limit')
+            ->body($quota->messageFor($user))
+            ->danger()
+            ->persistent()
+            ->send();
+
+        $this->redirect(EnvironmentResource::getUrl('index', panel: 'admin'));
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema

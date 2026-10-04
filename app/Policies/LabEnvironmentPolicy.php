@@ -50,7 +50,11 @@ class LabEnvironmentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->isActive();
+        // Registration is open, so an account that has never been approved by
+        // anyone can reach this. The quota is what stops each of them asking the
+        // compute plane for an unbounded number of containers.
+        return $user->isActive()
+            && app(\App\Services\EnvironmentQuota::class)->allowsAnother($user);
     }
 
     /**

@@ -24,6 +24,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
  */
 final class EnvironmentStatsOverview extends StatsOverviewWidget
 {
+    protected static ?int $sort = 1;
+
     protected ?string $heading = 'Environments';
 
     protected function getColumns(): int

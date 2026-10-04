@@ -33,7 +33,7 @@ class AdminPanelProvider extends PanelProvider
 
             ->viteTheme('resources/css/filament/admin/theme.css')
 
-            ->login()
+            ->login(\App\Filament\Auth\Pages\Login::class)
 
             ->colors([
                 'primary' => Color::Teal,

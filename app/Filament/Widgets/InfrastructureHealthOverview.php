@@ -12,7 +12,7 @@ use Throwable;
 
 final class InfrastructureHealthOverview extends StatsOverviewWidget
 {
-    protected static ?int $sort = 1;
+    protected static ?int $sort = 4;
 
     use MapsStatusColor;
 

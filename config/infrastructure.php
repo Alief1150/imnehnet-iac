@@ -160,6 +160,12 @@ return [
         'browser_access_enabled' => (bool) env('TERMINAL_BROWSER_ACCESS', false),
     ],
 
+    // How many environments one student may hold at once. Registration is open,
+    // so without this any account that reaches the portal can ask the compute
+    // plane for an unbounded number of containers. Administrators are not
+    // counted; they provision for other people and for testing.
+    'student_environment_limit' => (int) env('STUDENT_ENVIRONMENT_LIMIT', 3),
+
     'wazuh_api_url' => env('WAZUH_API_URL', 'https://127.0.0.1:55000'),
     'wazuh_api_username' => env('WAZUH_API_USERNAME'),
     'wazuh_api_password' => env('WAZUH_API_PASSWORD'),
