@@ -75,10 +75,12 @@ test('a student reaches the create page and is asked for what a lab needs', func
         ->assertSuccessful()
         ->assertSee('Container name')
         ->assertSee('Image')
-        // Without these the student cannot pick a size, and a default they never
-        // chose is not a choice.
-        ->assertSee('CPU limit')
-        ->assertSee('Memory limit');
+        // A student chooses whether an environment exists, not how large it is.
+        // The earlier version of this test asserted the opposite, on the grounds
+        // that a default nobody chose is not a choice. The brief settles it: the
+        // sizing is the portal's decision, so the form must not offer it.
+        ->assertDontSee('CPU limit')
+        ->assertDontSee('Memory limit');
 });
 
 test('a student creating a lab owns it and the work is queued', function () {
