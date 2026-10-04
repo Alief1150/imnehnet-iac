@@ -233,11 +233,27 @@ properties of what is installed, not preferences.
   `.tracking-\[0\.35em\]`. Searching for the unescaped form finds nothing and
   reads as a missing class. Search for the value, not the selector.
 
-* **Filament puts its own `Authenticate` ahead of the panel's middleware list.**
-  That middleware aborts with 403 as soon as `canAccessPanel` says no, so any
-  middleware added through `Panel::middleware()` runs *after* the refusal it was
-  meant to prevent, and appears to do nothing. Panel access redirects have to be
-  registered globally in `bootstrap/app.php`.
+* **Where a middleware sits decides whether it can work at all, and both obvious
+  placements are wrong.** A panel-access redirect cannot go in
+  `Panel::middleware()`, because Filament injects its own `Authenticate` ahead of
+  that list and that one aborts with 403 before the redirect runs. It cannot be
+  global either: global middleware runs before `StartSession`, so `$request->user()`
+  is null, the middleware concludes there is nobody to redirect, and Filament's
+  403 goes out a moment later. It works only as the panel's **authMiddleware**,
+  which means subclassing `Filament\Http\Middleware\Authenticate` so the check
+  replaces that middleware rather than sitting beside it.
+
+* **A subclass of a framework middleware must reproduce the parent's signature
+  exactly.** `handle($request, Closure $next, ...$guards)` — leaving the variadic
+  off is a fatal declaration error, not a warning, and it takes down every page of
+  both panels at once.
+
+* **`actingAs()` cannot catch a middleware-ordering bug.** It puts the user
+  straight on the guard, so a test that signs a user in never goes through the
+  session start the real request depends on, and a middleware placed before
+  `StartSession` looks correct in every test. The fault was only visible in a
+  browser. The tests that guard this assert the ordering and the global stack
+  structurally, and their teeth were checked by putting the bug back.
 
 * **Filament's login refuses an account that may not enter the current panel, and
   reports it as "these credentials do not match our records."** With two panels
@@ -311,8 +327,8 @@ the only way back to a known good state.
 ## 8. State at the time of writing
 
 ```
-tests        190 passed (707 assertions), 1 pre-existing warning
-HEAD         10281ba, working tree clean
+tests        201 passed (755 assertions), 1 pre-existing warning
+HEAD         see git log, working tree clean
 queue worker supervised by scripts/queue-supervisor.sh, started by @reboot cron
 Incus lab-env   lab-test 10.20.0.31
                 lab-tofu-test 10.20.0.202  (protected, untouched)

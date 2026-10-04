@@ -4,66 +4,55 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Filament\Facades\Filament;
-use Filament\Panel;
+use Filament\Http\Middleware\Authenticate;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Sends a signed-in user to the panel that belongs to them.
+ * Signs people in, and sends each of them to the door that is theirs.
  *
  * Two panels exist, one per role, and somebody will eventually type the other
  * one: a bookmark, a link somebody sent, or the address bar after signing out.
- * A 403 answers that mistake with an accusation, so it is redirected instead.
+ * Filament's answer to that is a 403, which treats a mistyped address as an
+ * attempt to reach something forbidden. This sends them to the panel that
+ * belongs to them instead.
  *
- * This is registered as global middleware rather than panel middleware, and that
- * is not a style choice. Filament inserts its own Authenticate in front of the
- * panel's middleware list, and that middleware aborts with 403 as soon as
- * canAccessPanel says no. As panel middleware this therefore always ran after the
- * refusal it was meant to prevent, which looked like it did nothing at all.
- * Global middleware runs before any route middleware, so it runs first.
+ * It extends Filament's own Authenticate rather than being bolted in beside it,
+ * and the placement is the whole reason. Two other arrangements were tried and
+ * both fail for the same reason in opposite directions:
  *
- * The panel is matched from the first path segment against the paths the panels
- * actually registered, because the current panel is not resolved until Filament's
- * own SetUpPanel middleware has run, which is later.
+ *  - As panel middleware, Filament injects its own Authenticate *ahead* of the
+ *    panel's list, so the 403 is already sent before this runs.
+ *  - As global middleware it does run first, but global middleware runs before
+ *    StartSession, so `$request->user()` is null, this concludes there is nothing
+ *    to redirect, and Filament's 403 goes out a moment later.
  *
- * A disabled account can reach neither panel, and following the redirect to "its
- * own" would bounce it between them for ever, so it is left to fail normally.
+ * Extending the middleware puts this check exactly where Filament's own is, which
+ * is after the session is available and before anything is served.
+ *
+ * A disabled account can reach neither panel, and redirecting it to "its own"
+ * would bounce it between them for ever, so it falls through to Filament and is
+ * refused once.
  */
-final class RedirectToOwnPanel
+final class RedirectToOwnPanel extends Authenticate
 {
-    public function handle(Request $request, Closure $next): Response
+    /**
+     * The variadic $guards is the parent's own signature and must be reproduced
+     * exactly. Leaving it off is a fatal declaration error rather than a warning,
+     * and it takes down every panel page at once.
+     */
+    public function handle($request, Closure $next, ...$guards): Response
     {
         $user = $request->user();
 
-        if ($user === null) {
-            return $next($request);
-        }
+        if ($user !== null && ! $user->canAccessPanel(Filament::getCurrentOrDefaultPanel())) {
+            $own = $user->isAdmin() ? 'admin' : 'student';
 
-        $panel = $this->panelForPath($request->path());
-
-        if ($panel === null || $user->canAccessPanel($panel)) {
-            return $next($request);
-        }
-
-        $own = $user->isAdmin() ? 'admin' : 'student';
-
-        if (! $user->canAccessPanel(Filament::getPanel($own))) {
-            return $next($request);
-        }
-
-        return redirect()->route("filament.{$own}.pages.dashboard");
-    }
-
-    private function panelForPath(string $path): ?Panel
-    {
-        $segment = explode('/', trim($path, '/'))[0] ?? '';
-
-        foreach (Filament::getPanels() as $panel) {
-            if ($panel->getPath() === $segment) {
-                return $panel;
+            if ($user->canAccessPanel(Filament::getPanel($own))) {
+                return redirect()->route("filament.{$own}.pages.dashboard");
             }
         }
 
-        return null;
+        return parent::handle($request, $next);
     }
 }

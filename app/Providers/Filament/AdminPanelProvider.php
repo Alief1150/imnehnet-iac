@@ -3,8 +3,8 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Dashboard;
+use App\Http\Middleware\RedirectToOwnPanel;
 use Filament\Enums\ThemeMode;
-use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -78,8 +78,13 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
 
+            // Not Filament's Authenticate but a subclass of it, so that an account
+            // which may not enter this panel is redirected to the one it may,
+            // rather than answered with 403. Runs after the panel's middleware and
+            // therefore after the session, which is the only point where the
+            // signed-in user is readable.
             ->authMiddleware([
-                Authenticate::class,
+                RedirectToOwnPanel::class,
             ]);
     }
 }

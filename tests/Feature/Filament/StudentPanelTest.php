@@ -112,3 +112,64 @@ test('a correct password is never reported as wrong because the panel differs', 
 
     auth()->logout();
 });
+/**
+ * The two failures that a behavioural test cannot see.
+ *
+ * Both of these were found by opening a browser, not by running the suite, and
+ * both took down every page of a panel at once. They are asserted structurally
+ * here because actingAs() puts the user straight on the guard and so can never
+ * reproduce them: a test that signs a user in does not go through the session
+ * start that the real request depends on.
+ */
+test('the redirect middleware runs after the session has been started', function () {
+    $route = Route::getRoutes()->getByName('filament.admin.pages.dashboard');
+
+    expect($route)->not->toBeNull();
+
+    $middleware = $route->gatherMiddleware();
+
+    $session = array_search(Illuminate\Session\Middleware\StartSession::class, $middleware, true);
+    $redirect = array_search(\App\Http\Middleware\RedirectToOwnPanel::class, $middleware, true);
+
+    // Global middleware runs before StartSession, so the signed-in user is not
+    // readable yet, the redirect concludes there is nobody to redirect, and
+    // Filament's own 403 goes out a moment later. This was the first version and
+    // it looked correct in every test.
+    expect($session)->toBeInt()
+        ->and($redirect)->toBeInt()
+        ->and($redirect)->toBeGreaterThan($session);
+
+    // Registering it globally as well as here would put a copy in front of
+    // StartSession, where it reads a signed-in user that does not exist yet and
+    // does nothing, while the panel copy still works and hides the fact. The
+    // global stack is not part of the route's middleware, so the assertion above
+    // cannot see it and it has to be checked here.
+    $kernel = app(Illuminate\Contracts\Http\Kernel::class);
+    $global = (new ReflectionMethod($kernel, 'getGlobalMiddleware'))->invoke($kernel);
+
+    foreach ((array) $global as $name) {
+        expect($name)->not->toBe(\App\Http\Middleware\RedirectToOwnPanel::class);
+    }
+});
+
+test('the redirect middleware replaces, and does not sit beside, the one that refuses', function () {
+    $auth = Filament\Facades\Filament::getPanel('admin')->getAuthMiddleware();
+
+    // Panel middleware runs after Filament injects its own Authenticate, so a
+    // redirect added there always runs after the refusal it exists to prevent.
+    // That was the second version. Extending Authenticate is what puts the check
+    // in the only position where the user is both known and not yet refused.
+    expect($auth)->toContain(\App\Http\Middleware\RedirectToOwnPanel::class)
+        ->and($auth)->not->toContain(Filament\Http\Middleware\Authenticate::class);
+});
+
+test('the redirect middleware keeps the parent handle signature', function () {
+    // Reproducing this exactly is not optional. An incompatible declaration is a
+    // fatal error rather than a warning, and it takes every page of both panels
+    // down with it.
+    $parent = new ReflectionMethod(Illuminate\Auth\Middleware\Authenticate::class, 'handle');
+    $child = new ReflectionMethod(\App\Http\Middleware\RedirectToOwnPanel::class, 'handle');
+
+    expect($child->getNumberOfParameters())->toBe($parent->getNumberOfParameters())
+        ->and($child->getParameters()[2]->isVariadic())->toBeTrue();
+});
