@@ -5,7 +5,7 @@ dan direplikasi melalui repository GitHub privat.
 
 - `index.json` adalah indeks mesin-terbaca dan menyimpan checksum SHA-256.
 - `proposals/` menyimpan proposal akademik dalam format PDF dan arsip sumber final.
-- Revisi proposal terbaru diterima dan diarsipkan pada Selasa, 6 Oktober 2026; metadata dan checksum tercatat di `index.json` serta `SHA256SUMS`.
+- **Proposal terbaru: v4** — `proposals/2026-10-06-kelompok-5-proposal-pbl-imnehnet-final-v4.pdf`, diterima Selasa, 6 Oktober 2026. Versi sebelumnya tetap disimpan sebagai riwayat dan ditandai `superseded-final-reference` dalam `index.json`.
 - `presentations/` menyimpan artefak presentasi PBL yang dapat diedit dan sudah melalui structural read-back serta visual QA.
 - `audit/` menyimpan dokumentasi setup/troubleshooting audit yang sudah disanitasi; raw audit log dan mapping identitas aktual tidak boleh disimpan di repository.
 - `handoffs/` menyimpan breakpoint implementasi dan context note yang sudah disanitasi; setiap fakta runtime yang dapat berubah tetap harus diverifikasi terhadap `docs/status.md` dan sistem live.
