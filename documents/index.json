@@ -110,6 +110,26 @@
       "notes": "Versi final hasil finishing dan review pembimbing menurut pengirim. Dokumen disimpan sebagai referensi akademik final; klaim di dalamnya tidak otomatis membuktikan status deployment dan tidak menggantikan docs/status.md."
     },
     {
+      "id": "imnehnet-proposal-kelompok-5-2026-final-v3-2026-10-06",
+      "title": "Rancang Bangun Model LaaS Berbasis Micro-Segmentation untuk Meningkatkan Keamanan dan Skalabilitas Praktikum Keamanan Siber",
+      "document_type": "proposal",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "latest-final-reference",
+      "authority": "proposal-not-runtime-state",
+      "path": "documents/proposals/2026-10-06-kelompok-5-proposal-pbl-imnehnet-final.pdf",
+      "original_filename": "NEW Kelompok_5_Proposal_PBL_IMNEHNET_FINAL.pdf",
+      "media_type": "application/pdf",
+      "page_count": 19,
+      "size_bytes": 861600,
+      "sha256": "3aa89093282af8e2232c76189dba5de47d05855ab6c5c50abf078954a00d1811",
+      "received_at": "2026-10-06T23:28:22+07:00",
+      "source": "telegram-upload",
+      "notes": "Diterima dan diarsipkan pada Selasa, 6 Oktober 2026 sebagai revisi proposal terbaru. Dokumen dipertahankan utuh sebagai referensi akademik; klaim di dalamnya tidak otomatis membuktikan status deployment dan tidak menggantikan docs/status.md."
+    },
+    {
       "id": "imnehnet-backend-automation-breakpoint-2026-09-25-md",
       "title": "IMNEHNET Backend & Automation Breakpoint — 25 September 2026",
       "document_type": "implementation-handoff",
