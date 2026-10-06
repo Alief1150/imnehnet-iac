@@ -183,57 +183,79 @@
                         </p>
                     </div>
 
-                    <div class="mt-3 grid items-center gap-3 sm:grid-cols-[minmax(180px,1fr)_minmax(150px,0.8fr)] xl:grid-cols-1 2xl:grid-cols-[minmax(180px,1fr)_minmax(150px,0.8fr)]">
-                        <div
-                            wire:key="course-status-chart-{{ $courseStatus['completed'] }}-{{ $courseStatus['inProgress'] }}-{{ $courseStatus['notStarted'] }}"
-                            x-data
-                            x-init="
-                                const instance = window.createImnehnetCourseChart(
-                                    $refs.chart,
-                                    @js([
-                                        $courseStatus['completed'],
-                                        $courseStatus['inProgress'],
-                                        $courseStatus['notStarted'],
-                                    ])
-                                );
-                                $cleanup(() => instance?.destroy());
-                            "
-                            class="relative"
-                        >
-                            <div x-ref="chart" class="min-h-[250px]"></div>
+                    {{-- A donut of zeroes is not an empty state, it looks like a bug. --}}
+                    @if ($courseStatus['total'] === 0 || $courseStatus['completed'] + $courseStatus['inProgress'] === 0)
+                        {{-- No student has started, so there is no distribution to draw.
+                             Stating that is the honest rendering of the same fact a donut
+                             would show as an unexplained gap. --}}
+                        <div class="mt-3 flex min-h-[250px] flex-col items-center justify-center rounded-lg border border-dashed border-base-content/15 p-6 text-center">
+                            <p class="text-sm font-medium text-base-content/70">
+                                No lab started yet
+                            </p>
+                            <p class="mt-1 max-w-[30ch] text-xs text-base-content/50">
+                                @if ($courseStatus['total'] === 0)
+                                    No students are registered yet. This will show how each of them
+                                    is progressing once someone starts a lab.
+                                @else
+                                    {{ $courseStatus['total'] }} registered
+                                    {{ $courseStatus['total'] === 1 ? 'student has' : 'students have' }}
+                                    not started a lab.
+                                @endif
+                            </p>
+                        </div>
+                    @else
+                        <div class="mt-3 grid items-center gap-3 sm:grid-cols-[minmax(180px,1fr)_minmax(150px,0.8fr)] xl:grid-cols-1 2xl:grid-cols-[minmax(180px,1fr)_minmax(150px,0.8fr)]">
+                            <div
+                                wire:key="course-status-chart-{{ $courseStatus['completed'] }}-{{ $courseStatus['inProgress'] }}-{{ $courseStatus['notStarted'] }}"
+                                x-data
+                                x-init="
+                                    const instance = window.createImnehnetCourseChart(
+                                        $refs.chart,
+                                        @js([
+                                            $courseStatus['completed'],
+                                            $courseStatus['inProgress'],
+                                            $courseStatus['notStarted'],
+                                        ])
+                                    );
+                                    $cleanup(() => instance?.destroy());
+                                "
+                                class="relative"
+                            >
+                                <div x-ref="chart" class="min-h-[250px]"></div>
 
-                            <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                <div class="text-center">
-                                    <div class="text-2xl font-semibold text-base-content">
-                                        {{ number_format($courseStatus['total']) }}
-                                    </div>
-                                    <div class="text-xs text-base-content/55">
-                                        Total Students
+                                <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-semibold text-base-content">
+                                            {{ number_format($courseStatus['total']) }}
+                                        </div>
+                                        <div class="text-xs text-base-content/55">
+                                            Total Students
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="grid gap-2.5">
+                                <div class="flex items-center gap-2 text-sm">
+                                    <span class="size-2.5 rounded-full" style="background-color: #0ea5a4"></span>
+                                    <span class="flex-1 text-base-content/65">Completed</span>
+                                    <strong>{{ $courseStatus['completed'] }}</strong>
+                                </div>
+
+                                <div class="flex items-center gap-2 text-sm">
+                                    <span class="size-2.5 rounded-full bg-info"></span>
+                                    <span class="flex-1 text-base-content/65">In Progress</span>
+                                    <strong>{{ $courseStatus['inProgress'] }}</strong>
+                                </div>
+
+                                <div class="flex items-center gap-2 text-sm">
+                                    <span class="size-2.5 rounded-full bg-warning"></span>
+                                    <span class="flex-1 text-base-content/65">Not Started</span>
+                                    <strong>{{ $courseStatus['notStarted'] }}</strong>
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="grid gap-2.5">
-                            <div class="flex items-center gap-2 text-sm">
-                                <span class="size-2.5 rounded-full" style="background-color: #0ea5a4"></span>
-                                <span class="flex-1 text-base-content/65">Completed</span>
-                                <strong>{{ $courseStatus['completed'] }}</strong>
-                            </div>
-
-                            <div class="flex items-center gap-2 text-sm">
-                                <span class="size-2.5 rounded-full bg-info"></span>
-                                <span class="flex-1 text-base-content/65">In Progress</span>
-                                <strong>{{ $courseStatus['inProgress'] }}</strong>
-                            </div>
-
-                            <div class="flex items-center gap-2 text-sm">
-                                <span class="size-2.5 rounded-full bg-warning"></span>
-                                <span class="flex-1 text-base-content/65">Not Started</span>
-                                <strong>{{ $courseStatus['notStarted'] }}</strong>
-                            </div>
-                        </div>
-                    </div>
+                    @endif
                 </div>
             </div>
         </div>
