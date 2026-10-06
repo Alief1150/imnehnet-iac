@@ -41,14 +41,13 @@ final class AdminDashboardOverview extends Widget
 
         $systemHealth = $this->systemHealth();
         $labActivity = $this->labActivity();
-        $courseStatus = $this->courseStatus();
 
         return [
             'activeLabs' => $activeLabs,
             'totalUsers' => $totalUsers,
             'systemHealth' => $systemHealth,
             'labActivity' => $labActivity,
-            'courseStatus' => $courseStatus,
+            'accounts' => $this->accounts(),
             'labActivityTrend' => $this->labActivityTrend(),
             'userGrowthTrend' => $this->userGrowthTrend(),
             'recentActivity' => ActivityLog::query()
@@ -56,6 +55,39 @@ final class AdminDashboardOverview extends Widget
                 ->latest('created_at')
                 ->limit(5)
                 ->get(),
+        ];
+    }
+
+    /**
+     * Who is on the platform right now.
+     *
+     * Replaces a progress donut that had nothing to divide up. The guided course exists
+     * in the database but is not yet published to students, so a card showing how many
+     * students had completed it, were working on it, or had not started was answering a
+     * question about a course nobody can open — and the seeded session in it made it look
+     * as though the cohort were already progressing.
+     *
+     * What an administrator can actually act on before a course opens is who has an
+     * account and what role it carries. That is real, it is what the next step of setting
+     * the platform up needs, and it does not imply a course is running.
+     *
+     * @return array<string, int|bool>
+     */
+    private function accounts(): array
+    {
+        $since = now()->subDays(30);
+
+        return [
+            'total' => User::query()->count(),
+            'students' => User::query()->where('role', 'student')->count(),
+            'administrators' => User::query()->where('role', 'admin')->count(),
+            'lecturers' => User::query()->where('role', 'lecturer')->count(),
+            'newInPeriod' => User::query()->where('created_at', '>=', $since)->count(),
+            'active' => User::query()->where('status', 'active')->count(),
+
+            // Said plainly on the card so a reader is not left wondering why a guided
+            // CTF platform has nothing to guide anyone through yet.
+            'coursePublished' => false,
         ];
     }
 
@@ -228,37 +260,4 @@ final class AdminDashboardOverview extends Widget
         ];
     }
 
-    /**
-     * @return array{completed: int, inProgress: int, notStarted: int, total: int}
-     */
-    private function courseStatus(): array
-    {
-        $students = User::query()
-            ->where('role', 'student')
-            ->pluck('id');
-
-        $sessions = LabSession::query()
-            ->whereIn('user_id', $students)
-            ->latest('created_at')
-            ->get()
-            ->groupBy('user_id')
-            ->map(fn ($sessions) => $sessions->first());
-
-        $completed = $sessions
-            ->filter(fn (LabSession $session): bool => $session->status === LabSessionStatus::Completed)
-            ->count();
-
-        $inProgress = $sessions
-            ->reject(fn (LabSession $session): bool => $session->status === LabSessionStatus::Completed)
-            ->count();
-
-        $notStarted = max(0, $students->count() - $sessions->count());
-
-        return [
-            'completed' => $completed,
-            'inProgress' => $inProgress,
-            'notStarted' => $notStarted,
-            'total' => $students->count(),
-        ];
     }
-}

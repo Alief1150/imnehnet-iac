@@ -177,85 +177,68 @@
             <div class="card border border-base-content/10 shadow-sm">
                 <div class="card-body">
                     <div>
-                        <h2 class="card-title text-base">Course Status</h2>
+                        <h2 class="card-title text-base">Students</h2>
                         <p class="mt-1 text-sm text-base-content/60">
-                            Distribution of guided CTF students
+                            Accounts registered on the platform
                         </p>
                     </div>
 
-                    {{-- A donut of zeroes is not an empty state, it looks like a bug. --}}
-                    @if ($courseStatus['total'] === 0 || $courseStatus['completed'] + $courseStatus['inProgress'] === 0)
-                        {{-- No student has started, so there is no distribution to draw.
-                             Stating that is the honest rendering of the same fact a donut
-                             would show as an unexplained gap. --}}
-                        <div class="mt-3 flex min-h-[250px] flex-col items-center justify-center rounded-lg border border-dashed border-base-content/15 p-6 text-center">
-                            <p class="text-sm font-medium text-base-content/70">
-                                No lab started yet
-                            </p>
-                            <p class="mt-1 max-w-[30ch] text-xs text-base-content/50">
-                                @if ($courseStatus['total'] === 0)
-                                    No students are registered yet. This will show how each of them
-                                    is progressing once someone starts a lab.
-                                @else
-                                    {{ $courseStatus['total'] }} registered
-                                    {{ $courseStatus['total'] === 1 ? 'student has' : 'students have' }}
-                                    not started a lab.
-                                @endif
-                            </p>
+                    <div class="mt-3 flex flex-col gap-3">
+                        {{-- The one figure the mockup's donut carried and the only one that
+                             means anything while no course is open to students. --}}
+                        <div class="rounded-lg border border-base-content/10 bg-base-200/40 p-4 text-center">
+                            <div class="text-3xl font-semibold text-base-content">
+                                {{ number_format($accounts['students']) }}
+                            </div>
+                            <div class="mt-0.5 text-xs text-base-content/55">
+                                Total Students
+                            </div>
                         </div>
-                    @else
-                        <div class="mt-3 grid items-center gap-3 sm:grid-cols-[minmax(180px,1fr)_minmax(150px,0.8fr)] xl:grid-cols-1 2xl:grid-cols-[minmax(180px,1fr)_minmax(150px,0.8fr)]">
-                            <div
-                                wire:key="course-status-chart-{{ $courseStatus['completed'] }}-{{ $courseStatus['inProgress'] }}-{{ $courseStatus['notStarted'] }}"
-                                x-data
-                                x-init="
-                                    const instance = window.createImnehnetCourseChart(
-                                        $refs.chart,
-                                        @js([
-                                            $courseStatus['completed'],
-                                            $courseStatus['inProgress'],
-                                            $courseStatus['notStarted'],
-                                        ])
-                                    );
-                                    $cleanup(() => instance?.destroy());
-                                "
-                                class="relative"
-                            >
-                                <div x-ref="chart" class="min-h-[250px]"></div>
 
-                                <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                    <div class="text-center">
-                                        <div class="text-2xl font-semibold text-base-content">
-                                            {{ number_format($courseStatus['total']) }}
-                                        </div>
-                                        <div class="text-xs text-base-content/55">
-                                            Total Students
-                                        </div>
-                                    </div>
-                                </div>
+                        <div class="grid gap-2">
+                            <div class="flex items-center justify-between gap-2 text-sm">
+                                <span class="flex items-center gap-2 text-base-content/65">
+                                    <span class="size-2.5 rounded-full" style="background-color:#0ea5a4"></span>
+                                    Students
+                                </span>
+                                <strong>{{ $accounts['students'] }}</strong>
                             </div>
 
-                            <div class="grid gap-2.5">
-                                <div class="flex items-center gap-2 text-sm">
-                                    <span class="size-2.5 rounded-full" style="background-color: #0ea5a4"></span>
-                                    <span class="flex-1 text-base-content/65">Completed</span>
-                                    <strong>{{ $courseStatus['completed'] }}</strong>
-                                </div>
-
-                                <div class="flex items-center gap-2 text-sm">
+                            <div class="flex items-center justify-between gap-2 text-sm">
+                                <span class="flex items-center gap-2 text-base-content/65">
                                     <span class="size-2.5 rounded-full bg-info"></span>
-                                    <span class="flex-1 text-base-content/65">In Progress</span>
-                                    <strong>{{ $courseStatus['inProgress'] }}</strong>
-                                </div>
+                                    Administrators
+                                </span>
+                                <strong>{{ $accounts['administrators'] }}</strong>
+                            </div>
 
-                                <div class="flex items-center gap-2 text-sm">
-                                    <span class="size-2.5 rounded-full bg-warning"></span>
-                                    <span class="flex-1 text-base-content/65">Not Started</span>
-                                    <strong>{{ $courseStatus['notStarted'] }}</strong>
+                            @if ($accounts['lecturers'] > 0)
+                                <div class="flex items-center justify-between gap-2 text-sm">
+                                    <span class="flex items-center gap-2 text-base-content/65">
+                                        <span class="size-2.5 rounded-full bg-warning"></span>
+                                        Lecturers
+                                    </span>
+                                    <strong>{{ $accounts['lecturers'] }}</strong>
                                 </div>
+                            @endif
+
+                            <div class="flex items-center justify-between gap-2 border-t border-base-content/10 pt-2 text-sm">
+                                <span class="text-base-content/65">
+                                    New in 30 days
+                                </span>
+                                <strong>{{ $accounts['newInPeriod'] }}</strong>
                             </div>
                         </div>
-                    @endif
+
+                        {{-- Said on the card rather than left for the reader to work out.
+                             The course exists in the database and one session has been run
+                             against it, so without this the dashboard implies a cohort is
+                             progressing through a course nobody can open yet. --}}
+                        <p class="rounded-lg border border-dashed border-base-content/15 p-3 text-xs leading-relaxed text-base-content/55">
+                            The guided CTF course is not published to students yet. Course
+                            progress will appear here once it is open and someone starts a lab.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
