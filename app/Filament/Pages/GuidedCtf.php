@@ -4,15 +4,13 @@ namespace App\Filament\Pages;
 
 use App\Enums\LabSessionStatus;
 use App\Enums\ObjectiveStatus;
+use App\Jobs\ProvisionLabSession;
 use App\Jobs\ResetLabSession;
 use App\Models\Course;
 use App\Models\LabEnvironment;
 use App\Models\LabSession;
 use App\Models\Objective;
-use App\Models\ObjectiveProgress;
 use App\Services\GuidedCtf\LabSessionManager;
-use App\Services\GuidedCtf\ObjectiveVerdict;
-use App\Jobs\ProvisionLabSession;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
@@ -32,11 +30,13 @@ use Illuminate\Support\Facades\Queue;
  */
 class GuidedCtf extends Page
 {
-    protected static ?string $navigationLabel = 'Guided CTF';
+    protected static ?string $navigationLabel = 'CTF Management';
 
     protected static ?string $title = 'Guided CTF';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
+
+    protected static string|\UnitEnum|null $navigationGroup = 'GUIDED CTF';
 
     protected string $view = 'filament.pages.guided-ctf';
 

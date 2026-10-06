@@ -2,8 +2,10 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Pages\Login;
 use App\Filament\Pages\Dashboard;
 use App\Http\Middleware\RedirectToOwnPanel;
+use App\Support\Wordmark;
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -11,7 +13,9 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
+use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -31,19 +35,33 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('IMNEHNET')
             // The same wordmark on both panels and on the registration form,
             // so the name is written down in exactly one place.
-            ->brandLogo(\App\Support\Wordmark::make())
+            ->brandLogo(Wordmark::make())
             ->favicon('favicon.ico')
 
             ->viteTheme('resources/css/filament/admin/theme.css')
 
-            ->login(\App\Filament\Auth\Pages\Login::class)
+            ->login(Login::class)
 
             ->colors([
                 'primary' => Color::Teal,
                 'gray' => Color::Slate,
             ])
 
-            ->defaultThemeMode(ThemeMode::Dark)
+            ->defaultThemeMode(ThemeMode::Light)
+            ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
+            ->globalSearchFieldKeyBindingSuffix()
+            ->renderHook(
+                PanelsRenderHook::GLOBAL_SEARCH_AFTER,
+                fn (): View => view('filament.components.theme-toggle'),
+            )
+            ->databaseNotifications()
+            ->navigationGroups([
+                'INFRASTRUCTURE',
+                'LAB MANAGEMENT',
+                'USERS',
+                'GUIDED CTF',
+                'OPERATIONS',
+            ])
             ->maxContentWidth('full')
 
             ->discoverResources(

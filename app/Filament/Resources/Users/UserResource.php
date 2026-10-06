@@ -56,7 +56,7 @@ class UserResource extends Resource
         return Lucide::icon('users');
     }
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Administration';
+    protected static string|\UnitEnum|null $navigationGroup = 'USERS';
 
     protected static ?int $navigationSort = 10;
 }

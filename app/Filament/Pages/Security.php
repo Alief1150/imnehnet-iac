@@ -29,7 +29,7 @@ final class Security extends Page
         return Lucide::icon('shield-check');
     }
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Infrastructure';
+    protected static string|\UnitEnum|null $navigationGroup = 'INFRASTRUCTURE';
 
     protected static ?int $navigationSort = 30;
 }

@@ -76,7 +76,7 @@ final class Monitoring extends Page
         return Lucide::icon('gauge');
     }
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Infrastructure';
+    protected static string|\UnitEnum|null $navigationGroup = 'INFRASTRUCTURE';
 
     protected static ?int $navigationSort = 20;
 }

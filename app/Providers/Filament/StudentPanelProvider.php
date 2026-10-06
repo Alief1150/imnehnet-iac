@@ -2,11 +2,13 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Pages\Login;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\GuidedCtf;
 use App\Filament\Pages\Terminal;
 use App\Filament\Resources\Environments\EnvironmentResource;
 use App\Http\Middleware\RedirectToOwnPanel;
+use App\Support\Wordmark;
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -50,15 +52,15 @@ class StudentPanelProvider extends PanelProvider
             ->brandName('IMNEHNET')
             // The same wordmark on both panels and on the registration form,
             // so the name is written down in exactly one place.
-            ->brandLogo(\App\Support\Wordmark::make())
+            ->brandLogo(Wordmark::make())
             ->favicon('favicon.ico')
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->login(\App\Filament\Auth\Pages\Login::class)
+            ->login(Login::class)
             ->colors([
                 'primary' => Color::Teal,
                 'gray' => Color::Slate,
             ])
-            ->defaultThemeMode(ThemeMode::Dark)
+            ->defaultThemeMode(ThemeMode::Light)
             ->maxContentWidth('full')
             // Named rather than discovered. A new administrative resource must not
             // appear in the student's panel by being added to a directory.

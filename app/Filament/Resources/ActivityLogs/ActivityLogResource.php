@@ -58,7 +58,7 @@ class ActivityLogResource extends Resource
         return Lucide::icon('scroll-text');
     }
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+    protected static string|\UnitEnum|null $navigationGroup = 'OPERATIONS';
 
     protected static ?int $navigationSort = 30;
 

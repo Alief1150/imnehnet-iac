@@ -29,7 +29,7 @@ class EnvironmentResource extends Resource
 
     protected static ?string $pluralLabel = 'Environments';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Environments';
+    protected static string|\UnitEnum|null $navigationGroup = 'LAB MANAGEMENT';
 
     protected static ?int $navigationSort = 10;
 
