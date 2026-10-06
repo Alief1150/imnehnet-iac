@@ -62,7 +62,30 @@ final class Dashboard extends BaseDashboard
     {
         $user = auth()->user();
 
-        if ($user === null || ! $user->isActive() || $user->isAdmin()) {
+        if ($user === null) {
+            return [];
+        }
+
+        // The period the figures below were drawn over, stated rather than offered as a
+        // control.
+        //
+        // It is disabled on purpose. Every figure on this dashboard is a total or a
+        // per-day count over a window the widget owns, and a control that looks like it
+        // changes them would promise something the page does not do. What it does is say
+        // how far back a total reaches, which is the thing a bare number never tells you:
+        // three accounts over thirty days and three accounts over an hour are the same
+        // figure and mean different things.
+        if ($user->isAdmin()) {
+            return [
+                Action::make('dashboardPeriod')
+                    ->label('Last 30 days')
+                    ->icon(Lucide::icon('calendar-days'))
+                    ->color('gray')
+                    ->disabled(),
+            ];
+        }
+
+        if (! $user->isActive()) {
             return [];
         }
 
