@@ -149,7 +149,7 @@
                                 ])>{{ $host['healthLabel'] }}</span>
                             </div>
 
-                            <dl class="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+                            <dl class="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
                                 <div>
                                     <dt class="text-base-content/50">Role</dt>
                                     <dd class="mt-0.5 font-medium">{{ $host['role'] }}</dd>
@@ -166,6 +166,23 @@
                                                  "not determined" knows which probe failed;
                                                  reading a blank knows nothing. --}}
                                             <span class="text-base-content/50">not determined</span>
+                                        @endif
+                                    </dd>
+                                </div>
+
+                                {{-- The tailnet address, which is how anything reaches a
+                                     host from outside the lab network. Shown beside the
+                                     lab address rather than instead of it: they are
+                                     different routes to the same machine and an operator
+                                     needs whichever one their client can use. Read from
+                                     tailscale itself, so it cannot be a stale guess. --}}
+                                <div>
+                                    <dt class="text-base-content/50">Tailscale</dt>
+                                    <dd class="mt-0.5 font-mono font-medium">
+                                        @if (filled($host['tailscale']))
+                                            {{ $host['tailscale'] }}
+                                        @else
+                                            <span class="text-base-content/50">not on the tailnet</span>
                                         @endif
                                     </dd>
                                 </div>
@@ -227,6 +244,37 @@
                             </tbody>
                         </table>
                     </div>
+
+                    {{-- Published ports, as a segment row to match the design.
+                         Every one of these is bound to 0.0.0.0 on the management host, so
+                         every one of them is reachable from the lab network. Named rather
+                         than numbered alone, because "9200" does not tell an operator
+                         that it is the Wazuh indexer — which is the reason to know it. --}}
+                    @if ($topology['publishedAccess']['count'] > 0)
+                        <div class="rounded-lg border border-warning/30 bg-warning/5 p-3">
+                            <p class="flex items-center gap-2 text-xs font-medium text-warning">
+                                {!! \App\Support\Lucide::icon('shield-alert') !!}
+                                {{ $topology['publishedAccess']['count'] }} {{ $topology['publishedAccess']['count'] === 1 ? 'service is' : 'services are' }}
+                                bound to every interface
+                            </p>
+
+                            <div class="mt-2 flex flex-wrap gap-1.5">
+                                @foreach ($topology['publishedAccess']['named'] as $port)
+                                    <span class="rounded-md border border-base-content/15 bg-base-200/50 px-2 py-1 font-mono text-[11px]">
+                                        <strong>{{ $port['port'] }}</strong>
+                                        <span class="text-base-content/55">{{ $port['service'] }}</span>
+                                    </span>
+                                @endforeach
+                            </div>
+
+                            <p class="mt-2 text-[11px] leading-relaxed text-base-content/50">
+                                Reachable from anything that can route to
+                                {{ $topology['hosts'][0]['address'] ?? 'this host' }}. Restrict
+                                these to the management network and the agents that need
+                                them; the Wazuh ports in particular accept agent traffic.
+                            </p>
+                        </div>
+                    @endif
 
                     <p class="text-[11px] leading-relaxed text-base-content/45">
                         Each segment is read from the plane that owns it, so an address here

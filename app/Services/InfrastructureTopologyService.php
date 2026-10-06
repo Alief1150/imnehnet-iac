@@ -57,6 +57,7 @@ class InfrastructureTopologyService
             now()->addSeconds(self::TTL_SECONDS),
             fn (): array => [
                 'planes' => $this->planes(),
+                'publishedAccess' => $this->publishedAccess(),
                 'hosts' => $this->hosts(),
                 'segments' => $this->segments(),
                 'stack' => $this->stack(),
@@ -91,8 +92,38 @@ class InfrastructureTopologyService
     private function planes(): array
     {
         $health = app(InfrastructureStatusService::class)->summary();
+        $published = $this->publishedAccess();
 
         $planes = [];
+
+        // Published Access is a plane card for the same reason the others are: it is a
+        // question an operator has to answer, and here it is answered from the kernel's
+        // listening sockets rather than from a list of ports somebody remembered. It is
+        // the surface of this host alone — the two compute planes publish their own
+        // separately — so its address is this host's.
+        $planes[] = [
+            'key' => 'published_access',
+            'label' => 'Published Access',
+            'role' => 'Externally reachable ports on the management host',
+            'address' => $this->localAddress(),
+            'tailscale' => null,
+            'icon' => 'globe',
+            'tone' => 'warning',
+
+            // Not a probe. There is no upstream to be up or down; the fact is the list,
+            // and the verdict is that the host answered the question.
+            'status' => 'healthy',
+            'statusLabel' => 'Online',
+            'detail' => sprintf(
+                '%d %s bound to every interface, on port%s %s.',
+                $published['count'],
+                $published['count'] === 1 ? 'service is' : 'services are',
+                $published['count'] === 1 ? '' : 's',
+                implode(', ', $published['ports']) ?: 'none',
+            ),
+            'source' => 'ss -ltn',
+            'checkedAt' => Carbon::now()->toIso8601String(),
+        ];
 
         foreach ($this->planeDefinitions() as $plane) {
             $probe = $health[$plane['healthKey']] ?? null;
@@ -170,6 +201,7 @@ class InfrastructureTopologyService
     private function hosts(): array
     {
         $health = app(InfrastructureStatusService::class)->summary();
+        $tailscale = $this->tailscaleAddresses();
 
         $hosts = [
             [
@@ -178,6 +210,7 @@ class InfrastructureTopologyService
                 'role' => 'Management Plane',
                 'roleDetail' => 'Portal, orchestration, and the database',
                 'address' => $this->localAddress(),
+                'tailscale' => $tailscale['self'] ?? null,
                 'icon' => 'server',
                 'tone' => 'success',
                 // Not `management_plane`, which is the *group* this service is filed
@@ -197,7 +230,8 @@ class InfrastructureTopologyService
                     ? 'Student victim environments and the target services'
                     : 'Attacker tooling and paired attacker containers',
                 'address' => $this->remoteAddress($remote),
-                'icon' => $remote === 'lab-env' ? 'database' : 'flame',
+                'tailscale' => $tailscale[$remote] ?? null,
+                'icon' => $remote === 'lab-env' ? 'database' : 'server',
                 'tone' => $remote === 'lab-env' ? 'info' : 'error',
                 'healthKey' => $remote === 'lab-env' ? 'lab_env' : 'incus_atk',
                 'remote' => $remote,
@@ -370,7 +404,9 @@ class InfrastructureTopologyService
      */
     private function planeDefinitions(): array
     {
+        $tailscale = $this->tailscaleAddresses();
         $atk = $this->attackerAddress();
+        $atkRemote = (string) config('infrastructure.attacker_plane_remote', 'lab-atk');
 
         return [
             [
@@ -378,15 +414,18 @@ class InfrastructureTopologyService
                 'label' => 'Management Plane',
                 'role' => 'Portal, orchestration, and the database',
                 'address' => $this->localAddress(),
+                'tailscale' => $tailscale['self'] ?? null,
                 'icon' => 'server',
                 'tone' => 'success',
                 'healthKey' => 'iaas_mgmt',
+                'remote' => null,
             ],
             [
                 'key' => 'lab_env',
                 'label' => 'Lab Compute',
                 'role' => 'Student victim environments and labs',
                 'address' => $this->remoteAddress('lab-env'),
+                'tailscale' => $tailscale['lab-env'] ?? null,
                 'icon' => 'box',
                 'tone' => 'info',
                 'healthKey' => 'lab_env',
@@ -397,14 +436,172 @@ class InfrastructureTopologyService
                 'label' => 'Attacker Plane',
                 'role' => 'Attacker tooling and paired containers',
                 'address' => $atk,
-                'icon' => 'flame',
+                'tailscale' => $tailscale[strtolower($atkRemote)] ?? null,
+
+                // The bell icon from the design, not a flame. An attacker plane is a
+                // machine that hosts attacker tooling, not a fire; the design picked the
+                // bell deliberately and reading it as a flame is exactly the sort of
+                // substitution that makes an icon mean nothing.
+                'icon' => 'bell',
                 'tone' => 'error',
                 // Not probed by InfrastructureStatusService, which predates the plane.
                 // Probed here instead, so the entry is not a permanent "unverified".
                 'healthKey' => 'incus_atk',
-                'remote' => (string) config('infrastructure.attacker_plane_remote', 'lab-atk'),
+                'remote' => $atkRemote,
             ],
         ];
+    }
+
+    /**
+     * The published surface of this host: what is reachable from off it.
+     *
+     * Read from the kernel's own listening sockets rather than declared, because this is
+     * the one fact on the page someone could act on. A declared list of "published ports"
+     * would be a claim about exposure; the socket table is the exposure.
+     *
+     * Wildcard listeners only. A socket bound to 127.0.0.1 is published to nothing, and
+     * listing it would overstate the surface. The address is compared rather than parsed
+     * so an IPv6 wildcard — which `ss` renders as `*:5201` — is caught by the same rule.
+     *
+     * @return array<string, mixed>
+     */
+    private function publishedAccess(): array
+    {
+        $result = $this->commands->run(['ss', '-ltn'], 3);
+
+        $ports = [];
+
+        foreach ($this->lines($result['stdout']) as $line) {
+            if (preg_match('/\s(\S+):(\d+)\s/', $line, $m) !== 1) {
+                continue;
+            }
+
+            [, $address, $port] = $m;
+
+            if (! $this->isWildcard($address)) {
+                continue;
+            }
+
+            $ports[(int) $port] = true;
+        }
+
+        $list = array_keys($ports);
+        sort($list);
+
+        $named = [];
+
+        foreach ($list as $port) {
+            $named[] = ['port' => $port, 'service' => $this->serviceName($port)];
+        }
+
+        return ['ports' => $list, 'named' => $named, 'count' => count($list)];
+    }
+
+    /**
+     * Whether a listening socket is bound to every interface.
+     */
+    private function isWildcard(string $address): bool
+    {
+        return in_array($address, ['0.0.0.0', '*', '::', '[::]'], true);
+    }
+
+    /**
+     * What runs on a port.
+     *
+     * Named explicitly because a bare number does not tell an operator that 9200 is the
+     * Wazuh indexer reachable from the lab network — which is the reason it is worth
+     * knowing. Unknown ports say so rather than being given a plausible name.
+     */
+    private function serviceName(int $port): string
+    {
+        $known = [
+            22 => 'SSH',
+            80 => 'HTTP',
+            443 => 'HTTPS',
+            1514 => 'Wazuh agent events',
+            1515 => 'Wazuh agent enrolment',
+            3000 => 'Grafana',
+            3306 => 'MySQL',
+            5201 => 'incus cluster',
+            8000 => 'artisan serve',
+            8080 => 'HTTP',
+            9090 => 'Prometheus',
+            9100 => 'node_exporter',
+            9115 => 'blackbox exporter',
+            9200 => 'Wazuh indexer',
+            55000 => 'Wazuh API',
+        ];
+
+        return $known[$port] ?? 'unknown service';
+    }
+
+    /**
+     * Tailscale addresses for this host and the peers it can see.
+     *
+     * Asked of tailscale's own JSON rather than of configuration, because a Tailscale
+     * address is assigned when a node joins the tailnet and is not something the platform
+     * chooses. Anything declared would be a guess that happens to hold until someone
+     * reinstalls the node.
+     *
+     * Only v4. The v6 address sits in the same field and is not what an operator reads
+     * off a card to paste into a command.
+     *
+     * @return array<string, string>
+     */
+    private function tailscaleAddresses(): array
+    {
+        $result = $this->commands->run(
+            ['sh', '-c', 'tailscale status --json 2>/dev/null'],
+            5,
+        );
+
+        if ($result['successful'] !== true || trim($result['stdout']) === '') {
+            return [];
+        }
+
+        try {
+            $state = json_decode($result['stdout'], true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return [];
+        }
+
+        if (! is_array($state)) {
+            return [];
+        }
+
+        $firstV4 = static function (array $node): ?string {
+            foreach ($node['TailscaleIPs'] ?? [] as $ip) {
+                if (is_string($ip) && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                    return $ip;
+                }
+            }
+
+            return null;
+        };
+
+        $addresses = [];
+
+        $self = $firstV4($state['Self'] ?? []);
+
+        if ($self !== null) {
+            $addresses['self'] = $self;
+        }
+
+        foreach ($state['Peer'] ?? [] as $peer) {
+            $name = $peer['HostName'] ?? null;
+
+            if (! is_string($name) || $name === '') {
+                continue;
+            }
+
+            $ip = $firstV4($peer);
+
+            if ($ip !== null) {
+                $addresses[strtolower($name)] = $ip;
+            }
+        }
+
+        return $addresses;
     }
 
     /**
