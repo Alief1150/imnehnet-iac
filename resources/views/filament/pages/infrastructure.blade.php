@@ -1,95 +1,313 @@
+{{--
+    The Infrastructure page: what this platform is made of.
+
+    Every figure on this page is measured when the page is asked for, by
+    InfrastructureTopologyService. There are no constants in this template. That is the
+    whole design constraint: a page whose job is to describe the installation cannot
+    carry its own description of it as a literal, because the installation changes and
+    the literal would not.
+
+    Two consequences worth naming, both visible here:
+
+      - The provisioning stack lists what answers. The design this was built from named
+        KVM/QEMU and libvirt; neither is installed, and this platform's hypervisor is
+        Incus. They are absent from the row rather than shown as present.
+      - A host whose address could not be determined says so. An empty cell teaches
+        nothing; "not determined" tells an operator which probe failed.
+
+    The health verdicts are the existing InfrastructureStatusService's, read rather than
+    recomputed. Two answers to "is LAB-ENV up", one here and one on the dashboard, would
+    be two chances to disagree in front of the same operator.
+--}}
 <x-filament-panels::page>
     @php
-        $summary = $this->statusSummary();
-        $groups = [
-            'management_plane' => 'Planes',
-            'compute_plane' => 'Planes',
-            'automation' => 'Planes',
-            'monitoring' => 'Monitoring',
-            'security' => 'Security',
-        ];
+        $topology = $this->topology();
+        $planes = $topology['planes'] ?? [];
+        $hosts = $topology['hosts'] ?? [];
+        $segments = $topology['segments'] ?? [];
+        $stack = $topology['stack'] ?? [];
     @endphp
 
-    <div wire:poll.10s class="space-y-6">
-        @foreach ($groups as $group => $heading)
-            @php($entries = collect($summary)->where('group', $group))
+    {{-- ── plane cards ─────────────────────────────────────────────────────── --}}
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        @foreach ($planes as $plane)
+            <article class="card border border-base-content/10 shadow-sm">
+                <div class="card-body gap-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <span @class([
+                                'flex size-11 shrink-0 items-center justify-center rounded-lg',
+                                'bg-success/15 text-success' => $plane['tone'] === 'success',
+                                'bg-info/15 text-info' => $plane['tone'] === 'info',
+                                'bg-error/15 text-error' => $plane['tone'] === 'error',
+                            ])>
+                                {!! \App\Support\Lucide::icon($plane['icon']) !!}
+                            </span>
 
-            @if ($entries->isEmpty())
-                @continue
-            @endif
+                            <div class="min-w-0">
+                                <h2 class="card-title text-base">{{ $plane['label'] }}</h2>
+                                @if ($plane['address'])
+                                    <p class="mt-0.5 font-mono text-xs text-base-content/55">
+                                        {{ $plane['address'] }}
+                                    </p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
 
-            <section>
-                <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    {{ $heading }}
-                </h2>
-
-                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    @foreach ($entries as $service)
-                        <article @class([
-                            'rounded-xl border bg-white p-4 shadow-sm transition dark:bg-gray-900',
-                            'border-teal-500/40' => $service['status'] === 'healthy',
-                            'border-amber-500/40' => $service['status'] === 'degraded',
-                            'border-rose-500/40' => $service['status'] === 'offline',
-                            'border-gray-200 dark:border-gray-800' => ! in_array($service['status'], ['healthy', 'degraded', 'offline']),
+                    {{-- Not a coloured dot with no explanation: the verdict is the
+                         probe's own words, so a plane showing degraded says why. --}}
+                    <div class="flex items-start gap-2">
+                        <span @class([
+                            'mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
+                            'bg-success/15 text-success' => $plane['status'] === 'healthy',
+                            'bg-warning/15 text-warning' => $plane['status'] === 'degraded',
+                            'bg-error/15 text-error' => $plane['status'] === 'offline',
+                            'bg-base-300 text-base-content/60' => $plane['status'] === 'unknown',
                         ])>
-                            <div class="flex items-center justify-between gap-3">
-                                <h3 class="text-sm font-semibold text-gray-950 dark:text-white">{{ $service['label'] }}</h3>
+                            <span class="size-1.5 rounded-full bg-current"></span>
+                            {{ $plane['statusLabel'] }}
+                        </span>
+
+                        <p class="text-xs leading-relaxed text-base-content/60">
+                            {{ $plane['detail'] }}
+                        </p>
+                    </div>
+
+                    {{-- The two things a verdict needs to be actionable: what was asked,
+                         and how long ago. A card claiming "Online" with no provenance
+                         cannot be trusted when it disagrees with what an operator just
+                         saw fail. --}}
+                    <dl class="grid gap-1 border-t border-base-content/10 pt-2 text-[11px] text-base-content/50 sm:grid-cols-2">
+                        <div class="flex gap-1.5">
+                            <dt class="font-medium">Source</dt>
+                            <dd class="truncate font-mono">{{ $plane['source'] }}</dd>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <dt class="font-medium">Checked</dt>
+                            <dd>
+                                @if ($plane['checkedAt'])
+                                    {{ \Illuminate\Support\Carbon::parse($plane['checkedAt'])->diffForHumans() }}
+                                @else
+                                    {{-- Not omitted. An empty cell reads as "checked, no
+                                         result", which is different from "not measured". --}}
+                                    <span class="text-base-content/50">just now</span>
+                                @endif
+                            </dd>
+                        </div>
+                    </dl>
+
+                    <p class="text-xs text-base-content/50">
+                        {{ $plane['role'] }}
+                    </p>
+                </div>
+            </article>
+        @endforeach
+    </div>
+
+    {{-- ── hosts and segments ──────────────────────────────────────────────── --}}
+    <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <section class="card border border-base-content/10 shadow-sm">
+            <div class="card-body gap-3">
+                <div>
+                    <h2 class="card-title text-base">Host and VM Overview</h2>
+                    <p class="mt-1 text-sm text-base-content/60">
+                        Core infrastructure hosts and their roles in the platform.
+                    </p>
+                </div>
+
+                <div class="grid gap-3">
+                    @foreach ($hosts as $host)
+                        <article @class([
+                            'rounded-lg border p-3',
+                            'border-base-content/10',
+                            'bg-base-200/30',
+                        ])>
+                            <div class="flex items-center gap-3">
                                 <span @class([
-                                    'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                                    'bg-teal-500/15 text-teal-700 dark:text-teal-300' => $service['status'] === 'healthy',
-                                    'bg-amber-500/15 text-amber-700 dark:text-amber-300' => $service['status'] === 'degraded',
-                                    'bg-rose-500/15 text-rose-700 dark:text-rose-300' => $service['status'] === 'offline',
-                                    'bg-gray-500/15 text-gray-600 dark:text-gray-300' => ! in_array($service['status'], ['healthy', 'degraded', 'offline']),
-                                ])>{{ $service['status'] }}</span>
+                                    'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                                    'bg-success/15 text-success' => $host['tone'] === 'success',
+                                    'bg-info/15 text-info' => $host['tone'] === 'info',
+                                    'bg-error/15 text-error' => $host['tone'] === 'error',
+                                ])>
+                                    {!! \App\Support\Lucide::icon($host['icon']) !!}
+                                </span>
+
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="text-sm font-semibold">{{ $host['name'] }}</h3>
+                                    <p class="font-mono text-xs text-base-content/55">
+                                        {{ $host['hostname'] }}
+                                    </p>
+                                </div>
+
+                                <span @class([
+                                    'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium',
+                                    'bg-success/15 text-success' => $host['health'] === 'healthy',
+                                    'bg-warning/15 text-warning' => $host['health'] === 'degraded',
+                                    'bg-error/15 text-error' => $host['health'] === 'offline',
+                                    'bg-base-300 text-base-content/60' => $host['health'] === 'unknown',
+                                ])>{{ $host['healthLabel'] }}</span>
                             </div>
 
-                            <p class="mt-2 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
-                                {{ $service['summary'] }}
-                            </p>
-
-                            <dl class="mt-3 space-y-1 border-t border-gray-100 pt-2 text-[11px] text-gray-500 dark:border-gray-800 dark:text-gray-400">
-                                @if ($service['latency_ms'] !== null)
-                                    <div class="flex gap-2">
-                                        <dt class="font-medium text-gray-600 dark:text-gray-300">Latency</dt>
-                                        <dd class="font-mono">{{ $service['latency_ms'] }} ms</dd>
-                                    </div>
-                                @endif
-                                @if (! empty($service['version']))
-                                    <div class="flex gap-2">
-                                        <dt class="font-medium text-gray-600 dark:text-gray-300">Version</dt>
-                                        <dd class="truncate font-mono">{{ $service['version'] }}</dd>
-                                    </div>
-                                @endif
-                                <div class="flex gap-2">
-                                    <dt class="font-medium text-gray-600 dark:text-gray-300">Source</dt>
-                                    <dd class="truncate font-mono">{{ $service['source'] }}</dd>
+                            <dl class="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+                                <div>
+                                    <dt class="text-base-content/50">Role</dt>
+                                    <dd class="mt-0.5 font-medium">{{ $host['role'] }}</dd>
+                                    <dd class="text-[11px] text-base-content/50">{{ $host['roleDetail'] }}</dd>
                                 </div>
-                                <div class="flex gap-2">
-                                    <dt class="font-medium text-gray-600 dark:text-gray-300">Checked</dt>
-                                    <dd>{{ \Illuminate\Support\Carbon::parse($service['checked_at'])->diffForHumans() }}</dd>
+
+                                <div>
+                                    <dt class="text-base-content/50">IP Address</dt>
+                                    <dd class="mt-0.5 font-mono font-medium">
+                                        @if ($host['addressKnown'])
+                                            {{ $host['address'] }}
+                                        @else
+                                            {{-- Not an empty cell. An operator reading
+                                                 "not determined" knows which probe failed;
+                                                 reading a blank knows nothing. --}}
+                                            <span class="text-base-content/50">not determined</span>
+                                        @endif
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt class="text-base-content/50">Health</dt>
+                                    <dd class="mt-0.5 leading-relaxed text-base-content/70">
+                                        {{ $host['detail'] ?? 'No probe reported.' }}
+                                    </dd>
                                 </div>
                             </dl>
                         </article>
                     @endforeach
                 </div>
-            </section>
-        @endforeach
+            </div>
+        </section>
 
-        <section class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-            <h2 class="text-sm font-semibold text-gray-950 dark:text-white">Ungrouped services</h2>
-            <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                @foreach (collect($summary)->reject(fn (array $s): bool => isset($groups[$s['group']])) as $service)
-                    <article class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-                        <div class="flex items-center justify-between gap-3">
-                            <h3 class="text-sm font-semibold text-gray-950 dark:text-white">{{ $service['label'] }}</h3>
-                            <span class="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                                {{ $service['status'] }}
-                            </span>
-                        </div>
-                        <p class="mt-2 text-xs text-gray-600 dark:text-gray-300">{{ $service['summary'] }}</p>
-                    </article>
-                @endforeach
+        <section class="card border border-base-content/10 shadow-sm">
+            <div class="card-body gap-3">
+                <div>
+                    <h2 class="card-title text-base">Network Segments</h2>
+                    <p class="mt-1 text-sm text-base-content/60">
+                        Platform networks and their address spaces.
+                    </p>
+                </div>
+
+                @if (count($segments) === 0)
+                    <p class="rounded-lg border border-dashed border-base-content/15 p-4 text-sm text-base-content/55">
+                        No network segment could be read from either plane.
+                    </p>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-[11px] uppercase tracking-wide text-base-content/50">
+                                <tr>
+                                    <th class="py-2 pr-4 font-medium">Segment</th>
+                                    <th class="py-2 pr-4 font-medium">CIDR</th>
+                                    <th class="py-2 font-medium">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($segments as $segment)
+                                    <tr class="border-t border-base-content/10">
+                                        <td class="py-2 pr-4">
+                                            <span class="flex items-center gap-2 font-medium">
+                                                <span @class([
+                                                    'size-2 rounded-full',
+                                                    'bg-success' => $segment['tone'] === 'success',
+                                                    'bg-info' => $segment['tone'] === 'info',
+                                                    'bg-warning' => $segment['tone'] === 'warning',
+                                                ])></span>
+                                                {{ $segment['name'] }}
+                                            </span>
+                                        </td>
+                                        <td class="py-2 pr-4 font-mono">{{ $segment['cidr'] }}</td>
+                                        <td class="py-2 text-base-content/60">{{ $segment['description'] }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p class="text-[11px] leading-relaxed text-base-content/45">
+                        Each segment is read from the plane that owns it, so an address here
+                        is the one the platform is configured to use rather than one written
+                        down beside it.
+                    </p>
+                @endif
             </div>
         </section>
     </div>
+
+    {{-- ── provisioning stack ──────────────────────────────────────────────── --}}
+    <section class="card mt-5 border border-base-content/10 shadow-sm">
+        <div class="card-body gap-3">
+            <div>
+                <h2 class="card-title text-base">Provisioning Stack</h2>
+                <p class="mt-1 text-sm text-base-content/60">
+                    Technologies found on the management host.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                @forelse ($stack as $tool)
+                    <div @class([
+                        'flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm',
+                        'border-success/30 bg-success/10 text-success',
+                        'border-info/30 bg-info/10 text-info',
+                        'border-warning/30 bg-warning/10 text-warning',
+                        'border-base-content/15 bg-base-200/50 text-base-content/70',
+                    ]) title="{{ $tool['role'] }} — {{ $tool['path'] }}">
+                        {!! \App\Support\Lucide::icon($tool['icon']) !!}
+                        <span class="font-medium">{{ $tool['label'] }}</span>
+                    </div>
+                @empty
+                    <p class="text-sm text-base-content/55">
+                        No provisioning tool could be found on the management host.
+                    </p>
+                @endforelse
+            </div>
+
+            {{-- Named explicitly rather than left to the absence. An operator who knows
+                 the design expected a hypervisor should be told the platform's is Incus
+                 and that there is no KVM layer to go looking for. --}}
+            <p class="text-[11px] leading-relaxed text-base-content/45">
+                Only tools present on this host are listed. This platform virtualises with
+                Incus; there is no libvirt or KVM layer, and the two compute planes are
+                reached over their Incus API rather than a libvirt socket.
+            </p>
+        </div>
+    </section>
+
+    {{-- ── the component probe, unchanged in meaning ───────────────────────── --}}
+    <section class="card mt-5 border border-base-content/10 shadow-sm">
+        <div class="card-body gap-3">
+            <div>
+                <h2 class="card-title text-base">Service Probes</h2>
+                <p class="mt-1 text-sm text-base-content/60">
+                    Every component checked to reach the verdict above.
+                </p>
+            </div>
+
+            <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                @foreach (collect($this->statusSummary()) as $service)
+                    <div class="flex items-start gap-2 rounded-lg border border-base-content/10 p-2.5">
+                        <span @class([
+                            'mt-1 size-2 shrink-0 rounded-full',
+                            'bg-success' => $service['status'] === 'healthy',
+                            'bg-warning' => $service['status'] === 'degraded',
+                            'bg-error' => in_array($service['status'], ['offline', 'down'], true),
+                            'bg-base-300' => ! in_array($service['status'], ['healthy', 'degraded', 'offline', 'down'], true),
+                        ])></span>
+
+                        <div class="min-w-0">
+                            <p class="text-xs font-medium">{{ $service['label'] }}</p>
+                            <p class="text-[11px] leading-relaxed text-base-content/55">
+                                {{ $service['summary'] }}
+                            </p>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
 </x-filament-panels::page>

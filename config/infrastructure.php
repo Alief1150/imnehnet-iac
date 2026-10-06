@@ -75,6 +75,19 @@ return [
 
     'incus_remote' => 'lab-env:',
 
+    // The attacker plane, where the attacker half of a pair is created.
+    //
+    // Named beside the victim remote rather than inside the lab configuration below,
+    // because it is a property of the installation — which machine is the attacker
+    // plane — and not of any one lab. Provisioning reads it, and the Infrastructure
+    // page reads it to show where that plane is actually reachable.
+    //
+    // The address is not written down here. It comes from the remote's URL, so the page
+    // cannot claim a plane is at an address the portal does not use to reach it.
+    'attacker_plane_remote' => env('ATTACKER_PLANE_REMOTE', 'lab-atk'),
+
+    'attacker_plane_ssh_alias' => env('ATTACKER_PLANE_SSH_ALIAS', 'lab-atk'),
+
     // Network the student containers are attached to on the compute plane.
     'incus_network' => env('INCUS_NETWORK', 'incusbr0'),
 
