@@ -156,14 +156,55 @@ test('the reference environment is listed but offers no lifecycle action', funct
         ->assertOk();
 });
 
-test('the dashboard is titled IMNEHNET DASHBOARD with the control plane subheading', function () {
-    $admin = User::factory()->create(['role' => 'admin']);
+/**
+ * The dashboard heading and subheading.
+ *
+ * This used to assert the literal strings "IMNEHNET DASHBOARD" and "Cybersecurity
+ * Infrastructure Control Plane". The dashboard was redesigned and both went, which is
+ * the right outcome — they were the ugliest text on the page.
+ *
+ * What replaces them is not a weaker version of the same test. Asserting the word
+ * "Dashboard" would be close to vacuous: the string is in the navigation, the page
+ * title and the layout, so it would pass against a dashboard that renders nothing at
+ * all. What is worth protecting is the property the strings were standing in for, which
+ * is that the dashboard describes itself differently depending on who is looking at it.
+ * An administrator sees the estate; a student sees their own workspace. If that ever
+ * collapses to one wording, an administrator is reading a page addressed to a student,
+ * and no amount of literal string matching would have noticed.
+ */
+test('the dashboard addresses the administrator and the student differently', function () {
+    $admin = User::factory()->create(['role' => UserRole::Admin]);
+    $student = User::factory()->create(['role' => UserRole::Student]);
 
     $this->actingAs($admin)
         ->get(Dashboard::getUrl(panel: 'admin'))
         ->assertOk()
-        ->assertSee('IMNEHNET DASHBOARD')
-        ->assertSee('Cybersecurity Infrastructure Control Plane');
+        ->assertSee('Overview of your cybersecurity lab infrastructure');
+
+    $this->actingAs($student)
+        ->get(Dashboard::getUrl(panel: 'student'))
+        ->assertOk()
+        ->assertSee('Your cybersecurity lab workspace');
+
+    // And the two are genuinely different, asked of the method under each role rather
+    // than scraped from markup, so this cannot pass by both roles happening to render
+    // both strings somewhere on the page.
+    //
+    // The role is re-established before each call because getSubheading() reads it from
+    // the session. Capturing both first and comparing afterwards compares two reads of
+    // the same session, which is how this first returned the student's wording twice.
+    $subheading = new ReflectionMethod(new Dashboard(), 'getSubheading');
+
+    $this->actingAs($admin);
+    $asAdmin = $subheading->invoke(new Dashboard());
+
+    $this->actingAs($student);
+    $asStudent = $subheading->invoke(new Dashboard());
+
+    expect($asAdmin)
+        ->toBeString()
+        ->not->toBe($asStudent)
+        ->and($asStudent)->toBeString();
 });
 
 test('the dashboard reports the five figures the specification names, from live data', function () {
@@ -195,20 +236,85 @@ test('the brand reads IMNEHNET', function () {
     expect(Filament\Facades\Filament::getPanel('admin')->getBrandName())->toBe('IMNEHNET');
 });
 
-test('navigation is grouped the way the specification lays it out', function () {
+/**
+ * Navigation grouping on the admin panel.
+ *
+ * The groups were renamed when the sidebar was regrouped: Environments became
+ * LAB MANAGEMENT and Administration became USERS. The literal names are updated, but
+ * the second half is the part that was missing and is now asserted — that every
+ * resource *and* every page sits in some group.
+ *
+ * Filament renders an ungrouped item loose in the sidebar with no heading above it, so
+ * one resource left out of a group is invisible in review and only shows up as an item
+ * floating above the sections. toMatchArray cannot see that: it passes on the entries it
+ * names regardless of whether a fourth one exists. The specification names three
+ * resources; the panel now has three resources and five pages, and the pages are
+ * exactly where grouping mistakes show up.
+ */
+test('navigation is grouped the way the sidebar lays it out', function () {
+    $panel = Filament\Facades\Filament::getPanel('admin');
+
     $groups = [];
 
-    foreach (Filament\Facades\Filament::getPanel('admin')->getResources() as $resource) {
+    foreach ($panel->getResources() as $resource) {
         if ($resource::shouldRegisterNavigation()) {
             $groups[class_basename($resource)] = $resource::getNavigationGroup();
         }
     }
 
     expect($groups)->toMatchArray([
-        'EnvironmentResource' => 'Environments',
-        'ActivityLogResource' => 'Operations',
-        'UserResource' => 'Administration',
+        'EnvironmentResource' => 'LAB MANAGEMENT',
+        'ActivityLogResource' => 'OPERATIONS',
+        'UserResource' => 'USERS',
     ]);
+
+    // A resource with no group is always a mistake. Filament draws an ungrouped entry
+    // loose in the sidebar, above the sections rather than inside one, and toMatchArray
+    // cannot see that: it passes on the entries it names whether or not a fourth sits
+    // beside them. So this is asserted over every resource, not only the three above.
+    foreach ($panel->getResources() as $resource) {
+        if ($resource::shouldRegisterNavigation()) {
+            expect($resource::getNavigationGroup())
+                ->toBeString(
+                    class_basename($resource).' registers no navigation group, so the sidebar renders it loose',
+                );
+        }
+    }
+
+    // Pages are held to the same rule, except the ones meant to sit at the top alone.
+    //
+    // Dashboard and Terminal are ungrouped by design and always were: the dashboard is
+    // the first thing in the sidebar and a heading above it is noise. Asserting they
+    // were grouped would be asserting a worse sidebar. Naming them makes the exception
+    // visible — a third ungrouped page fails here, and has to be argued for rather than
+    // arriving by omission.
+    //
+    // getPages() on this Filament version returns file path => page class name, as
+    // strings: not page objects, and not keyed by class. Only shouldRegisterNavigation()
+    // is asked of them; the hidden flag lives on the registration rather than the class,
+    // and reaching it would mean building that registration for no gain here.
+    $deliberatelyTopLevel = ['Dashboard', 'Terminal'];
+
+    $pages = [];
+
+    foreach ($panel->getPages() as $class) {
+        if ($class::shouldRegisterNavigation()) {
+            $pages[class_basename($class)] = $class::getNavigationGroup();
+        }
+    }
+
+    expect($pages)->not->toBeEmpty();
+
+    foreach ($pages as $class => $group) {
+        if (in_array($class, $deliberatelyTopLevel, true)) {
+            expect($group)->toBeNull("{$class} was moved out of its top-level place");
+
+            continue;
+        }
+
+        expect($group)
+            ->toBeString("{$class} registers no navigation group, so the sidebar renders it loose");
+    }
 });
 
 test('every navigation entry carries a Lucide icon as markup', function () {
