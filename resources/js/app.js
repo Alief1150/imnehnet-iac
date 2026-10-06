@@ -1,3 +1,4 @@
+import ApexCharts from 'apexcharts';
 /**
  * Smooth scrolling for the main content area only.
  *
@@ -141,4 +142,272 @@ window.imnehnetLenis = {
     stop: () => lenis?.stop(),
     start: () => lenis?.start(),
     isRunning: () => lenis !== null,
+};
+
+
+/* ============================================================
+ * IMNEHNET Dashboard Charts
+ * FlyonUI visual system + ApexCharts
+ * ============================================================ */
+
+window.ApexCharts = ApexCharts;
+
+function imnehnetIsDark() {
+    return document.documentElement.classList.contains('dark');
+}
+
+function syncFlyonTheme() {
+    document.documentElement.dataset.theme = imnehnetIsDark() ? 'dark' : 'light';
+}
+
+syncFlyonTheme();
+
+window.addEventListener('theme-changed', () => {
+    requestAnimationFrame(syncFlyonTheme);
+});
+
+const themeObserver = new MutationObserver(syncFlyonTheme);
+
+themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class'],
+});
+
+function chartPalette() {
+    const dark = imnehnetIsDark();
+
+    return {
+        mode: dark ? 'dark' : 'light',
+        text: dark ? '#94a3b8' : '#64748b',
+        grid: dark ? '#273244' : '#e2e8f0',
+        surface: dark ? '#111827' : '#ffffff',
+        primary: '#0ea5a4',
+        info: '#3b82f6',
+        warning: '#f59e0b',
+    };
+}
+
+window.createImnehnetLabChart = (element, labels, values) => {
+    const palette = chartPalette();
+
+    const chart = new ApexCharts(element, {
+        chart: {
+            type: 'area',
+            height: 260,
+            toolbar: { show: false },
+            zoom: { enabled: false },
+            animations: {
+                enabled: true,
+                easing: 'easeinout',
+                speed: 500,
+            },
+            fontFamily: 'Instrument Sans, sans-serif',
+            background: 'transparent',
+        },
+        series: [{
+            name: 'Lab Sessions',
+            data: labels.map((label, index) => ({
+                x: label,
+                y: values[index] ?? 0,
+            })),
+        }],
+        xaxis: {
+            type: 'category',
+            tickAmount: labels.length <= 7 ? labels.length - 1 : 4,
+            labels: {
+                rotate: 0,
+                hideOverlappingLabels: true,
+                formatter: (value, timestamp, opts) => {
+                    const index = opts?.i ?? -1;
+                    const last = labels.length - 1;
+
+                    let indexes;
+
+                    if (labels.length <= 7) {
+                        indexes = labels.map((_, i) => i);
+                    } else {
+                        indexes = [
+                            0,
+                            Math.round(last * 0.25),
+                            Math.round(last * 0.50),
+                            Math.round(last * 0.75),
+                            last,
+                        ];
+                    }
+
+                    return indexes.includes(index)
+                        ? (labels[index] ?? value)
+                        : '';
+                },
+                style: {
+                    colors: palette.text,
+                    fontSize: '11px',
+                },
+            },
+            axisBorder: { show: false },
+            axisTicks: { show: false },
+            tooltip: { enabled: false },
+        },
+        yaxis: {
+            min: 0,
+            forceNiceScale: true,
+            labels: {
+                formatter: (value) => Math.round(value),
+                style: {
+                    colors: [palette.text],
+                    fontSize: '11px',
+                },
+            },
+        },
+        stroke: {
+            curve: 'smooth',
+            width: 2.5,
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.38,
+                opacityTo: 0.05,
+                stops: [0, 85, 100],
+            },
+        },
+        colors: [palette.primary],
+        dataLabels: { enabled: false },
+        markers: {
+            size: 0,
+            hover: { size: 5 },
+        },
+        grid: {
+            borderColor: palette.grid,
+            strokeDashArray: 3,
+            padding: {
+                left: 6,
+                right: 10,
+            },
+        },
+        tooltip: {
+            theme: palette.mode,
+            x: { show: true },
+        },
+        theme: {
+            mode: palette.mode,
+        },
+    });
+
+    chart.render();
+
+    const updateTheme = () => {
+        requestAnimationFrame(() => {
+            const next = chartPalette();
+
+            chart.updateOptions({
+                theme: { mode: next.mode },
+                grid: { borderColor: next.grid },
+                xaxis: {
+                    labels: {
+                        style: {
+                            colors: next.text,
+                            fontSize: '11px',
+                        },
+                    },
+                },
+                yaxis: {
+                    labels: {
+                        style: {
+                            colors: [next.text],
+                            fontSize: '11px',
+                        },
+                    },
+                },
+                tooltip: { theme: next.mode },
+            }, false, true);
+        });
+    };
+
+    window.addEventListener('theme-changed', updateTheme);
+
+    return {
+        destroy() {
+            window.removeEventListener('theme-changed', updateTheme);
+            chart.destroy();
+        },
+    };
+};
+
+window.createImnehnetCourseChart = (element, values) => {
+    const palette = chartPalette();
+
+    const chart = new ApexCharts(element, {
+        chart: {
+            type: 'donut',
+            height: 250,
+            fontFamily: 'Instrument Sans, sans-serif',
+            background: 'transparent',
+            animations: {
+                enabled: true,
+                easing: 'easeinout',
+                speed: 500,
+            },
+        },
+        series: values,
+        labels: ['Completed', 'In Progress', 'Not Started'],
+        colors: [
+            palette.primary,
+            palette.info,
+            palette.warning,
+        ],
+        stroke: {
+            width: 0,
+        },
+        dataLabels: {
+            enabled: false,
+        },
+        legend: {
+            show: false,
+        },
+        tooltip: {
+            theme: palette.mode,
+        },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '72%',
+                },
+            },
+        },
+        states: {
+            hover: {
+                filter: {
+                    type: 'lighten',
+                    value: 0.04,
+                },
+            },
+        },
+        theme: {
+            mode: palette.mode,
+        },
+    });
+
+    chart.render();
+
+    const updateTheme = () => {
+        requestAnimationFrame(() => {
+            const next = chartPalette();
+
+            chart.updateOptions({
+                theme: { mode: next.mode },
+                tooltip: { theme: next.mode },
+            }, false, true);
+        });
+    };
+
+    window.addEventListener('theme-changed', updateTheme);
+
+    return {
+        destroy() {
+            window.removeEventListener('theme-changed', updateTheme);
+            chart.destroy();
+        },
+    };
 };

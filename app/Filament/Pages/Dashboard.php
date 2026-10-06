@@ -26,7 +26,7 @@ final class Dashboard extends BaseDashboard
     public function getSubheading(): ?string
     {
         return auth()->user()?->isAdmin()
-            ? 'Cybersecurity lab orchestration and guided CTF control center'
+            ? 'Overview of your cybersecurity lab infrastructure'
             : 'Your cybersecurity lab workspace';
     }
 

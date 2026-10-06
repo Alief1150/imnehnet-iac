@@ -49,6 +49,8 @@ final class AdminDashboardOverview extends Widget
             'systemHealth' => $systemHealth,
             'labActivity' => $labActivity,
             'courseStatus' => $courseStatus,
+            'labActivityTrend' => $this->labActivityTrend(),
+            'userGrowthTrend' => $this->userGrowthTrend(),
             'recentActivity' => ActivityLog::query()
                 ->with('actor')
                 ->latest('created_at')
@@ -143,6 +145,86 @@ final class AdminDashboardOverview extends Widget
         return [
             'labels' => $labels,
             'values' => $values,
+        ];
+    }
+
+    /**
+     * @return array{value: ?float, direction: string, label: string}
+     */
+    private function labActivityTrend(): array
+    {
+        $days = in_array($this->activityDays, [7, 30, 90], true)
+            ? $this->activityDays
+            : 30;
+
+        $currentStart = now()->startOfDay()->subDays($days - 1);
+        $previousEnd = $currentStart->copy()->subSecond();
+        $previousStart = $currentStart->copy()->subDays($days);
+
+        $current = LabSession::query()
+            ->whereNotNull('started_at')
+            ->where('started_at', '>=', $currentStart)
+            ->count();
+
+        $previous = LabSession::query()
+            ->whereNotNull('started_at')
+            ->whereBetween('started_at', [$previousStart, $previousEnd])
+            ->count();
+
+        return $this->percentageTrend(
+            $current,
+            $previous,
+            'lab starts vs previous period',
+        );
+    }
+
+    /**
+     * @return array{value: ?float, direction: string, label: string}
+     */
+    private function userGrowthTrend(): array
+    {
+        $days = in_array($this->activityDays, [7, 30, 90], true)
+            ? $this->activityDays
+            : 30;
+
+        $currentStart = now()->startOfDay()->subDays($days - 1);
+        $previousEnd = $currentStart->copy()->subSecond();
+        $previousStart = $currentStart->copy()->subDays($days);
+
+        $current = User::query()
+            ->where('created_at', '>=', $currentStart)
+            ->count();
+
+        $previous = User::query()
+            ->whereBetween('created_at', [$previousStart, $previousEnd])
+            ->count();
+
+        return $this->percentageTrend(
+            $current,
+            $previous,
+            'new users vs previous period',
+        );
+    }
+
+    /**
+     * @return array{value: ?float, direction: string, label: string}
+     */
+    private function percentageTrend(int $current, int $previous, string $label): array
+    {
+        if ($previous === 0) {
+            return [
+                'value' => $current > 0 ? null : 0.0,
+                'direction' => $current > 0 ? 'new' : 'flat',
+                'label' => $label,
+            ];
+        }
+
+        $value = round((($current - $previous) / $previous) * 100, 1);
+
+        return [
+            'value' => abs($value),
+            'direction' => $value > 0 ? 'up' : ($value < 0 ? 'down' : 'flat'),
+            'label' => $label,
         ];
     }
 

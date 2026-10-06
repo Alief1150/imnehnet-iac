@@ -1,6 +1,6 @@
 <div
     x-data="{
-        theme: localStorage.getItem('theme') || '{{ filament()->getDefaultThemeMode()->value }}',
+        theme: localStorage.getItem('theme') || 'light',
 
         isDark() {
             if (this.theme === 'system') {
@@ -17,51 +17,24 @@
         },
     }"
     x-on:theme-changed.window="theme = $event.detail"
-    class="im-theme-toggle"
 >
     <button
         type="button"
         x-on:click="toggle()"
-        class="im-theme-toggle-button"
-        x-bind:aria-label="isDark() ? 'Switch to light theme' : 'Switch to dark theme'"
+        class="btn btn-circle btn-text btn-sm"
+        x-bind:aria-label="isDark() ? 'Switch to light mode' : 'Switch to dark mode'"
         x-bind:title="isDark() ? 'Light mode' : 'Dark mode'"
     >
-        <svg
+        <x-heroicon-o-sun
             x-show="! isDark()"
             x-cloak
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-            class="im-theme-icon"
-        >
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2"></path>
-            <path d="M12 20v2"></path>
-            <path d="m4.93 4.93 1.42 1.42"></path>
-            <path d="m17.66 17.66 1.41 1.41"></path>
-            <path d="M2 12h2"></path>
-            <path d="M20 12h2"></path>
-            <path d="m6.34 17.66-1.41 1.41"></path>
-            <path d="m19.07 4.93-1.41 1.41"></path>
-        </svg>
+            class="size-5"
+        />
 
-        <svg
+        <x-heroicon-o-moon
             x-show="isDark()"
             x-cloak
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-            class="im-theme-icon"
-        >
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-        </svg>
+            class="size-5"
+        />
     </button>
 </div>

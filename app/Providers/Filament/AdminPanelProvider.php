@@ -21,6 +21,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -39,6 +40,10 @@ class AdminPanelProvider extends PanelProvider
             ->favicon('favicon.ico')
 
             ->viteTheme('resources/css/filament/admin/theme.css')
+            ->renderHook(
+                'panels::body.end',
+                fn (): string => Vite::withEntryPoints(['resources/js/app.js'])->toHtml(),
+            )
 
             ->login(Login::class)
 

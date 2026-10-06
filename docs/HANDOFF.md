@@ -19,9 +19,20 @@ cd /home/iaas/projects/webportal-iaas
 bash scripts/verify.sh                       # the gate. Nothing is done until it is green.
 ```
 
-The portal is at **http://192.168.100.20/** (Apache, port 80). `artisan serve` on 8000
-works too but is a single worker and will serialise two students on two terminals at
-once; port 80 will not.
+**The portal is at `http://100.77.79.18` — Tailscale, not the lab LAN.** Measured on
+2026-10-06 from a laptop on a home network: `192.168.100.20` is unreachable, because
+that network has no route to `192.168.100.0/24` and the address is sent to the home
+gateway, which drops it. Everything resolves over Tailscale instead, including the SSH
+alias and the portal. `100.77.79.18` is IAAS-MGMT's tailnet address; both the browser
+and `ssh iaas` go through it.
+
+Apache serves port 80 and `artisan serve` serves 8000; both answer over Tailscale.
+Use port 80 anyway — `artisan serve` is a single worker and serialises two students
+talking to two terminals at once.
+
+`192.168.100.20` is LAB-ENV, not the portal, and is only reachable from inside the lab
+or by hopping through IAAS-MGMT. Any note that gives it as the portal's address is
+wrong for anyone outside.
 
 To see the course as a student: `ctf-student@imnehnet.test` / `Koral-Mekanisme-9917`.
 It owns a finished lab, so the page opens on the results — `Finish Lab` clears it back

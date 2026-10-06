@@ -1,5 +1,7 @@
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 
+@plugin "flyonui";
+
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
 
@@ -1412,4 +1414,36 @@ body,
         transition-duration: 0.01ms !important;
         animation-duration: 0.01ms !important;
     }
+}
+
+/* =========================================================
+   IMNEHNET × FLYONUI — dark surface integration
+   Keep FlyonUI components while aligning them with the
+   graphite / navy IMNEHNET application shell.
+   ========================================================= */
+
+.dark .im-admin-dashboard .card,
+.dark .fi-wi-widget .card {
+    background-color: #11151c;
+    border-color: #252c38;
+}
+
+.dark .fi-main {
+    background-color: #090c11;
+}
+
+.dark .fi-topbar {
+    background-color: #0f172a;
+}
+
+.dark .fi-sidebar {
+    background-color: #0c1015;
+}
+
+.dark .fi-wi-widget .table thead {
+    border-color: #29313d;
+}
+
+.dark .fi-wi-widget .table tbody tr {
+    border-color: #202733;
 }
