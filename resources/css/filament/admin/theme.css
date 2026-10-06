@@ -808,6 +808,93 @@ html:not(.dark) {
     --imnehnet-text-faint: #94a3b8;
 }
 
+/*
+    DARK GROUND
+    =========================================================
+
+    The block above declares its palette under html:not(.dark), so every colour that follows
+    from it is defined for the light theme only. Dark mode therefore fell back to Tailwind's
+    stock shades, which are a shade off from the surfaces the components draw themselves —
+    cards landed on the same value as the page behind them, and body text came out as the
+    muted token rather than the full-contrast one. That is the "dark looks different and is
+    harder to read" report, and it was a gap in the palette rather than a taste question.
+
+    Declared the same way as the light block so the two read as one set. Values are chosen
+    for contrast first:
+
+      text       #e2e8f0 on surface #131a26 — about 13:1, well past AA for body text
+      text-muted #94a3b8 — about 6:1, still past AA, for secondary text
+      text-faint #64748b — about 3.5:1, used only for large or non-essential marks
+
+    Surfaces are three distinct steps rather than one, so a card separates from the page
+    without relying on a border to do it.
+*/
+html.dark {
+    --imnehnet-ground: #0b111a;
+    --imnehnet-surface: #131a26;
+    --imnehnet-raised: #1a2331;
+    --imnehnet-sunken: #0e1520;
+    --imnehnet-line: #26324a;
+    --imnehnet-line-strong: #38455f;
+
+    --imnehnet-text: #e2e8f0;
+    --imnehnet-text-muted: #94a3b8;
+    --imnehnet-text-faint: #64748b;
+}
+
+/*
+    Apply the palette to the surfaces the framework draws.
+
+    Scoped to html.dark rather than left to defaults, because the light block above does
+    exactly this and a dark theme that renders through a different set of rules than the
+    light one is how the two drift apart in the first place.
+*/
+html.dark .fi-body,
+html.dark .fi-body > div {
+    background-color: var(--imnehnet-ground);
+    color: var(--imnehnet-text);
+}
+
+html.dark .card,
+html.dark .fi-section,
+html.dark [class*='rounded-xl'][class*='border-base-content'] {
+    background-color: var(--imnehnet-surface);
+    border-color: var(--imnehnet-line);
+    color: var(--imnehnet-text);
+}
+
+/*
+    Body copy.
+
+    Filament's default dark text is a muted grey, so paragraphs read as captions even when
+    the surrounding card is fine. Body text is forced to the full-contrast token; only the
+    genuinely secondary classes step down.
+*/
+html.dark .card p,
+html.dark .card-body p,
+html.dark .card h1,
+html.dark .card h2,
+html.dark .card h3 {
+    color: var(--imnehnet-text);
+}
+
+html.dark .text-base-content\/60,
+html.dark .text-base-content\/55,
+html.dark .text-base-content\/50 {
+    color: var(--imnehnet-text-muted);
+}
+
+html.dark .text-base-content\/45,
+html.dark .text-base-content\/40 {
+    color: var(--imnehnet-text-faint);
+}
+
+/* The theme toggle sits on the topbar, which is the one surface still on its own colour. */
+html.dark .fi-topbar > nav {
+    background-color: var(--imnehnet-surface);
+    border-color: var(--imnehnet-line);
+}
+
 html:not(.dark) .fi-body,
 html:not(.dark) .fi-body > div {
     background: #f8fafc;

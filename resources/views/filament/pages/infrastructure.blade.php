@@ -326,34 +326,79 @@
         </div>
     </section>
 
-    {{-- ── the component probe, unchanged in meaning ───────────────────────── --}}
+    {{-- ── the component probe, now the only place probes are listed ────────── --}}
     <section class="card mt-5 border border-base-content/10 shadow-sm">
-        <div class="card-body gap-3">
+        <div class="card-body gap-4">
             <div>
                 <h2 class="card-title text-base">Service Probes</h2>
                 <p class="mt-1 text-sm text-base-content/60">
-                    Every component checked to reach the verdict above.
+                    Every component checked to reach the verdict above. A probe that could not
+                    be run says so.
                 </p>
             </div>
 
             <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                @foreach (collect($this->statusSummary()) as $service)
-                    <div class="flex items-start gap-2 rounded-lg border border-base-content/10 p-2.5">
-                        <span @class([
-                            'mt-1 size-2 shrink-0 rounded-full',
-                            'bg-success' => $service['status'] === 'healthy',
-                            'bg-warning' => $service['status'] === 'degraded',
-                            'bg-error' => in_array($service['status'], ['offline', 'down'], true),
-                            'bg-base-300' => ! in_array($service['status'], ['healthy', 'degraded', 'offline', 'down'], true),
-                        ])></span>
+                @foreach (collect($this->statusSummary()) as $key => $service)
+                    @php
+                        $tone = match ($service['status']) {
+                            'healthy' => 'success',
+                            'degraded' => 'warning',
+                            'offline', 'down' => 'error',
+                            default => 'muted',
+                        };
+                    @endphp
 
-                        <div class="min-w-0">
-                            <p class="text-xs font-medium">{{ $service['label'] }}</p>
-                            <p class="text-[11px] leading-relaxed text-base-content/55">
+                    {{-- Icons are Lucide, resolved from the generated set. The widget this
+                         replaced asked for Heroicons, which this project does not ship, so
+                         its icons rendered as bare markers — the second complaint about a
+                         missing icon, and the one this replaced rather than hid. --}}
+                    <article @class([
+                        'flex items-start gap-2.5 rounded-lg border p-3',
+                        'border-success/25 bg-success/5' => $tone === 'success',
+                        'border-warning/30 bg-warning/5' => $tone === 'warning',
+                        'border-error/30 bg-error/5' => $tone === 'error',
+                        'border-base-content/12 bg-base-200/40' => $tone === 'muted',
+                    ])>
+                        <span @class([
+                            'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md',
+                            'bg-success/15 text-success' => $tone === 'success',
+                            'bg-warning/15 text-warning' => $tone === 'warning',
+                            'bg-error/15 text-error' => $tone === 'error',
+                            'bg-base-300 text-base-content/55' => $tone === 'muted',
+                        ])>
+                            {!! \App\Support\Lucide::icon($this->probeIcon($key)) !!}
+                        </span>
+
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-baseline justify-between gap-2">
+                                <p class="text-xs font-semibold uppercase tracking-wide">
+                                    {{ $service['label'] }}
+                                </p>
+
+                                <span @class([
+                                    'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase',
+                                    'bg-success/15 text-success' => $tone === 'success',
+                                    'bg-warning/15 text-warning' => $tone === 'warning',
+                                    'bg-error/15 text-error' => $tone === 'error',
+                                    'bg-base-300 text-base-content/60' => $tone === 'muted',
+                                ])>{{ $service['status'] }}</span>
+                            </div>
+
+                            <p class="mt-1 text-xs leading-relaxed text-base-content/65">
                                 {{ $service['summary'] }}
                             </p>
+
+                            <p class="mt-1.5 text-[11px] text-base-content/45">
+                                @if ($service['latency_ms'] !== null)
+                                    <span class="font-mono">{{ $service['latency_ms'] }} ms</span> &middot;
+                                @endif
+                                <span class="font-mono">{{ \Illuminate\Support\Carbon::parse($service['checked_at'])->diffForHumans() }}</span>
+                                @if (! empty($service['source']))
+                                    &middot; <span class="font-mono">{{ $service['source'] }}</span>
+                                @endif
+                            </p>
                         </div>
-                    </div>
+                    </article>
                 @endforeach
             </div>
         </div>
