@@ -51,77 +51,98 @@
          two groups rather than one set of four, and the one that wrapped was the attacker
          plane. The plane the page exists to describe was the one that looked like an
          afterthought. --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {{-- Four across from md.
+
+             The plane set is the first thing on the page and it only reads as a set of
+             four when it is four across. It was xl, then lg, and at 912 pixels — an
+             ordinary laptop with a sidebar open — it was still wrapping to two pairs.
+             md it is: the cards are four short lines and a badge, so 200 pixels each is
+             enough, and the sidebar already leaves the content column narrower than the
+             window suggests. --}}
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         @foreach ($planes as $plane)
             <article class="card border border-base-content/10 shadow-sm">
-                <div class="card-body gap-3">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex items-center gap-3">
-                            <span @class([
-                                'flex size-9 shrink-0 items-center justify-center rounded-lg',
-                                'bg-success/15 text-success' => $plane['tone'] === 'success',
-                                'bg-info/15 text-info' => $plane['tone'] === 'info',
-                                'bg-error/15 text-error' => $plane['tone'] === 'error',
-                            ])>
-                                {!! \App\Support\Lucide::icon($plane['icon']) !!}
-                            </span>
-
-                            <div class="min-w-0">
-                                <h2 class="card-title text-base">{{ $plane['label'] }}</h2>
-                                @if ($plane['address'])
-                                    <p class="mt-0.5 font-mono text-xs text-base-content/55">
-                                        {{ $plane['address'] }}
-                                    </p>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Not a coloured dot with no explanation: the verdict is the
-                         probe's own words, so a plane showing degraded says why. --}}
-                    <div class="flex items-start gap-2">
+                {{-- Tighter than the card component's default padding. Four across leaves
+                     each card roughly 260 pixels, and the default padding spends a third
+                     of that on nothing. --}}
+                <div class="card-body gap-2 p-4">
+                    {{-- Icon, name, status. That is the whole row in the design, and it is
+                         the part a reader scans. --}}
+                    <div class="flex items-center gap-2.5">
                         <span @class([
-                            'mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
-                            'bg-success/15 text-success' => $plane['status'] === 'healthy',
-                            'bg-warning/15 text-warning' => $plane['status'] === 'degraded',
-                            'bg-error/15 text-error' => $plane['status'] === 'offline',
-                            'bg-base-300 text-base-content/60' => $plane['status'] === 'unknown',
+                            'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                            'bg-success/15 text-success' => $plane['tone'] === 'success',
+                            'bg-info/15 text-info' => $plane['tone'] === 'info',
+                            'bg-error/15 text-error' => $plane['tone'] === 'error',
+                            'bg-warning/15 text-warning' => $plane['tone'] === 'warning',
                         ])>
-                            <span class="size-1.5 rounded-full bg-current"></span>
-                            {{ $plane['statusLabel'] }}
+                            {!! \App\Support\Lucide::icon($plane['icon']) !!}
                         </span>
 
-                        <p class="text-xs leading-relaxed text-base-content/60">
-                            {{ $plane['detail'] }}
-                        </p>
+                        <div class="min-w-0 flex-1">
+                            <h2 class="truncate text-sm font-semibold">{{ $plane['label'] }}</h2>
+                            @if ($plane['address'])
+                                <p class="truncate font-mono text-[11px] text-base-content/50">
+                                    {{ $plane['address'] }}
+                                </p>
+                            @endif
+                        </div>
                     </div>
 
-                    {{-- The two things a verdict needs to be actionable: what was asked,
-                         and how long ago. A card claiming "Online" with no provenance
-                         cannot be trusted when it disagrees with what an operator just
-                         saw fail. --}}
-                    <dl class="grid gap-1 border-t border-base-content/10 pt-2 text-[11px] text-base-content/50 sm:grid-cols-2">
-                        <div class="flex gap-1.5">
-                            <dt class="font-medium">Source</dt>
-                            <dd class="truncate font-mono">{{ $plane['source'] }}</dd>
-                        </div>
-                        <div class="flex gap-1.5">
-                            <dt class="font-medium">Checked</dt>
-                            <dd>
-                                @if ($plane['checkedAt'])
-                                    {{ \Illuminate\Support\Carbon::parse($plane['checkedAt'])->diffForHumans() }}
-                                @else
-                                    {{-- Not omitted. An empty cell reads as "checked, no
-                                         result", which is different from "not measured". --}}
-                                    <span class="text-base-content/50">just now</span>
-                                @endif
-                            </dd>
-                        </div>
-                    </dl>
+                    {{-- self-start, not w-fit: the card body is a flex column and stretches its
+                     children across the full width, so a badge built to hug its text
+                     was drawn as a full-width bar. --}}
+                    <span @class([
+                        'inline-flex shrink-0 items-center gap-1.5 self-start rounded-full px-2 py-0.5 text-[11px] font-medium',
+                        'bg-success/15 text-success' => $plane['status'] === 'healthy',
+                        'bg-warning/15 text-warning' => $plane['status'] === 'degraded',
+                        'bg-error/15 text-error' => $plane['status'] === 'offline',
+                        'bg-base-300 text-base-content/60' => $plane['status'] === 'unknown',
+                    ])>
+                        <span class="size-1.5 rounded-full bg-current"></span>
+                        {{ $plane['statusLabel'] }}
+                    </span>
 
-                    <p class="text-xs text-base-content/50">
+                    <p class="text-[11px] leading-relaxed text-base-content/60">
                         {{ $plane['role'] }}
                     </p>
+
+                    {{-- Everything else behind a disclosure.
+
+                         The verdict's wording, what was probed and how long ago all matter
+                         when a card disagrees with what an operator just saw — but they are
+                         not what anyone reads while scanning four healthy planes, and they
+                         were what made the row the busiest thing on the page. Kept, not
+                         dropped.
+                    --}}
+                    <details class="group">
+                        <summary class="cursor-pointer list-none text-[11px] font-medium text-base-content/45 hover:text-base-content/70">
+                            Details
+                        </summary>
+
+                        <div class="mt-2 space-y-2 border-t border-base-content/10 pt-2">
+                            <p class="text-[11px] leading-relaxed text-base-content/65">
+                                {{ $plane['detail'] }}
+                            </p>
+
+                            <dl class="space-y-0.5 text-[10px] text-base-content/45">
+                                <div class="flex gap-1.5">
+                                    <dt class="font-medium">Source</dt>
+                                    <dd class="truncate font-mono">{{ $plane['source'] }}</dd>
+                                </div>
+                                <div class="flex gap-1.5">
+                                    <dt class="font-medium">Checked</dt>
+                                    <dd>
+                                        @if ($plane['checkedAt'])
+                                            {{ \Illuminate\Support\Carbon::parse($plane['checkedAt'])->diffForHumans() }}
+                                        @else
+                                            <span class="text-base-content/50">just now</span>
+                                        @endif
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </details>
                 </div>
             </article>
         @endforeach
@@ -130,7 +151,7 @@
     {{-- ── hosts and segments ──────────────────────────────────────────────── --}}
     <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <section class="card border border-base-content/10 shadow-sm">
-            <div class="card-body gap-3">
+            <div class="card-body gap-3 p-4">
                 <div>
                     <h2 class="card-title text-base">Host and VM Overview</h2>
                     <p class="mt-1 text-sm text-base-content/60">
@@ -171,15 +192,17 @@
                                 ])>{{ $host['healthLabel'] }}</span>
                             </div>
 
-                            <dl class="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                            {{-- Role, both addresses. Health has a badge already and its wording is a
+                                     sentence, which in a fourth column made the row
+                                     wrap onto three lines for every host --}}
+                            <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs sm:grid-cols-3">
                                 <div>
-                                    <dt class="text-base-content/50">Role</dt>
+                                    <dt class="text-[10px] uppercase tracking-wide text-base-content/45">Role</dt>
                                     <dd class="mt-0.5 font-medium">{{ $host['role'] }}</dd>
-                                    <dd class="text-[11px] text-base-content/50">{{ $host['roleDetail'] }}</dd>
                                 </div>
 
                                 <div>
-                                    <dt class="text-base-content/50">IP Address</dt>
+                                    <dt class="text-[10px] uppercase tracking-wide text-base-content/45">IP Address</dt>
                                     <dd class="mt-0.5 font-mono font-medium">
                                         @if ($host['addressKnown'])
                                             {{ $host['address'] }}
@@ -193,26 +216,19 @@
                                 </div>
 
                                 {{-- The tailnet address, which is how anything reaches a
-                                     host from outside the lab network. Shown beside the
-                                     lab address rather than instead of it: they are
-                                     different routes to the same machine and an operator
-                                     needs whichever one their client can use. Read from
-                                     tailscale itself, so it cannot be a stale guess. --}}
+                                     host from outside the lab network. Beside the lab
+                                     address rather than instead of it: they are different
+                                     routes to the same machine and an operator needs
+                                     whichever one their client can use. Read from tailscale
+                                     itself, so it cannot be a stale guess. --}}
                                 <div>
-                                    <dt class="text-base-content/50">Tailscale</dt>
+                                    <dt class="text-[10px] uppercase tracking-wide text-base-content/45">Tailscale</dt>
                                     <dd class="mt-0.5 font-mono font-medium">
                                         @if (filled($host['tailscale']))
                                             {{ $host['tailscale'] }}
                                         @else
                                             <span class="text-base-content/50">not on the tailnet</span>
                                         @endif
-                                    </dd>
-                                </div>
-
-                                <div>
-                                    <dt class="text-base-content/50">Health</dt>
-                                    <dd class="mt-0.5 leading-relaxed text-base-content/70">
-                                        {{ $host['detail'] ?? 'No probe reported.' }}
                                     </dd>
                                 </div>
                             </dl>
@@ -223,7 +239,7 @@
         </section>
 
         <section class="card border border-base-content/10 shadow-sm">
-            <div class="card-body gap-3">
+            <div class="card-body gap-3 p-4">
                 <div>
                     <h2 class="card-title text-base">Network Segments</h2>
                     <p class="mt-1 text-sm text-base-content/60">
@@ -324,7 +340,7 @@
 
     {{-- ── provisioning stack ──────────────────────────────────────────────── --}}
     <section class="card mt-5 border border-base-content/10 shadow-sm">
-        <div class="card-body gap-3">
+        <div class="card-body gap-3 p-4">
             <div>
                 <h2 class="card-title text-base">Provisioning Stack</h2>
                 <p class="mt-1 text-sm text-base-content/60">
@@ -364,7 +380,7 @@
 
     {{-- ── the component probe, now the only place probes are listed ────────── --}}
     <section class="card mt-5 border border-base-content/10 shadow-sm">
-        <div class="card-body gap-4">
+        <div class="card-body gap-4 p-4">
             <div>
                 <h2 class="card-title text-base">Service Probes</h2>
                 <p class="mt-1 text-sm text-base-content/60">

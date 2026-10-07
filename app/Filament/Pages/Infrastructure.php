@@ -82,11 +82,37 @@ final class Infrastructure extends Page
      *
      * @return array<Action>
      */
+    /**
+ * The page's own name.
+ *
+ * Without this Filament renders the class name, and the heading was simply missing — the
+ * page opened straight onto its cards with no title and nothing saying what the page was
+ * for. The subheading says what it is about, which is the sentence a reader is looking
+ * for when they arrive here.
+ */
+public function getHeading(): string
+    {
+        return 'Infrastructure';
+    }
+
+    public function getSubheading(): ?string
+    {
+        return 'Core platform hosts, networks, and service boundaries.';
+    }
+
+    /**
+     * When the figures on the page were read.
+     *
+     * Disabled, and worded as a fact rather than an invitation. It was "Measured 0 seconds
+     * ago", which reads as a control that does nothing and as a measurement that is
+     * somehow instantaneous — both wrong. It says what was checked and when, and it is
+     * there to answer "how stale is this?" without opening anything.
+     */
     protected function getHeaderActions(): array
     {
         return [
             Action::make('lastCollected')
-                ->label(fn (): string => 'Measured '.(
+                ->label(fn (): string => 'Checked '.(
                     \Illuminate\Support\Carbon::parse($this->topology()['collectedAt'] ?? null)
                         ->diffForHumans()
                 ))
