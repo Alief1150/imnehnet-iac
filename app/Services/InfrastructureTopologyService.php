@@ -115,11 +115,9 @@ class InfrastructureTopologyService
             'status' => 'healthy',
             'statusLabel' => 'Online',
             'detail' => sprintf(
-                '%d %s bound to every interface, on port%s %s.',
+                '%d %s listening on every interface. Listed in full below the segments.',
                 $published['count'],
                 $published['count'] === 1 ? 'service is' : 'services are',
-                $published['count'] === 1 ? '' : 's',
-                implode(', ', $published['ports']) ?: 'none',
             ),
             'source' => 'ss -ltn',
             'checkedAt' => Carbon::now()->toIso8601String(),

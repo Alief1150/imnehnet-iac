@@ -117,7 +117,7 @@ final class Infrastructure extends Page
             'incus' => 'layers',
             'database' => 'database',
             'prometheus' => 'activity',
-            'grafana' => 'bar-chart',
+            'grafana' => 'chart-bar',
             'blackbox' => 'radio',
             'opentofu' => 'boxes',
             'ansible' => 'workflow',

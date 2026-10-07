@@ -115,39 +115,86 @@ SVG,
             'circle-dot' => <<<'SVG'
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="circle-dot" class="lucide lucide-circle-dot"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="12" r="10"/></svg>
 SVG,
+            'globe' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="globe" class="lucide lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+SVG,
+            'bell' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="bell" class="lucide lucide-bell"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+SVG,
+            'database' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="database" class="lucide lucide-database"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+SVG,
+            'chart-bar' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="chart-bar" class="lucide lucide-chart-bar"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16h8"/><path d="M7 11h12"/><path d="M7 6h3"/></svg>
+SVG,
+            'radio' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="radio" class="lucide lucide-radio"><path d="M16.247 7.761a6 6 0 0 1 0 8.478"/><path d="M19.075 4.933a10 10 0 0 1 0 14.134"/><path d="M4.925 19.067a10 10 0 0 1 0-14.134"/><path d="M7.753 16.239a6 6 0 0 1 0-8.478"/><circle cx="12" cy="12" r="2"/></svg>
+SVG,
+            'boxes' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="boxes" class="lucide lucide-boxes"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"/><path d="m7 16.5-4.74-2.85"/><path d="m7 16.5 5-3"/><path d="M7 16.5v5.17"/><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"/><path d="m17 16.5-5-3"/><path d="m17 16.5 4.74-2.85"/><path d="M17 16.5v5.17"/><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"/><path d="M12 8 7.26 5.15"/><path d="m12 8 4.74-2.85"/><path d="M12 13.5V8"/></svg>
+SVG,
+            'workflow' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="workflow" class="lucide lucide-workflow"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
+SVG,
+            'cog' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="cog" class="lucide lucide-cog"><path d="M11 10.27 7 3.34"/><path d="m11 13.73-4 6.93"/><path d="M12 22v-2"/><path d="M12 2v2"/><path d="M14 12h8"/><path d="m17 20.66-1-1.73"/><path d="m17 3.34-1 1.73"/><path d="M2 12h2"/><path d="m20.66 17-1.73-1"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m3.34 7 1.73 1"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="8"/></svg>
+SVG,
+            'shield' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="shield" class="lucide lucide-shield"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+SVG,
+            'circle' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="circle" class="lucide lucide-circle"><circle cx="12" cy="12" r="10"/></svg>
+SVG,
+            'shield-alert' => <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-lucide="shield-alert" class="lucide lucide-shield-alert"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+SVG,
         ];
     }
 
     /**
      * An icon as raw markup, for a component that accepts markup rather than
-     * a component name. Falls back to a neutral icon so a missing entry
-     * degrades to something ordinary instead of a broken page.
+     * a component name.
+     *
+     * The fallback is 'circle-question-mark', which is in this file. It was
+     * 'circle-help', which is not: that name is not in the package under this version,
+     * so looking up a missing icon raised on the very lookup meant to absorb it. The
+     * Infrastructure page asked for eleven names this file did not carry, and every
+     * one of them hit that line and took the page to a 500. A safety net that throws is
+     * not a safety net.
      */
     public static function svg(string $name, string $class = ''): string
     {
-        return self::map()[$name] ?? self::map()['circle-help'];
+        return self::map()[$name] ?? self::map()['circle-question-mark'];
     }
 
     /**
-     * An icon as markup a component can render directly.
+     * An icon as markup, or null when the name is not in the set.
      *
-     * Filament resolves a string icon through the blade-icons default set,
-     * which only knows Heroicons, so passing a name such as "lucide-server"
-     * raises SvgNotFound. Markup bypasses that lookup entirely, which is the
-     * supported way to use an icon set Filament does not ship.
+     * Null rather than a placeholder, deliberately. A status card showing a question
+     * mark because someone misspelled an icon name is worse than a status card showing
+     * no icon: the first tells the reader something that is not true, and looks like a
+     * deliberate state. svg() keeps the fallback for places that must render something,
+     * and callers that care check has() first.
      *
-     * Returns null for an unknown name so a caller can fall back rather than
-     * render an icon that means nothing.
+     * Returns HtmlString rather than string: the project's icon accessors —
+     * EnvironmentStatus::icon() and the navigation icons — declare ?Htmlable, and a
+     * bare string under those signatures is a TypeError. It was, and the environments
+     * table 500'd on first render.
      */
-    public static function icon(string $name): ?HtmlString
+    public static function icon(string $name, string $class = ''): ?HtmlString
     {
-        $map = self::map();
+        $svg = self::map()[$name] ?? null;
+        return $svg === null ? null : new HtmlString($svg);
+    }
 
-        if (! array_key_exists($name, $map)) {
-            return null;
-        }
-
-        return new HtmlString($map[$name]);
+    /**
+     * An icon as markup, always, falling back to a neutral glyph.
+     *
+     * For the callers that are rendering a control whose presence is not in question.
+     */
+    public static function html(string $name, string $class = ''): HtmlString
+    {
+        return new HtmlString(self::svg($name, $class));
     }
 
     /**

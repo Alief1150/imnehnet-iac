@@ -28,6 +28,20 @@ $wanted = [
     'circle-check', 'circle-pause', 'circle-help', 'circle-question-mark',
     'loader-circle', 'snowflake', 'settings', 'circle-x', 'clock', 'gauge',
     'shield-check', 'users', 'layers', 'box', 'lock', 'wifi', 'circle-dot',
+
+    // The Infrastructure page: four plane cards and eleven probe cards.
+    //
+    // These names were already in the templates while this list did not contain them.
+    // An icon absent from the generated file does not render as a missing glyph — it
+    // renders as an empty coloured box, which on a status card reads as a fault in the
+    // page rather than a fault in the name. The fix belongs here, in the one place that
+    // decides what exists, rather than as a fallback at each call site: a fallback hides
+    // the next one.
+    //
+    // Note the spelling is the package's, not a guess — the dashboard icon is `chart-bar`,
+    // not `bar-chart`, and asking for the latter produces nothing.
+    'globe', 'bell', 'database', 'chart-bar', 'radio', 'boxes', 'workflow',
+    'cog', 'shield', 'circle', 'shield-alert',
 ];
 
 /**
@@ -112,6 +126,7 @@ foreach ($wanted as $name) {
 
 $php = "<?php\n\n"
     ."namespace App\\Support;\n\n"
+    ."use Illuminate\\Support\\HtmlString;\n\n"
     ."/**\n"
     ." * Lucide icons, generated from the installed npm package.\n"
     ." *\n"
@@ -134,12 +149,46 @@ foreach ($icons as $name => $svg) {
 $php .= "        ];\n    }\n\n"
     ."    /**\n"
     ."     * An icon as raw markup, for a component that accepts markup rather than\n"
-    ."     * a component name. Falls back to a neutral icon so a missing entry\n"
-    ."     * degrades to something ordinary instead of a broken page.\n"
+    ."     * a component name.\n"
+    ."     *\n"
+    ."     * The fallback is 'circle-question-mark', which is in this file. It was\n"
+    ."     * 'circle-help', which is not: that name is not in the package under this version,\n"
+    ."     * so looking up a missing icon raised on the very lookup meant to absorb it. The\n"
+    ."     * Infrastructure page asked for eleven names this file did not carry, and every\n"
+    ."     * one of them hit that line and took the page to a 500. A safety net that throws is\n"
+    ."     * not a safety net.\n"
     ."     */\n"
     ."    public static function svg(string \$name, string \$class = ''): string\n"
     ."    {\n"
-    ."        return self::map()[\$name] ?? self::map()['circle-help'];\n"
+    ."        return self::map()[\$name] ?? self::map()['circle-question-mark'];\n"
+    ."    }\n\n"
+    ."    /**\n"
+    ."     * An icon as markup, or null when the name is not in the set.\n"
+    ."     *\n"
+    ."     * Null rather than a placeholder, deliberately. A status card showing a question\n"
+    ."     * mark because someone misspelled an icon name is worse than a status card showing\n"
+    ."     * no icon: the first tells the reader something that is not true, and looks like a\n"
+    ."     * deliberate state. svg() keeps the fallback for places that must render something,\n"
+    ."     * and callers that care check has() first.\n"
+    ."     *\n"
+    ."     * Returns HtmlString rather than string: the project's icon accessors —\n"
+    ."     * EnvironmentStatus::icon() and the navigation icons — declare ?Htmlable, and a\n"
+    ."     * bare string under those signatures is a TypeError. It was, and the environments\n"
+    ."     * table 500'd on first render.\n"
+    ."     */\n"
+    ."    public static function icon(string \$name, string \$class = ''): ?HtmlString\n"
+    ."    {\n"
+    ."        \$svg = self::map()[\$name] ?? null;\n"
+    ."        return \$svg === null ? null : new HtmlString(\$svg);\n"
+    ."    }\n\n"
+    ."    /**\n"
+    ."     * An icon as markup, always, falling back to a neutral glyph.\n"
+    ."     *\n"
+    ."     * For the callers that are rendering a control whose presence is not in question.\n"
+    ."     */\n"
+    ."    public static function html(string \$name, string \$class = ''): HtmlString\n"
+    ."    {\n"
+    ."        return new HtmlString(self::svg(\$name, \$class));\n"
     ."    }\n\n"
     ."    /**\n"
     ."     * Whether a name is available, so a caller can hide a control rather than\n"

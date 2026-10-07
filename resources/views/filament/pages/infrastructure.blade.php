@@ -28,8 +28,14 @@
         $stack = $topology['stack'] ?? [];
     @endphp
 
-    {{-- ── plane cards ─────────────────────────────────────────────────────── --}}
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    {{-- ── plane cards ────────────────────────────────────────────────────────
+         Four across, always.
+
+         At three, the fourth wrapped onto a second row alone — which made the row read as
+         two groups rather than one set of four, and the one that wrapped was the attacker
+         plane. The plane the page exists to describe was the one that looked like an
+         afterthought. --}}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         @foreach ($planes as $plane)
             <article class="card border border-base-content/10 shadow-sm">
                 <div class="card-body gap-3">
