@@ -38,6 +38,101 @@ final class Terminal extends Page
 
     protected static ?int $navigationSort = 30;
 
+    /**
+     * The selected target is server-side state so only one terminal iframe is
+     * mounted at a time. This avoids opening browser connections to every
+     * environment merely because it appears in the target selector.
+     */
+    public ?int $selectedEnvironmentId = null;
+
+    /**
+     * Admin Terminal selects infrastructure hosts, not student LabEnvironment
+     * records. Transport is intentionally added in the next phase.
+     */
+    public string $selectedAdminTarget = 'iaas-mgmt';
+
+    /**
+     * @return list<array{key:string,name:string,role:string,address:?string,health:string,healthLabel:string,detail:?string}>
+     */
+    public function adminTargets(): array
+    {
+        $fallback = collect([
+            ['key' => 'iaas-mgmt', 'name' => 'IAAS-MGMT', 'role' => 'Management Plane'],
+            ['key' => 'lab-env', 'name' => 'LAB-ENV', 'role' => 'Lab Compute'],
+            ['key' => 'lab-atk', 'name' => 'LAB-ATK', 'role' => 'Attacker Plane'],
+        ]);
+
+        try {
+            $hosts = collect(app(\App\Services\InfrastructureTopologyService::class)->topology()['hosts'] ?? []);
+
+            return $fallback->map(function (array $target) use ($hosts): array {
+                $host = $hosts->firstWhere('name', $target['name']);
+
+                return [
+                    ...$target,
+                    'address' => $host['address'] ?? null,
+                    'health' => $host['health'] ?? 'unknown',
+                    'healthLabel' => match ($host['health'] ?? 'unknown') {
+                        'healthy' => 'Online',
+                        'offline' => 'Offline',
+                        'degraded' => 'Degraded',
+                        default => 'Unknown',
+                    },
+                    'detail' => $host['detail'] ?? null,
+                ];
+            })->all();
+        } catch (\Throwable) {
+            return $fallback->map(fn (array $target): array => [
+                ...$target,
+                'address' => null,
+                'health' => 'unknown',
+                'healthLabel' => 'Unknown',
+                'detail' => null,
+            ])->all();
+        }
+    }
+
+    public function selectAdminTarget(string $target): void
+    {
+        if (! auth()->user()?->isAdmin()) {
+            abort(403);
+        }
+
+        $allowed = collect($this->adminTargets())->pluck('key');
+
+        if (! $allowed->contains($target)) {
+            abort(404);
+        }
+
+        $this->selectedAdminTarget = $target;
+    }
+
+
+    public function mount(): void
+    {
+        $this->selectedEnvironmentId = $this->environments()->first()?->id;
+    }
+
+    public function selectEnvironment(int $environmentId): void
+    {
+        $environment = $this->environments()->firstWhere('id', $environmentId);
+
+        if (! $environment instanceof LabEnvironment) {
+            $this->deny();
+
+            return;
+        }
+
+        $this->selectedEnvironmentId = $environment->id;
+    }
+
+    public function getSubheading(): string|Htmlable|null
+    {
+        return auth()->user()?->isAdmin()
+            ? 'Secure administrative console for authorized IMNEHNET lab environments.'
+            : 'Secure shell access to your assigned IMNEHNET lab environment.';
+    }
+
     public static function canAccess(): bool
     {
         $user = auth()->user();

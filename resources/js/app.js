@@ -390,7 +390,21 @@ window.createImnehnetCourseChart = (element, values, totalStudents) => {
                             formatter: () => String(total),
                         },
                         total: {
-                            show: false,
+
+                            show: true,
+
+                            showAlways: true,
+
+                            label: 'Total Students',
+
+                            color: palette.text,
+
+                            fontSize: '12px',
+
+                            fontWeight: 500,
+
+                            formatter: () => String(total),
+
                         },
                     },
                 },

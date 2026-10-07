@@ -82,15 +82,33 @@ class User extends Authenticatable implements FilamentUser
         }
 
         return match ($panel->getId()) {
-            'admin' => $this->isAdmin(),
-            'student' => ! $this->isAdmin(),
-            default => false,
-        };
+            // Lecturer reaches the admin panel so it can reach the console. Panel access
+                // is not authorisation in itself: every administrative resource checks a
+                // role of its own, and the console checks canOperateInfrastructure()
+                // again at the point a shell is created. Being let through the door is not
+                // being handed every key behind it.
+                'admin' => $this->isAdmin() || $this->isLecturer(),
+                'student' => ! $this->isAdmin() && ! $this->isLecturer(),
+                default => false,
+            };
     }
 
     public function isAdmin(): bool
     {
         return $this->role === UserRole::Admin;
+    }
+
+    /**
+     * Whether this person may open a shell on the infrastructure nodes.
+     */
+    public function canOperateInfrastructure(): bool
+    {
+        return $this->role->canOperateInfrastructure();
+    }
+
+    public function isLecturer(): bool
+    {
+        return $this->role === UserRole::Lecturer;
     }
 
     public function isActive(): bool
