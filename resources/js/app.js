@@ -207,37 +207,28 @@ window.createImnehnetLabChart = (element, labels, values) => {
         series: [{
             name: 'Lab Sessions',
             data: labels.map((label, index) => ({
-                x: label,
+                x: index,
                 y: values[index] ?? 0,
             })),
         }],
         xaxis: {
-            type: 'category',
-            tickAmount: labels.length <= 7 ? labels.length - 1 : 4,
+            type: 'numeric',
+            min: 0,
+            max: Math.max(labels.length - 1, 0),
+            tickAmount: labels.length <= 7
+                ? Math.max(labels.length - 1, 1)
+                : 4,
+            decimalsInFloat: 0,
             labels: {
                 rotate: 0,
                 hideOverlappingLabels: true,
-                formatter: (value, timestamp, opts) => {
-                    const index = opts?.i ?? -1;
-                    const last = labels.length - 1;
+                formatter: (value) => {
+                    const index = Math.min(
+                        Math.max(Math.round(Number(value)), 0),
+                        Math.max(labels.length - 1, 0),
+                    );
 
-                    let indexes;
-
-                    if (labels.length <= 7) {
-                        indexes = labels.map((_, i) => i);
-                    } else {
-                        indexes = [
-                            0,
-                            Math.round(last * 0.25),
-                            Math.round(last * 0.50),
-                            Math.round(last * 0.75),
-                            last,
-                        ];
-                    }
-
-                    return indexes.includes(index)
-                        ? (labels[index] ?? value)
-                        : '';
+                    return labels[index] ?? '';
                 },
                 style: {
                     colors: palette.text,
@@ -334,3 +325,139 @@ window.createImnehnetLabChart = (element, labels, values) => {
         },
     };
 };
+
+window.createImnehnetCourseChart = (element, values, totalStudents) => {
+    const palette = chartPalette();
+
+    const normalized = [
+        Number(values?.[0] ?? 0),
+        Number(values?.[1] ?? 0),
+        Number(values?.[2] ?? 0),
+    ];
+
+    const total = Number(totalStudents ?? normalized.reduce((sum, value) => sum + value, 0));
+    const hasProgress = normalized.some((value) => value > 0);
+
+    const chart = new ApexCharts(element, {
+        chart: {
+            type: 'donut',
+            height: 220,
+            toolbar: { show: false },
+            animations: {
+                enabled: true,
+                easing: 'easeinout',
+                speed: 500,
+            },
+            fontFamily: 'Instrument Sans, sans-serif',
+            background: 'transparent',
+        },
+        series: hasProgress ? normalized : [1],
+        labels: hasProgress
+            ? ['Completed', 'In Progress', 'Not Started']
+            : ['No student data'],
+        colors: hasProgress
+            ? [palette.primary, palette.info, palette.warning]
+            : [palette.grid],
+        stroke: {
+            width: 2,
+            colors: [palette.surface],
+        },
+        dataLabels: {
+            enabled: false,
+        },
+        legend: {
+            show: false,
+        },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '68%',
+                    labels: {
+                        show: true,
+                        name: {
+                            show: true,
+                            offsetY: 18,
+                            color: palette.text,
+                            fontSize: '11px',
+                            formatter: () => 'Total Students',
+                        },
+                        value: {
+                            show: true,
+                            offsetY: -12,
+                            color: imnehnetIsDark() ? '#e2e8f0' : '#0f172a',
+                            fontSize: '24px',
+                            fontWeight: 600,
+                            formatter: () => String(total),
+                        },
+                        total: {
+                            show: false,
+                        },
+                    },
+                },
+            },
+        },
+        tooltip: {
+            enabled: hasProgress,
+            theme: palette.mode,
+            y: {
+                formatter: (value) => {
+                    const percentage = total > 0
+                        ? Math.round((Number(value) / total) * 100)
+                        : 0;
+
+                    return `${value} student${Number(value) === 1 ? '' : 's'} (${percentage}%)`;
+                },
+            },
+        },
+        theme: {
+            mode: palette.mode,
+        },
+    });
+
+    chart.render();
+
+    const updateTheme = () => {
+        requestAnimationFrame(() => {
+            const next = chartPalette();
+
+            chart.updateOptions({
+                theme: { mode: next.mode },
+                colors: hasProgress
+                    ? [next.primary, next.info, next.warning]
+                    : [next.grid],
+                stroke: {
+                    width: 2,
+                    colors: [next.surface],
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            labels: {
+                                name: {
+                                    color: next.text,
+                                },
+                                value: {
+                                    color: imnehnetIsDark() ? '#e2e8f0' : '#0f172a',
+                                },
+                            },
+                        },
+                    },
+                },
+                tooltip: {
+                    enabled: hasProgress,
+                    theme: next.mode,
+                },
+            }, false, true);
+        });
+    };
+
+    window.addEventListener('theme-changed', updateTheme);
+
+    return {
+        destroy() {
+            window.removeEventListener('theme-changed', updateTheme);
+            chart.destroy();
+        },
+    };
+};
+

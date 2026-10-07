@@ -20,6 +20,22 @@
     be two chances to disagree in front of the same operator.
 --}}
 <x-filament-panels::page>
+
+    {{-- Refreshes itself, and it has to.
+
+         This page's whole claim is that it describes the installation as it is now. Without
+         polling it describes the installation as it was when it was opened, which is worse
+         than no page: the numbers stay correct-looking and grow quietly untrue, and a card
+         that still reads "2 seconds ago" an hour later is lying about its own age.
+
+         The original had wire:poll.10s and it was lost in a rewrite of this template. Fifteen
+         seconds rather than ten because every probe here spawns a process or makes a request
+         — Incus, Prometheus, Grafana, blackbox, tofu, ansible — and the service caches its
+         own result for five, so a faster poll than that mostly re-reads the same cache. It
+         re-renders the whole section rather than just the timestamps, so a plane that goes
+         down is noticed here rather than on the next manual reload.
+    --}}
+    <div wire:poll.15s>
     @php
         $topology = $this->topology();
         $planes = $topology['planes'] ?? [];
@@ -409,4 +425,5 @@
             </div>
         </div>
     </section>
+    </div>
 </x-filament-panels::page>

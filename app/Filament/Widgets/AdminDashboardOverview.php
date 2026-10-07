@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Enums\LabSessionStatus;
 use App\Models\ActivityLog;
+use App\Models\Course;
 use App\Models\LabSession;
 use App\Models\User;
 use App\Services\InfrastructureStatusService;
@@ -47,7 +48,7 @@ final class AdminDashboardOverview extends Widget
             'totalUsers' => $totalUsers,
             'systemHealth' => $systemHealth,
             'labActivity' => $labActivity,
-            'accounts' => $this->accounts(),
+            'courseProgress' => $this->courseProgress(),
             'labActivityTrend' => $this->labActivityTrend(),
             'userGrowthTrend' => $this->userGrowthTrend(),
             'recentActivity' => ActivityLog::query()
@@ -73,6 +74,68 @@ final class AdminDashboardOverview extends Widget
      *
      * @return array<string, int|bool>
      */
+    /**
+     * Student progress through the MVP guided course.
+     *
+     * Count students, not lab attempts. A student is completed when at least one
+     * session for the course is completed. Any student with a course session but
+     * no completed attempt is in progress. Students with no session are not started.
+     *
+     * @return array{completed: int, inProgress: int, notStarted: int, total: int}
+     */
+    private function courseProgress(): array
+    {
+        $course = Course::webServerBreach();
+
+        $studentIds = User::query()
+            ->where('role', 'student')
+            ->pluck('id');
+
+        $total = $studentIds->count();
+
+        if ($course === null || $total === 0) {
+            return [
+                'completed' => 0,
+                'inProgress' => 0,
+                'notStarted' => $total,
+                'total' => $total,
+            ];
+        }
+
+        $sessionsByStudent = LabSession::query()
+            ->where('course_id', $course->getKey())
+            ->whereIn('user_id', $studentIds)
+            ->get(['user_id', 'status'])
+            ->groupBy('user_id');
+
+        $completed = 0;
+        $inProgress = 0;
+
+        foreach ($studentIds as $studentId) {
+            $sessions = $sessionsByStudent->get($studentId, collect());
+
+            if ($sessions->contains(
+                fn (LabSession $session): bool =>
+                    $session->status === LabSessionStatus::Completed
+            )) {
+                $completed++;
+
+                continue;
+            }
+
+            if ($sessions->isNotEmpty()) {
+                $inProgress++;
+            }
+        }
+
+        return [
+            'completed' => $completed,
+            'inProgress' => $inProgress,
+            'notStarted' => max(0, $total - $completed - $inProgress),
+            'total' => $total,
+        ];
+    }
+
     private function accounts(): array
     {
         $since = now()->subDays(30);

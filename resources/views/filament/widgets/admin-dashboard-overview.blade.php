@@ -17,7 +17,12 @@
                         </div>
 
                         <div class="flex size-11 items-center justify-center rounded-lg bg-success/10 text-success">
-                            <x-heroicon-o-cube-transparent class="size-6" />
+                            {{-- Lucide, not heroicon. This project generates its icon
+                                 set from the Lucide package and ships no Heroicons, so
+                                 a heroicon component resolves to nothing and renders as
+                                 an empty coloured box — which on a stat tile reads as a
+                                 fault in the page rather than a fault in the name. --}}
+                            {!! \App\Support\Lucide::html('box') !!}
                         </div>
                     </div>
 
@@ -58,7 +63,7 @@
                         </div>
 
                         <div class="flex size-11 items-center justify-center rounded-lg bg-info/10 text-info">
-                            <x-heroicon-o-users class="size-6" />
+                            {!! \App\Support\Lucide::html('users') !!}
                         </div>
                     </div>
 
@@ -100,7 +105,7 @@
                         </div>
 
                         <div class="flex size-11 items-center justify-center rounded-lg bg-success/10 text-success">
-                            <x-heroicon-o-heart class="size-6" />
+                            {!! \App\Support\Lucide::html('activity') !!}
                         </div>
                     </div>
 
@@ -177,67 +182,70 @@
             <div class="card border border-base-content/10 shadow-sm">
                 <div class="card-body">
                     <div>
-                        <h2 class="card-title text-base">Students</h2>
+                        <h2 class="card-title text-base">Course Status</h2>
                         <p class="mt-1 text-sm text-base-content/60">
-                            Accounts registered on the platform
+                            Student progress in the guided CTF course
                         </p>
                     </div>
 
-                    <div class="mt-3 flex flex-col gap-3">
-                        {{-- The one figure the mockup's donut carried and the only one that
-                             means anything while no course is open to students. --}}
-                        <div class="rounded-lg border border-base-content/10 bg-base-200/40 p-4 text-center">
-                            <div class="text-3xl font-semibold text-base-content">
-                                {{ number_format($accounts['students']) }}
-                            </div>
-                            <div class="mt-0.5 text-xs text-base-content/55">
-                                Total Students
-                            </div>
+                    <div class="mt-3 grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(150px,0.8fr)]">
+                        <div
+                            wire:ignore
+                            x-data="{ instance: null }"
+                            x-init="
+                                instance = window.createImnehnetCourseChart(
+                                    $refs.chart,
+                                    @js([
+                                        $courseProgress['completed'],
+                                        $courseProgress['inProgress'],
+                                        $courseProgress['notStarted'],
+                                    ]),
+                                    {{ $courseProgress['total'] }}
+                                );
+
+                                $cleanup(() => instance?.destroy());
+                            "
+                            class="min-w-0"
+                        >
+                            <div
+                                x-ref="chart"
+                                class="mx-auto min-h-[220px] w-full max-w-[260px]"
+                                aria-label="Guided CTF course progress chart"
+                            ></div>
                         </div>
 
-                        <div class="grid gap-2">
-                            <div class="flex items-center justify-between gap-2 text-sm">
+                        <div class="grid gap-3">
+                            <div class="flex items-center justify-between gap-3 text-sm">
                                 <span class="flex items-center gap-2 text-base-content/65">
-                                    <span class="size-2.5 rounded-full" style="background-color:#0ea5a4"></span>
-                                    Students
+                                    <span class="size-2.5 shrink-0 rounded-full" style="background-color:#0ea5a4"></span>
+                                    Completed
                                 </span>
-                                <strong>{{ $accounts['students'] }}</strong>
+                                <strong>{{ $courseProgress['completed'] }}</strong>
                             </div>
 
-                            <div class="flex items-center justify-between gap-2 text-sm">
+                            <div class="flex items-center justify-between gap-3 text-sm">
                                 <span class="flex items-center gap-2 text-base-content/65">
-                                    <span class="size-2.5 rounded-full bg-info"></span>
-                                    Administrators
+                                    <span class="size-2.5 shrink-0 rounded-full" style="background-color:#3b82f6"></span>
+                                    In Progress
                                 </span>
-                                <strong>{{ $accounts['administrators'] }}</strong>
+                                <strong>{{ $courseProgress['inProgress'] }}</strong>
                             </div>
 
-                            @if ($accounts['lecturers'] > 0)
-                                <div class="flex items-center justify-between gap-2 text-sm">
-                                    <span class="flex items-center gap-2 text-base-content/65">
-                                        <span class="size-2.5 rounded-full bg-warning"></span>
-                                        Lecturers
-                                    </span>
-                                    <strong>{{ $accounts['lecturers'] }}</strong>
-                                </div>
-                            @endif
-
-                            <div class="flex items-center justify-between gap-2 border-t border-base-content/10 pt-2 text-sm">
-                                <span class="text-base-content/65">
-                                    New in 30 days
+                            <div class="flex items-center justify-between gap-3 text-sm">
+                                <span class="flex items-center gap-2 text-base-content/65">
+                                    <span class="size-2.5 shrink-0 rounded-full" style="background-color:#f59e0b"></span>
+                                    Not Started
                                 </span>
-                                <strong>{{ $accounts['newInPeriod'] }}</strong>
+                                <strong>{{ $courseProgress['notStarted'] }}</strong>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-3 border-t border-base-content/10 pt-3 text-sm">
+                                <span class="font-medium text-base-content/65">
+                                    Total Students
+                                </span>
+                                <strong>{{ $courseProgress['total'] }}</strong>
                             </div>
                         </div>
-
-                        {{-- Said on the card rather than left for the reader to work out.
-                             The course exists in the database and one session has been run
-                             against it, so without this the dashboard implies a cohort is
-                             progressing through a course nobody can open yet. --}}
-                        <p class="rounded-lg border border-dashed border-base-content/15 p-3 text-xs leading-relaxed text-base-content/55">
-                            The guided CTF course is not published to students yet. Course
-                            progress will appear here once it is open and someone starts a lab.
-                        </p>
                     </div>
                 </div>
             </div>

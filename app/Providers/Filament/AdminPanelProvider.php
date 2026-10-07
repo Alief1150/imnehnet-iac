@@ -13,9 +13,7 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
-use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -55,10 +53,19 @@ class AdminPanelProvider extends PanelProvider
             ->defaultThemeMode(ThemeMode::Light)
             ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
             ->globalSearchFieldKeyBindingSuffix()
-            ->renderHook(
-                PanelsRenderHook::GLOBAL_SEARCH_AFTER,
-                fn (): View => view('filament.components.theme-toggle'),
-            )
+
+            // No theme toggle in the topbar.
+            //
+            // There were two: this one, pinned next to the search field, and the one
+            // Filament's AccountWidget already puts in the profile menu. Two controls for
+            // one setting is worse than either alone — a reader cannot tell whether they
+            // do the same thing, and they write to the same key, so the one that looks
+            // "wrong" is simply whichever was not clicked last.
+            //
+            // The profile menu's is kept. It is where a person expects their own
+            // preferences to live, and it is the control Filament's own markup keeps in
+            // step with the theme it renders. See also StudentPanelProvider, which never
+            // had the duplicate.
             ->databaseNotifications()
             ->navigationGroups([
                 'INFRASTRUCTURE',
