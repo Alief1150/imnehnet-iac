@@ -792,6 +792,40 @@
 
 
 /* =========================================================
+   ICON SIZING
+
+   The generated Lucide SVG carries a viewBox and no width or height. That is correct
+   markup, and it also means the icon has no intrinsic size — in a flex or block context
+   it expands to fill whatever space it is given. One did exactly that: the shield on the
+   published-ports warning grew until it filled its card and pushed the ports beneath it
+   off the bottom of the screen.
+
+   Capped here rather than at the call sites, because the next icon added would otherwise
+   have to remember.
+
+   :where() on purpose. The selector carries no specificity, so this is a default that any
+   class can still override. A plain [data-lucide] rule outside a layer would outrank
+   every size-* utility on the site, and the icons that ask for a size would silently stop
+   being able to have one.
+   ========================================================= */
+:where([data-lucide]) {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+}
+
+/*
+   Where the icon is the subject rather than an adornment — the leading icon on a stat
+   tile, or an empty state with nothing else in it. Still zero specificity, so an icon
+   that asks for a size keeps it.
+*/
+:where([data-lucide].size-8) {
+    width: 2rem;
+    height: 2rem;
+}
+
+
+/* =========================================================
    SPRINT 1 — ADMIN DASHBOARD
    ========================================================= */
 

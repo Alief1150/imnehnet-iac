@@ -58,7 +58,7 @@
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3">
                             <span @class([
-                                'flex size-11 shrink-0 items-center justify-center rounded-lg',
+                                'flex size-9 shrink-0 items-center justify-center rounded-lg',
                                 'bg-success/15 text-success' => $plane['tone'] === 'success',
                                 'bg-info/15 text-info' => $plane['tone'] === 'info',
                                 'bg-error/15 text-error' => $plane['tone'] === 'error',
@@ -147,7 +147,7 @@
                         ])>
                             <div class="flex items-center gap-3">
                                 <span @class([
-                                    'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                                    'flex size-9 shrink-0 items-center justify-center rounded-lg',
                                     'bg-success/15 text-success' => $host['tone'] === 'success',
                                     'bg-info/15 text-info' => $host['tone'] === 'info',
                                     'bg-error/15 text-error' => $host['tone'] === 'error',
@@ -273,29 +273,43 @@
                          than numbered alone, because "9200" does not tell an operator
                          that it is the Wazuh indexer — which is the reason to know it. --}}
                     @if ($topology['publishedAccess']['count'] > 0)
-                        <div class="rounded-lg border border-warning/30 bg-warning/5 p-3">
-                            <p class="flex items-center gap-2 text-xs font-medium text-warning">
+                        {{-- A summary line, and the list behind a disclosure.
+
+                             Thirteen badges wrapped across five rows, inside a panel that
+                             also has the segment table in it, made the section read as the
+                             subject of the page when it is a footnote to the network
+                             table. The count is the finding; the individual ports are
+                             detail someone opens when they are already looking.
+                        --}}
+                        <details class="rounded-lg border border-warning/30 bg-warning/5">
+                            <summary class="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium text-warning">
                                 {!! \App\Support\Lucide::icon('shield-alert') !!}
-                                {{ $topology['publishedAccess']['count'] }} {{ $topology['publishedAccess']['count'] === 1 ? 'service is' : 'services are' }}
-                                bound to every interface
-                            </p>
+                                <span>
+                                    {{ $topology['publishedAccess']['count'] }}
+                                    {{ $topology['publishedAccess']['count'] === 1 ? 'service' : 'services' }}
+                                    listening on every interface
+                                </span>
+                                <span class="ml-auto text-[11px] font-normal opacity-70">show</span>
+                            </summary>
 
-                            <div class="mt-2 flex flex-wrap gap-1.5">
-                                @foreach ($topology['publishedAccess']['named'] as $port)
-                                    <span class="rounded-md border border-base-content/15 bg-base-200/50 px-2 py-1 font-mono text-[11px]">
-                                        <strong>{{ $port['port'] }}</strong>
-                                        <span class="text-base-content/55">{{ $port['service'] }}</span>
-                                    </span>
-                                @endforeach
+                            <div class="px-3 pb-3">
+                                <div class="flex flex-wrap gap-1">
+                                    @foreach ($topology['publishedAccess']['named'] as $port)
+                                        <span class="rounded border border-base-content/15 bg-base-200/50 px-1.5 py-0.5 font-mono text-[10px] leading-tight">
+                                            <strong>{{ $port['port'] }}</strong>
+                                            <span class="text-base-content/55">{{ $port['service'] }}</span>
+                                        </span>
+                                    @endforeach
+                                </div>
+
+                                <p class="mt-2 text-[11px] leading-relaxed text-base-content/50">
+                                    Reachable from anything that can route to
+                                    {{ $topology['hosts'][0]['address'] ?? 'this host' }}. Restrict
+                                    these to the management network and the agents that need
+                                    them; the Wazuh ports in particular accept agent traffic.
+                                </p>
                             </div>
-
-                            <p class="mt-2 text-[11px] leading-relaxed text-base-content/50">
-                                Reachable from anything that can route to
-                                {{ $topology['hosts'][0]['address'] ?? 'this host' }}. Restrict
-                                these to the management network and the agents that need
-                                them; the Wazuh ports in particular accept agent traffic.
-                            </p>
-                        </div>
+                        </details>
                     @endif
 
                     <p class="text-[11px] leading-relaxed text-base-content/45">
