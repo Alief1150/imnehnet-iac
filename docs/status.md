@@ -1,6 +1,6 @@
 # Current Verified Status
 
-Last update: 2026-09-26
+Last update: 2026-10-11
 
 This file records only facts that have been observed or explicitly confirmed. Planned architecture belongs in `architecture.md` or `networking.md`.
 
@@ -22,6 +22,17 @@ This file records only facts that have been observed or explicitly confirmed. Pl
 - Host was able to reach previously blocked Internet destinations after WARP was enabled.
 - Tailscale is used for remote connectivity.
 - Tailscale MagicDNS is planned/being configured so the host can be addressed as `imnehnet` from the tailnet.
+
+## DBX Web on IAAS-MGMT
+
+Verified on 2026-10-11:
+
+- DBX Web `v0.6.40` is installed user-locally on `IAAS-MGMT` under `/home/iaas/.local/opt/dbx/v0.6.40`; the release archive matched its published SHA-256 `e8012adf12dd7766fbb9893ef08d1e146dc4adc613a15a43c4f7ae2c8a96ac57` before installation.
+- The user service `dbx-web.service` is enabled and active. Its backend binary SHA-256 is `06889b53a09d7fb509a4e2df1927dc2a0ccb2330e589eb363dd186973b04c82e`.
+- The service is explicitly configured with `DBX_BIND_ADDR=127.0.0.1` and listens only on `127.0.0.1:4224`. HTTP over loopback returned `200`; connection attempts to port `4224` through both `192.168.100.10` and Tailscale address `100.77.79.18` failed as intended.
+- Initial password setup remains pending: `/api/auth/check` reported `setup_required=true`, and an unauthenticated connection-list request returned HTTP `401`. No MySQL credential or connection profile has been entered.
+- Tailscale Serve has no active configuration, and no firewall, routing, Funnel, student-network policy, or MySQL listener was changed for this installation.
+- The service data directory is `/home/iaas/.local/share/dbx` with owner-only permissions. The user systemd manager reports `Linger=no`, so automatic startup immediately after a VM reboot is not yet guaranteed until the `iaas` user logs in or lingering is explicitly approved and enabled.
 
 ## Remote desktop
 
