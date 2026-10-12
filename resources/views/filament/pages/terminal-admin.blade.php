@@ -17,6 +17,7 @@
         $state = $this->adminSessionState();
         $url = $this->adminUrl();
         $embedUrl = $this->adminEmbedUrl();
+        $frameSrc = $this->adminEmbedFrameSrc();
         $browserAccess = (bool) config('infrastructure.terminal.browser_access_enabled');
     @endphp
 
@@ -231,8 +232,9 @@
                          queued when the session opened, which is why there is no
                          password on this page to copy. --}}
                     <div class="bg-[#0b1118]">
-                        <iframe src="{{ $embedUrl }}" title="Administrative shell on {{ $selected['name'] }}"
-                                class="block h-[31rem] w-full border-0 bg-[#0b1118]"
+                        <iframe src="{{ $frameSrc }}" title="Administrative shell on {{ $selected['name'] }}"
+                                class="block w-full border-0 bg-[#0b1118]"
+                                style="height: min(72vh, 44rem);"
                                 allow="clipboard-read; clipboard-write"></iframe>
                     </div>
                     <div class="border-t border-slate-800 bg-[#0b1118] px-5 py-3">

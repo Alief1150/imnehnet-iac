@@ -188,6 +188,24 @@ final class Terminal extends Page
     }
 
     /**
+     * The frame's address with the console's look appended.
+     *
+     * The look travels in the query string because that is where this build of the
+     * client reads its preferences; the ticket stays in the cookie. Only
+     * presentation — font size and theme, neither of which is a secret.
+     */
+    public function adminEmbedFrameSrc(): ?string
+    {
+        $url = $this->adminEmbedUrl();
+
+        if ($url === null) {
+            return null;
+        }
+
+        return $url.'?'.http_build_query(AdminTerminalService::terminalPreferences());
+    }
+
+    /**
      * Hand the browser the ticket cookie for this session.
      *
      * Queued rather than set, because a Livewire action answers with JSON and the

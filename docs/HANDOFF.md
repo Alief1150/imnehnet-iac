@@ -564,6 +564,14 @@ Ownership of the socket directory, which is the same three facts as the lease di
 is that it was started under sudo, which is what the log line "The shell runner must run as iaas"
 means.
 
+Start it detached, or it dies with the logout that started it — both supervisors were once
+found dead on a host with ten days of uptime for exactly this reason:
+
+    setsid nohup bash scripts/shell-supervisor.sh >> storage/logs/shell-supervisor.log 2>&1 < /dev/null &
+
+And never `kill` the runner to reload it: it exits 0 on SIGTERM, and 0 means "asked to stop",
+which the supervisor obeys by *not* restarting. A kill is a shutdown, not a reload.
+
 ### The embedded console — how a shell appears inside the page
 
 Opening a session issues two leases, not one: the password file the direct address checks, and a

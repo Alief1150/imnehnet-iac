@@ -59,6 +59,13 @@ return Application::configure(basePath: dirname(__DIR__))
           $schedule->command('terminal:reap --quiet-report')
               ->everyFiveMinutes()
               ->withoutOverlapping();
+
+          // Fill the infrastructure caches every minute so page renders rarely pay
+          // for a cold recompute. See WarmInfrastructureCacheCommand for why the
+          // TTLs stay short instead.
+          $schedule->command('infrastructure:warm')
+              ->everyMinute()
+              ->withoutOverlapping();
       })
       ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

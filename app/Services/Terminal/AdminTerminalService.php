@@ -378,6 +378,32 @@ class AdminTerminalService
         return 'imnehnet_slot_'.$port;
     }
 
+    /**
+     * How the console looks: preferences the frame carries in its own query string.
+     *
+     * A real terminal is dark with a readable face — the default gray box is what
+     * made the embedded frame read as broken. This build of ttyd ignores -t client
+     * options (the page it serves is byte-identical with and without them), but its
+     * client parses preferences from the frame's address, so the address carries
+     * them. Only presentation travels here, never the ticket: a theme in the access
+     * log is uninteresting, and the background must equal the panel behind the
+     * frame so the shell fills it edge to edge.
+     *
+     * @return array{fontSize: int, theme: string}
+     */
+    public static function terminalPreferences(): array
+    {
+        return [
+            'fontSize' => 15,
+            'theme' => (string) json_encode([
+                'background' => '#0b1118',
+                'foreground' => '#e2e8f0',
+                'cursor' => '#5eead4',
+                'selectionBackground' => '#164e4f',
+            ]),
+        ];
+    }
+
     public function isConnected(TerminalSession $session): bool
     {
         return $session->closed_at === null
@@ -461,8 +487,12 @@ class AdminTerminalService
             '-p', (string) $port,
             '-W',
             '-t', 'titleFixed='.$this->loginName($node).'@'.$node['key'],
-            // Apache validates the per-session token from slots.map.
-            // Do not enable a second Basic Auth prompt inside an iframe.
+            // Apache checks the slot's password file; ttyd itself runs no credential
+            // of its own, so there is no second prompt anywhere, inside a frame or
+            // out of it. The frame's look is not set here: this build ignores -t
+            // client options (the served page is byte-identical with and without
+            // them), and the client reads its preferences from the frame's own
+            // query string instead — see terminalPreferences().
             ...$node['command'],
         ];
 

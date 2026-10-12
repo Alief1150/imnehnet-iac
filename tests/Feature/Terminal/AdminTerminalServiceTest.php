@@ -292,6 +292,7 @@ test('a leased slot is a password file, and it is gone when revoked', function (
         ->and($auth->leasedPorts())->toBe([]);
 
     array_map('unlink', (array) glob($directory.'/*'));
+});
 
 // ── the embedded frame ──────────────────────────────────────────────────────
 
@@ -388,4 +389,40 @@ test('the embed cookie is named per slot', function () {
     expect(AdminTerminalService::embedCookieName(38000))->toBe('imnehnet_slot_38000')
         ->and(AdminTerminalService::embedCookieName(38001))->toBe('imnehnet_slot_38001');
 });
+
+// ── how the console looks ───────────────────────────────────────────────────
+
+test('the console preferences are a readable dark terminal', function () {
+    $prefs = AdminTerminalService::terminalPreferences();
+
+    expect($prefs['fontSize'] ?? null)->toBe(15);
+
+    // Decoded, not substring-matched: a broken theme object is what would ship a
+    // broken console, and the background must equal the panel behind the frame.
+    $theme = json_decode($prefs['theme'] ?? '', true);
+
+    expect($theme)->toBeArray()
+        ->and($theme['background'] ?? null)->toBe('#0b1118')
+        ->and($theme['foreground'] ?? null)->not->toBeEmpty()
+        ->and($theme['cursor'] ?? null)->not->toBeEmpty();
+});
+
+test('the frame address carries the look but never any secret', function () {
+    config()->set('infrastructure.terminal.browser_access_enabled', true);
+    [$directory, $tickets] = embedServiceTicketDir();
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $session = aNodeSession($user, 'iaas-mgmt');
+    $tickets->issue(38000);
+
+    $src = Livewire::actingAs($user)->test(Terminal::class)->instance()->adminEmbedFrameSrc();
+
+    expect($src)->toStartWith('/embed/38000/?')
+        ->and((string) $src)->toContain('fontSize=15')
+        ->and((string) $src)->toContain('theme=')
+        ->and((string) $src)->not->toContain((string) $session->credential);
+
+    $tickets->revokeAll();
+    array_map('unlink', (array) glob($directory.'/*'));
+    @rmdir($directory);
 });

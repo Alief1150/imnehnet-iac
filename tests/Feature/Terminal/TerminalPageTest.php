@@ -232,6 +232,7 @@ test('the admin page mounts an embedded frame for a leased session', function ()
         ->assertSuccessful()
         ->assertSee('<iframe', false)
         ->assertSee('/embed/38000/', false)
+        ->assertSee('fontSize=15', false)
         ->assertDontSee('Session credential');
 
     $pageTickets->revokeAll();
