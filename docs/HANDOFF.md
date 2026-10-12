@@ -519,3 +519,53 @@ opening a session from the admin panel in a browser still needs a dedicated runn
 message says so. And `deploy/apache/imnehnet-portal.conf` is what the portal's own deployment
 would install; the copy on this host was edited by hand, so the two must be reconciled by a human
 with sudo rather than assumed identical.
+
+### The shell runner — why an administrative shell is not started by the web
+
+An administrative shell has to be started by the account that owns the host. On IAAS-MGMT that
+is the account that can sudo; on the two lab planes it is the only one that can read the key they
+are reached with. The web runs as `www-data`, so it cannot start one. Three ways out, and two
+are traps:
+
+- **Run php-fpm as the host account.** Then the process rendering untrusted input can already
+  sudo, and every web vulnerability on this host is root-adjacent. A portal that prints
+  environment names and container output does not get to own the web server.
+- **Let the web start it anyway.** It would open, as `www-data`, with no sudo and no key — and be
+  reported as an administrative shell. A control that grants less than it claims is worse than
+  one that refuses.
+- **Ask a process that does have the account.** That is `bin/shell-runner.php`.
+
+So the web sends a request over a unix socket and the runner decides for itself what is allowed.
+The request can say "open a shell on lab-env, slot 38003". It cannot name a binary, a command, a
+path, a user or a port outside the window, because the runner reads none of those from the
+request — its node table is its own. `close` refuses any pid not in the list the runner wrote,
+which is stronger than checking `/proc`: that proves a process is ttyd, not that the ttyd is
+ours. Every refusal is a test, through `php bin/shell-runner.php --once`.
+
+Run it with `bash scripts/shell-supervisor.sh`, which is supervised the same way the queue worker
+is — deliberately not a systemd service, because the rest of this deployment runs without root.
+There is an `@reboot` entry. It **must** be started as the host account: the runner refuses to
+run as root, and starting the supervisor under sudo produces a runner that rejects itself every
+five seconds, which reads exactly like a broken runner.
+
+Two details that are easy to get wrong and produce a page that lies:
+
+- **Liveness is read from `/proc`, not signalled.** From `www-data`, `kill(pid, 0)` on a process
+  owned by another user returns EPERM, so a liveness check written as a signal call reports a
+  healthy shell as gone. A zombie is not a shell either, and is treated as gone.
+- **The runner reaps what it starts.** Listeners are spawned with `proc_open` and nothing waited
+  for them, so a closed terminal left an exited child in `/proc` for as long as the runner lived.
+  The reap was originally placed before signalling and after `kill -9`, and the branch that
+  actually succeeds — SIGHUP on the first try — returned straight past it, so every close still
+  left one behind. Every return path goes through it now, and a restart prunes the record of pids
+  that are already gone.
+
+Ownership of the socket directory, which is the same three facts as the lease directory above:
+`iaas` must be in group `www-data`, the directory must be setgid, and it must be group-writable.
+
+### What to do when the console says no runner is answering
+
+`bash scripts/shell-supervisor.sh` in a login as the portal user, then check
+`storage/logs/shell-runner.out` and `storage/logs/shell-runner.log`. The most common cause by far
+is that it was started under sudo, which is what the log line "The shell runner must run as iaas"
+means.

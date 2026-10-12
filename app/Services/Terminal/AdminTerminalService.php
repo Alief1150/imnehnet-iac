@@ -4,6 +4,7 @@ namespace App\Services\Terminal;
 
 use App\Models\TerminalSession;
 use App\Models\User;
+use App\Support\ShellRunner;
 use App\Support\TerminalSlotAuth;
 use App\Services\ActivityLogService;
 use Illuminate\Support\Carbon;
@@ -384,13 +385,18 @@ class AdminTerminalService
      */
     private function spawn(array $node, int $port): int
     {
-        // PHP-FPM usually runs as www-data, not iaas. Never present that as an
-        // administrative shell. Configure a dedicated iaas-owned runner first.
-        $effectiveUser = function_exists('posix_geteuid') && function_exists('posix_getpwuid')
-            ? (posix_getpwuid(posix_geteuid())['name'] ?? null)
-            : null;
-        if ($effectiveUser !== 'iaas') {
-            throw new RuntimeException('Admin terminal runner is not iaas. A dedicated shell runner is required for this web runtime.');
+        // An administrative shell has to be started by the host's own account: that is the
+        // account that can sudo, and the only one that can read the key the lab nodes are
+        // reached with. The web runs as the web server's user, so it asks a runner that runs
+        // as the host account to start it instead — and the runner decides for itself whether
+        // the request is one of the ones it allows.
+        //
+        // Neither of the alternatives is acceptable and both were available. Running php-fpm
+        // as iaas would make every web vulnerability on this host root-adjacent. Letting the
+        // web start the shell itself would open one as www-data, with no sudo and no key, and
+        // call it administrative.
+        if (! $this->runsAsHostAccount()) {
+            return $this->spawnThroughRunner($node, $port);
         }
 
         $binary = (string) config('infrastructure.terminal.binary', 'ttyd');
@@ -465,9 +471,23 @@ class AdminTerminalService
             return false;
         }
 
-        // posix_kill with signal 0 tests for existence without sending anything. A Process per
-        // probe would be a process per probe, and its destructor signals its own child.
-        return @posix_kill($pid, 0);
+        // Read from /proc rather than signalled. From a different user, kill(pid, 0) on a
+        // process you do not own returns EPERM — which this would read as "gone", so the
+        // console would report Disconnected for a shell that was running. /proc is readable
+        // for any process.
+        //
+        // A zombie counts as gone: it has exited and is only waiting to be reaped, and it is
+        // not serving a shell.
+        $stat = @file_get_contents("/proc/{$pid}/stat");
+
+        if ($stat === false) {
+            return false;
+        }
+
+        $tail = explode(') ', $stat, 2)[1] ?? '';
+        $state = explode(' ', $tail)[0] ?? '';
+
+        return ! in_array($state, ['Z', 'X'], true);
     }
 
     /**
@@ -498,6 +518,21 @@ class AdminTerminalService
     private function terminate(int $pid): void
     {
         if ($pid <= 1 || ! $this->isTerminalProcess($pid) || ! $this->processIsAlive($pid)) {
+            return;
+        }
+
+        // From the web's own account this cannot work: a process owned by another user cannot
+        // be signalled by a process that is not privileged to reach it. The runner is asked
+        // instead, and it refuses any pid it did not start — a stronger check than the one
+        // above, which proves a process is ttyd but not that ttyd is ours.
+        if (! $this->runsAsHostAccount()) {
+            try {
+                $this->runner()->close($pid);
+            } catch (\Throwable) {
+                // Already gone, or the runner is not there. Both are the state we wanted, and
+                // the session is marked closed either way.
+            }
+
             return;
         }
 
@@ -630,6 +665,55 @@ class AdminTerminalService
         }
 
         return $pairs;
+    }
+
+    /**
+     * Whether this process is running as the account that owns the host.
+     */
+    private function runsAsHostAccount(): bool
+    {
+        $user = function_exists('posix_geteuid') && function_exists('posix_getpwuid')
+            ? (posix_getpwuid(posix_geteuid())['name'] ?? null)
+            : null;
+
+        return $user === (string) config('infrastructure.terminal.host_account', 'iaas');
+    }
+
+    private function runner(): ShellRunner
+    {
+        return ShellRunner::fromConfig();
+    }
+
+    /**
+     * Ask the runner to start a listener, and make its refusal a refusal here.
+     *
+     * The runner answers with a pid and this method returns it, so the rest of the class does
+     * not know which route was taken — which is the point. A refusal from the runner is
+     * raised as a RuntimeException, so a caller cannot tell an opened shell from a refused one
+     * by anything but whether it got here.
+     */
+    private function spawnThroughRunner(array $node, int $port): int
+    {
+        $runner = $this->runner();
+
+        if (! $runner->available()) {
+            throw new RuntimeException(sprintf(
+                'An administrative shell has to be started by %s, and this request came from the '
+                .'web server, which cannot. The runner that runs as %s is not answering on %s. '
+                .'Start it with: bash scripts/shell-supervisor.sh',
+                (string) config('infrastructure.terminal.host_account', 'iaas'),
+                (string) config('infrastructure.terminal.host_account', 'iaas'),
+                $runner->socket(),
+            ));
+        }
+
+        $started = $runner->open($node['key'], $port, $this->logPath($port));
+
+        if ($started['pid'] <= 1) {
+            throw new RuntimeException('The shell runner did not return a process.');
+        }
+
+        return $started['pid'];
     }
 
     private function logPath(int $port): string

@@ -213,6 +213,28 @@ return [
         // started, so a slot leased after that was never reachable.
         'auth_directory' => env('TERMINAL_AUTH_DIRECTORY', '/var/lib/imnehnet/terminal/htpasswd'),
 
+        // The shell runner that starts administrative shells when the request comes from the
+        // web server, which runs as a different account than the host's owner.
+        //
+        // The runner runs as that account and is reached over a unix socket. It re-decides
+        // everything — which node, which port, which processes may be signalled — because a
+        // check the caller performs is a check the caller can skip.
+        'runner_socket' => env('TERMINAL_RUNNER_SOCKET', '/var/lib/imnehnet/terminal/runner.sock'),
+
+        /*
+         * The account an administrative shell has to be started by.
+         *
+         * It is the account that can sudo and the only one that can read the key the lab nodes
+         * are reached with, so the portal does not start these shells itself when it is running
+         * as the web server's user: it asks a runner that runs as this account to start them.
+         *
+         * Running php-fpm as this account instead would make every web vulnerability on the
+         * host root-adjacent. Letting the web start the shell itself would open one with no
+         * sudo and no key while reporting it as administrative. Neither is acceptable, and
+         * naming the account here is what makes the runner's socket and its own check line up.
+         */
+        'host_account' => env('TERMINAL_HOST_ACCOUNT', 'iaas'),
+
         // Whether the portal hands a browser a terminal address at all.
         //
         // This is the switch for exposing a shell, and it is off by default
