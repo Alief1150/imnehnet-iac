@@ -5,6 +5,7 @@ namespace App\Services\Terminal;
 use App\Models\TerminalSession;
 use App\Models\User;
 use App\Support\ShellRunner;
+use App\Support\TerminalEmbedTicket;
 use App\Support\TerminalSlotAuth;
 use App\Services\ActivityLogService;
 use Illuminate\Support\Carbon;
@@ -45,12 +46,14 @@ use Throwable;
  *
  * It is deliberately not in the URL. A query string is written to the access log, to browser
  * history and to the Referer of anything the page loads, and this secret is good for two
- * hours. The page therefore offers a link and the browser is prompted once.
+ * hours. The direct address therefore opens in its own tab, where the browser is prompted
+ * once — and the embedded console does not use the password at all: it carries a ticket
+ * in a per-slot cookie, which is written to none of those places.
  *
  * An iframe cannot send an Authorization header — there is no attribute for it — so the
- * shell opens in its own tab rather than embedded. Authenticated-proxy mode (-H) would allow
- * embedding, but it moves the decision to the web server configuration where one mistake
- * exposes every slot at once rather than one session.
+ * embedded frame loads /embed/<port>/ with the ticket cookie instead. Authenticated-proxy
+ * mode (-H) would allow embedding, but it moves the decision to the web server
+ * configuration where one mistake exposes every slot at once rather than one session.
  */
 class AdminTerminalService
 {
@@ -58,8 +61,8 @@ class AdminTerminalService
     /** Bytes of credential per session. */
     private const CREDENTIAL_BYTES = 24;
 
-    /** How long a session may live if nobody closes it. */
-    private const SESSION_MINUTES = 120;
+    /** How long a session may live if nobody closes it. Public: the ticket cookie lives as long. */
+    public const SESSION_MINUTES = 120;
 
     private const ACTION_OPEN = 'ADMIN_TERMINAL_OPEN';
 
@@ -209,6 +212,7 @@ class AdminTerminalService
             ]);
 
             $this->slotAuth()->grant($port, $credential);
+            $this->embedTickets()->issue($port);
         } catch (Throwable $exception) {
             // No orphaned shell when the database or grant file fails.
             $this->terminate($pid);
@@ -235,7 +239,7 @@ class AdminTerminalService
     }
 
     /**
-     * Close a session: stop the listener and drop its credential.
+     * Close a session: stop the listener and drop its credential and its embed ticket.
      */
     public function close(TerminalSession $session): void
     {
@@ -246,6 +250,7 @@ class AdminTerminalService
         }
 
         $this->slotAuth()->revoke((int) $session->ttyd_port);
+        $this->embedTickets()->revoke((int) $session->ttyd_port);
 
         $session->forceFill(['closed_at' => Carbon::now()])->save();
 
@@ -322,6 +327,55 @@ class AdminTerminalService
             'user' => TerminalSlotAuth::USERNAME,
             'password' => (string) $session->credential,
         ];
+    }
+
+    /**
+     * The path the embedded frame loads the shell from.
+     *
+     * Names only the slot — never the ticket. The browser carries the ticket in a
+     * per-slot cookie, and Apache refuses any request whose cookie does not name a
+     * ticket file that exists. A cookie is written to neither the access log, nor
+     * browser history, nor any Referer, which is what a ticket in the address would
+     * cost. Null whenever the slot is not leased for embedding, which is also what
+     * keeps a frame from mounting when there is nothing behind it.
+     */
+    public function embedUrl(TerminalSession $session): ?string
+    {
+        if (! config('infrastructure.terminal.browser_access_enabled') || ! $this->isConnected($session)) {
+            return null;
+        }
+
+        if ($this->embedTicketFor($session) === null) {
+            return null;
+        }
+
+        return sprintf('/embed/%d/', (int) $session->ttyd_port);
+    }
+
+    /**
+     * The ticket the browser must carry in its cookie for this session, if leased.
+     *
+     * Read from the directory rather than remembered, so what is handed over is the
+     * ticket Apache is actually testing for.
+     */
+    public function embedTicketFor(TerminalSession $session): ?string
+    {
+        if (! $this->isConnected($session)) {
+            return null;
+        }
+
+        return $this->embedTickets()->tokenFor((int) $session->ttyd_port);
+    }
+
+    /**
+     * The cookie that carries a slot's ticket.
+     *
+     * One cookie per slot rather than one for the console, because a person may hold
+     * a shell on several nodes at once and each slot's ticket is revoked on its own.
+     */
+    public static function embedCookieName(int $port): string
+    {
+        return 'imnehnet_slot_'.$port;
     }
 
     public function isConnected(TerminalSession $session): bool
@@ -640,6 +694,11 @@ class AdminTerminalService
     private function slotAuth(): TerminalSlotAuth
     {
         return new TerminalSlotAuth((string) config('infrastructure.terminal.auth_directory'));
+    }
+
+    private function embedTickets(): TerminalEmbedTicket
+    {
+        return new TerminalEmbedTicket((string) config('infrastructure.terminal.embed_directory'));
     }
 
     /**

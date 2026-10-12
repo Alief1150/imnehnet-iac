@@ -52,6 +52,7 @@ final class InfrastructureStatusService
             // host is down", which is what an operator actually needs to know.
             $this->managementPlane(),
             $this->computePlane($timeout),
+            $this->attackerPlane($timeout),
             (new IncusHealthProvider(
                 $this->commands,
                 (string) config('infrastructure.incus_remote', 'lab-env:'),
@@ -130,6 +131,47 @@ final class InfrastructureStatusService
             checkedAt: $health->checkedAt,
             latencyMs: $health->latencyMs,
             group: 'compute_plane',
+        );
+    }
+
+    /**
+     * The attacker plane, asked the same way the compute plane is asked.
+     *
+     * LAB-ATK used to be read through `incus query lab-atk:/1.0`, which only works for
+     * the account that owns the Incus client certificates. The portal runs as the web
+     * server's user, which owns no such identity, so the card read Unknown while the
+     * plane was up. An unauthenticated GET to the Incus /1.0 API answers 200 whenever
+     * it is up — measured from this host against both planes — so this asks the same
+     * reachability question at a privilege the portal actually has.
+     *
+     * Keyed `incus_atk`: that is the health key both the host list and the plane cards
+     * read for LAB-ATK, so one probe fixes every page that shows it.
+     */
+    private function attackerPlane(int $timeout): ServiceHealth
+    {
+        $url = config('infrastructure.attacker_plane_api_url');
+
+        $health = (new HttpHealthProvider(
+            'incus_atk',
+            'LAB-ATK',
+            is_string($url) ? $url : null,
+            $timeout,
+            fn (Response $response): bool => $response->successful(),
+            verifyTls: false,
+            group: 'attacker_plane',
+        ))->check();
+
+        return new ServiceHealth(
+            key: $health->key,
+            label: $health->label,
+            status: $health->status,
+            summary: $health->status === 'healthy'
+                ? 'Attacker plane is reachable and running Incus.'
+                : $health->summary,
+            source: $health->source,
+            checkedAt: $health->checkedAt,
+            latencyMs: $health->latencyMs,
+            group: 'attacker_plane',
         );
     }
 

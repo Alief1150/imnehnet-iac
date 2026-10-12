@@ -506,19 +506,13 @@ refused everything even once the rules were correct.
 
 ### Two things that are deliberately not how they look
 
-Both terminal pages open the shell in a **tab**, not an iframe, and offer the credential behind a
-disclosure. HTTP Basic cannot be answered from inside an iframe — there is no attribute for an
-Authorization header — so an embedded frame reaches ttyd, gets a 401 it cannot answer, and
-renders a blank panel that reads as a broken terminal. The address itself carries no credential;
-that was the other half of the change, since a token in a query string is written to the access
+The direct address opens the shell in its own **tab** and offers the credential behind a
+disclosure, while the console itself is **embedded** in the page. HTTP Basic cannot be answered
+from inside an iframe — there is no attribute for an Authorization header — so the embedded
+frame does not use the password at all: it loads `/embed/<port>/` with the slot's ticket in a
+cookie (see the next section), and the address names only the slot. Either address carries no
+credential; a token in a query string was the earlier design, and it is written to the access
 log, to browser history and to the Referer of anything the page loads.
-
-Two open items, both honest rather than finished: the administrative shell refuses to spawn unless
-the PHP process is running as `iaas`, which is true for artisan but **not** for php-fpm — so
-opening a session from the admin panel in a browser still needs a dedicated runner, and the error
-message says so. And `deploy/apache/imnehnet-portal.conf` is what the portal's own deployment
-would install; the copy on this host was edited by hand, so the two must be reconciled by a human
-with sudo rather than assumed identical.
 
 ### The shell runner — why an administrative shell is not started by the web
 
@@ -569,3 +563,36 @@ Ownership of the socket directory, which is the same three facts as the lease di
 `storage/logs/shell-runner.out` and `storage/logs/shell-runner.log`. The most common cause by far
 is that it was started under sudo, which is what the log line "The shell runner must run as iaas"
 means.
+
+### The embedded console — how a shell appears inside the page
+
+Opening a session issues two leases, not one: the password file the direct address checks, and a
+ticket file `<port>-<token>` in `/var/lib/imnehnet/terminal/embed/` that the vhost tests for on
+every request to `/embed/`. The browser carries the ticket in a per-slot cookie
+(`imnehnet_slot_<port>`), queued when the session opens and forgotten when it closes, so the
+iframe address names only the slot and no secret is written to the access log, to browser
+history or to any Referer. Closing deletes the ticket file, and every request after that — page,
+asset or websocket — is refused with no reload; the reaper closes the same way, because expiry
+goes through `close()`.
+
+Two traps already paid for, recorded so they are not paid again:
+
+- **Laravel encrypts queued cookies.** The gate reads the cookie value as a filename, so an
+  encrypted value names a file that does not exist and every frame answers 403 with the ticket
+  leased and the cookie set — a mounted iframe that refuses. The ticket cookies are therefore
+  excluded from encryption in `bootstrap/app.php`, by exact name, built from the same port
+  window the slots live in. The plaintext is acceptable for the same reason the password was:
+  this deployment serves plain HTTP, so the cookie is visible on the wire either way.
+- **`mkdir` wants octal.** `mkdir($dir, 2770)` is decimal 2770, which PHP applies as garbage
+  permission bits — owner left without read, so a directory full of tickets is a directory
+  `glob()` cannot see. It is `02770`, and the comment beside it says why.
+
+The vhost also proxies websocket upgrades explicitly, for both paths. `ProxyPass http://`
+serves the ttyd page but answers an upgrade handshake with the page again — measured as 200
+instead of 101, a terminal that loads and never connects. Upgrade requests go to `ws://`
+targets in rewrite rules before the pass-through, and the direct path's `Require` still
+applies: an upgrade with no credential answers 401, verified live in both directions.
+
+`sites-enabled/imnehnet-portal.conf` is a symlink to `sites-available` again, so there is one
+vhost file rather than a hand copy drifting from the repository. If it is ever a copy again,
+that drift is how three versions of one vhost came to exist.

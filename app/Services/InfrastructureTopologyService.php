@@ -227,7 +227,7 @@ class InfrastructureTopologyService
                 'roleDetail' => $remote === 'lab-env'
                     ? 'Student victim environments and the target services'
                     : 'Attacker tooling and paired attacker containers',
-                'address' => $this->remoteAddress($remote),
+                'address' => $this->remoteAddress($remote) ?? $this->configuredPlaneAddress($remote),
                 'tailscale' => $tailscale[$remote] ?? null,
                 'icon' => $remote === 'lab-env' ? 'database' : 'server',
                 'tone' => $remote === 'lab-env' ? 'info' : 'error',
@@ -723,6 +723,33 @@ class InfrastructureTopologyService
         }
 
         return null;
+    }
+
+    /**
+     * The address the portal dials for a plane, read from its own configuration.
+     *
+     * Second choice behind asking the plane: remoteAddress() reports the address the
+     * platform actually connects to, but it needs an Incus identity the portal does
+     * not hold, so from the web it answers for neither plane. The configured API
+     * URLs are still the addresses the portal dials — facts about this
+     * installation, not guesses — so the cards show where each plane is
+     * connected rather than nothing.
+     */
+    private function configuredPlaneAddress(string $remote): ?string
+    {
+        $key = match ($remote) {
+            'lab-env' => 'lab_env_api_url',
+            (string) config('infrastructure.attacker_plane_remote', 'lab-atk') => 'attacker_plane_api_url',
+            default => null,
+        };
+
+        if ($key === null) {
+            return null;
+        }
+
+        $host = parse_url((string) config('infrastructure.'.$key), PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' ? $host : null;
     }
 
     /**

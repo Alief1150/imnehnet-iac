@@ -197,3 +197,44 @@ test('the admin page shows the three infrastructure nodes and no student contain
         ->not->toContain('lab-tofu-test')
         ->not->toContain('victim-demo');
 });
+
+test('the admin page mounts an embedded frame for a leased session', function () {
+    // A mounted frame is a claim that a shell is behind it. The row alone is not
+    // enough for that claim — the slot must also be leased for embedding, which is
+    // the ticket file the vhost tests for.
+    config()->set('infrastructure.terminal.browser_access_enabled', true);
+
+    $directory = storage_path('framework/testing/embed-page-'.bin2hex(random_bytes(6)));
+    config()->set('infrastructure.terminal.embed_directory', $directory);
+    $pageTickets = new \App\Support\TerminalEmbedTicket($directory);
+    $pageTickets->issue(38000);
+
+    $admin = anAdmin();
+
+    TerminalSession::query()->create([
+        'user_id' => $admin->getKey(),
+        'lab_environment_id' => null,
+        'target_kind' => 'node',
+        'target_node' => 'iaas-mgmt',
+        'container_name' => null,
+        // The test runner's own pid: alive, and not a terminal listener, so nothing
+        // here can end a real process.
+        'pid' => (string) getmypid(),
+        'ttyd_port' => '38000',
+        'credential' => bin2hex(random_bytes(24)),
+        'shell_user' => 'iaas',
+        'expires_at' => now()->addMinutes(30),
+    ]);
+
+    $this->actingAs($admin);
+
+    $this->get(Terminal::getUrl(panel: 'admin'))
+        ->assertSuccessful()
+        ->assertSee('<iframe', false)
+        ->assertSee('/embed/38000/', false)
+        ->assertDontSee('Session credential');
+
+    $pageTickets->revokeAll();
+    array_map('unlink', (array) glob($directory.'/*'));
+    @rmdir($directory);
+});

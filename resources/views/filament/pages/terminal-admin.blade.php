@@ -16,6 +16,7 @@
         $session = $this->adminSession();
         $state = $this->adminSessionState();
         $url = $this->adminUrl();
+        $embedUrl = $this->adminEmbedUrl();
         $browserAccess = (bool) config('infrastructure.terminal.browser_access_enabled');
     @endphp
 
@@ -104,9 +105,9 @@
                      it grants is a control nobody can consent to. --}}
                 <p class="mt-4 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
                     Opening a session runs a shell on the selected node as a privileged account and is
-                    recorded in the activity log. The listener is bound to loopback and carries a
-                    per-session credential; it is not reachable from the lab network. Opening a new
-                    session on a node closes the one already there and revokes its credential.
+                    recorded in the activity log. The listener is bound to loopback; the console
+                    appears embedded below, and nothing about it is reachable from the lab network.
+                    Opening a new session on a node closes the one already there and revokes its ticket.
                 </p>
             </div>
         </section>
@@ -150,13 +151,12 @@
                         </div>
                     </div>
 
-                    @if ($url)
-                        <a href="{{ $url }}" target="_blank" rel="noopener"
-                           title="Open the shell in a new tab"
-                           class="inline-flex h-8 items-center gap-2 rounded-lg border border-gray-300 px-3 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-white/15 dark:text-gray-200 dark:hover:bg-white/5">
+                    @if ($session)
+                        <span class="inline-flex h-8 items-center gap-2 rounded-lg border border-gray-300 px-3 text-xs font-semibold text-gray-500 dark:border-white/15 dark:text-gray-400"
+                              title="The console is embedded below">
                             {!! \App\Support\Lucide::html('terminal') !!}
-                            Open Shell
-                        </a>
+                            Embedded
+                        </span>
                     @endif
                 </header>
 
@@ -185,7 +185,7 @@
                             </p>
                         </div>
                     </div>
-                @elseif (! $url)
+                @elseif (! $embedUrl)
                     {{-- No frame is mounted here, and that is deliberate.
 
                          ttyd's -c is HTTP Basic auth — verified on this host: no credential
@@ -217,57 +217,31 @@
                                     would not survive. See the Infrastructure page for what it reports.
                                 @else
                                     Choose <strong>{{ $selected['name'] }}</strong> and press
-                                    <strong>New Session</strong>. The shell runs on the node itself, not in your
-                                    browser.
+                                    <strong>New Session</strong>. The console opens below, attached to a
+                                    shell on the node itself.
                                 @endif
                             </p>
                         </div>
                     </div>
                 @else
-                    <div class="bg-[#0b1118] px-5 py-8">
-                        <div class="flex flex-col items-center gap-5 py-6 text-center">
-                            <div class="mx-auto flex size-12 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-teal-400 shadow-sm">
-                                {!! \App\Support\Lucide::html('terminal') !!}
-                            </div>
-                            <div class="max-w-md">
-                                <h3 class="text-sm font-semibold text-white">Shell ready on {{ $selected['name'] }}</h3>
-                                <p class="mt-2 text-sm leading-6 text-slate-400">
-                                    The browser asks for this session's credential once. It is below, and it is
-                                    not written into the address — a query string would be copied into the access
-                                    log and into browser history.
-                                </p>
-                                <a href="{{ $url }}" target="_blank" rel="noopener"
-                                   class="mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-teal-700">
-                                    {!! \App\Support\Lucide::html('terminal') !!}
-                                    Open Shell
-                                </a>
-                            </div>
-                        </div>
-
-                        @if ($credentials = $this->adminCredentials())
-                            {{-- Behind a disclosure rather than shown inline: it is a secret
-                                 that lives as long as the session does, and a page that
-                                 displays one by default is a page that photographs one. --}}
-                            <details class="mx-auto max-w-md rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3 text-left">
-                                <summary class="cursor-pointer list-none text-xs font-semibold text-slate-300 hover:text-white">
-                                    Session credential
-                                </summary>
-                                <dl class="mt-3 space-y-2 font-mono text-xs">
-                                    <div class="flex items-baseline gap-3">
-                                        <dt class="w-20 shrink-0 text-slate-500">username</dt>
-                                        <dd class="text-slate-200">{{ $credentials['user'] }}</dd>
-                                    </div>
-                                    <div class="flex items-baseline gap-3">
-                                        <dt class="w-20 shrink-0 text-slate-500">password</dt>
-                                        <dd class="select-all break-all text-teal-300">{{ $credentials['password'] }}</dd>
-                                    </div>
-                                </dl>
-                                <p class="mt-3 text-[11px] leading-relaxed text-slate-500">
-                                    Closing the session revokes this. Closing the tab does not — the reaper does,
-                                    after the session's own window expires.
-                                </p>
-                            </details>
-                        @endif
+                    {{-- The console, embedded. This branch renders only when the slot is
+                         leased for it — embedUrl() is null otherwise — so there is no
+                         state in which the page mounts a frame with nothing behind it.
+                         The address names only the slot; the ticket travels in a cookie
+                         queued when the session opened, which is why there is no
+                         password on this page to copy. --}}
+                    <div class="bg-[#0b1118]">
+                        <iframe src="{{ $embedUrl }}" title="Administrative shell on {{ $selected['name'] }}"
+                                class="block h-[31rem] w-full border-0 bg-[#0b1118]"
+                                allow="clipboard-read; clipboard-write"></iframe>
+                    </div>
+                    <div class="border-t border-slate-800 bg-[#0b1118] px-5 py-3">
+                        <p class="text-[11px] leading-relaxed text-slate-500">
+                            This frame is the shell on {{ $selected['name'] }} itself, as
+                            {{ $session?->shell_user ?? 'the session user' }}. Closing the session stops
+                            the listener and revokes its ticket at once; closing this page does
+                            not — the reaper does, after the session's own window expires.
+                        </p>
                     </div>
                 @endif
 

@@ -150,6 +150,16 @@ return [
     'iaas_health_url' => env('IAAS_HEALTH_URL', 'http://127.0.0.1:8000/up'),
     'lab_env_api_url' => env('LAB_ENV_API_URL', 'https://192.168.100.20:8443/1.0'),
 
+    // The attacker plane's Incus API, asked the same way LAB-ENV is asked.
+    //
+    // LAB-ATK used to be read through `incus query lab-atk:/1.0`, which only works for the
+    // account that owns the client certificates. The portal runs as the web server's user,
+    // which owns no such identity, so the card read Unknown while the plane was fine. An
+    // unauthenticated GET to /1.0 answers 200 whenever the API is up — measured from this
+    // host against both planes — so this is the same reachability question at a privilege
+    // the portal actually has, and the default is the URL the registered incus remote uses.
+    'attacker_plane_api_url' => env('ATTACKER_PLANE_API_URL', 'https://192.168.100.30:8443/1.0'),
+
     // Published ports are bound on the host running Incus, so the address a
     // student connects to is the compute plane's management address.
     'lab_env_access_host' => env('LAB_ENV_ACCESS_HOST', '192.168.100.20'),
@@ -212,6 +222,14 @@ return [
         // behind a RewriteMap, which could do neither — the map was read once when the server
         // started, so a slot leased after that was never reachable.
         'auth_directory' => env('TERMINAL_AUTH_DIRECTORY', '/var/lib/imnehnet/terminal/htpasswd'),
+
+        // The embedded console's tickets. One file per leased slot, named "<port>-<token>",
+        // and the vhost tests for it on every request to /embed/ — the same pattern as the
+        // password files above, because it answers the same question: is this slot leased
+        // right now. The ticket travels in a cookie rather than the URL, so unlike a query
+        // string it is written to neither the access log, nor browser history, nor any
+        // Referer. Deleting the file closes the slot with no reload.
+        'embed_directory' => env('TERMINAL_EMBED_DIRECTORY', '/var/lib/imnehnet/terminal/embed'),
 
         // The shell runner that starts administrative shells when the request comes from the
         // web server, which runs as a different account than the host's owner.

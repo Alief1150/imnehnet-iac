@@ -292,4 +292,100 @@ test('a leased slot is a password file, and it is gone when revoked', function (
         ->and($auth->leasedPorts())->toBe([]);
 
     array_map('unlink', (array) glob($directory.'/*'));
+
+// ── the embedded frame ──────────────────────────────────────────────────────
+
+function embedServiceTicketDir(): array
+{
+    $directory = storage_path('framework/testing/embed-svc-'.bin2hex(random_bytes(6)));
+
+    config()->set('infrastructure.terminal.embed_directory', $directory);
+
+    return [$directory, new \App\Support\TerminalEmbedTicket($directory)];
+}
+
+test('the embedded address names only the slot, never any secret', function () {
+    // The ticket travels in a cookie, so unlike the old ?t= address there is nothing
+    // to keep out of the URL — and the test is that nothing secret is in it.
+    config()->set('infrastructure.terminal.browser_access_enabled', true);
+    [$directory, $tickets] = embedServiceTicketDir();
+
+    $session = aNodeSession(User::factory()->create(['role' => UserRole::Admin]), 'iaas-mgmt');
+    $tickets->issue(38000);
+
+    $url = adminConsole()->embedUrl($session);
+
+    expect($url)->toBe('/embed/38000/')
+        ->and((string) $url)->not->toContain((string) $session->credential)
+        ->and((string) $url)->not->toContain('?');
+
+    $tickets->revokeAll();
+    array_map('unlink', (array) glob($directory.'/*'));
+    @rmdir($directory);
+});
+
+test('no embedded address without a leased ticket', function () {
+    config()->set('infrastructure.terminal.browser_access_enabled', true);
+    [$directory, $tickets] = embedServiceTicketDir(); // An empty directory: nothing is leased.
+
+    $session = aNodeSession(User::factory()->create(['role' => UserRole::Admin]), 'iaas-mgmt');
+
+    // The row exists and the process is alive, but the slot was never leased for
+    // embedding — a frame mounted here would show a refusal, not a shell.
+    expect(adminConsole()->embedUrl($session))->toBeNull();
+
+    @rmdir($directory);
+});
+
+test('no embedded address for a session nobody can reach', function () {
+    config()->set('infrastructure.terminal.browser_access_enabled', true);
+    [$directory, $tickets] = embedServiceTicketDir();
+    $tickets->issue(38000);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    expect(adminConsole()->embedUrl(aNodeSession($user, 'iaas-mgmt', ['closed_at' => Carbon::now()])))->toBeNull();
+    expect(adminConsole()->embedUrl(aNodeSession($user, 'iaas-mgmt', ['expires_at' => Carbon::now()->subMinute()])))->toBeNull();
+    expect(adminConsole()->embedUrl(aNodeSession($user, 'iaas-mgmt', ['pid' => '999999'])))->toBeNull();
+
+    $tickets->revokeAll();
+    array_map('unlink', (array) glob($directory.'/*'));
+    @rmdir($directory);
+});
+
+test('no embedded address while browser access is switched off', function () {
+    config()->set('infrastructure.terminal.browser_access_enabled', false);
+    [$directory, $tickets] = embedServiceTicketDir();
+    $tickets->issue(38000);
+
+    $session = aNodeSession(User::factory()->create(['role' => UserRole::Admin]), 'iaas-mgmt');
+
+    expect(adminConsole()->embedUrl($session))->toBeNull();
+
+    $tickets->revokeAll();
+    array_map('unlink', (array) glob($directory.'/*'));
+    @rmdir($directory);
+});
+
+test('closing a session revokes its embed ticket', function () {
+    // close() also terminates the pid. The fabricated pid is the test runner itself,
+    // and terminate() refuses any pid that is not a terminal listener, so this ends
+    // nothing but the session row.
+    [$directory, $tickets] = embedServiceTicketDir();
+
+    $session = aNodeSession(User::factory()->create(['role' => UserRole::Admin]), 'iaas-mgmt');
+    $tickets->issue(38000);
+
+    adminConsole()->close($session);
+
+    expect($tickets->tokenFor(38000))->toBeNull();
+
+    array_map('unlink', (array) glob($directory.'/*'));
+    @rmdir($directory);
+});
+
+test('the embed cookie is named per slot', function () {
+    expect(AdminTerminalService::embedCookieName(38000))->toBe('imnehnet_slot_38000')
+        ->and(AdminTerminalService::embedCookieName(38001))->toBe('imnehnet_slot_38001');
+});
 });

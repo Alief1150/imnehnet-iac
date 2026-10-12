@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
+use App\Services\Terminal\AdminTerminalService;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -28,6 +29,22 @@ return Application::configure(basePath: dirname(__DIR__))
         // readable yet, the middleware concludes there is nobody to redirect, and
         // Filament's own 403 goes out a moment later. It is now the panels' auth
         // middleware instead.
+
+        // The embedded terminal's ticket cookies travel in plaintext.
+        //
+        // Apache's embed gate reads the cookie value as the ticket filename, so an
+        // encrypted value names a file that does not exist and every frame is
+        // refused — measured as a mounted iframe answering 403 with the ticket
+        // leased and the cookie queued. The names are exact because the middleware
+        // matches them exactly, and they are built by the service rather than
+        // repeated here, so renaming the cookie in one place renames it in both.
+        $middleware->encryptCookies(except: array_map(
+            fn (int $port): string => AdminTerminalService::embedCookieName($port),
+            range(
+                (int) env('TERMINAL_PORT_RANGE_MIN', 38000),
+                (int) env('TERMINAL_PORT_RANGE_MAX', 38007),
+            ),
+        ));
     })
     ->withSchedule(function (Schedule $schedule): void {
           // The backstop that makes "a shell cannot outlive its lease" true rather than

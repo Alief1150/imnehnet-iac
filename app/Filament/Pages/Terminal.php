@@ -11,6 +11,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cookie;
 use RuntimeException;
 use Throwable;
 
@@ -72,7 +73,10 @@ final class Terminal extends Page
         }
 
         try {
-            $session = app(AdminTerminalService::class)->open($user, $this->selectedAdminTarget);
+            $service = app(AdminTerminalService::class);
+            $session = $service->open($user, $this->selectedAdminTarget);
+
+            $this->rememberEmbedTicket($service, $session);
 
             Notification::make()
                 ->title('Shell opened')
@@ -101,6 +105,7 @@ final class Terminal extends Page
         }
 
         app(AdminTerminalService::class)->close($session);
+        $this->forgetEmbedTicket($session);
 
         Notification::make()
             ->title('Shell closed')
@@ -161,6 +166,74 @@ final class Terminal extends Page
         }
 
         return app(AdminTerminalService::class)->browserUrl($session);
+    }
+
+    /**
+     * The address the embedded frame loads for the shell.
+     *
+     * Names only the slot — never the ticket, which the browser carries in a cookie
+     * queued when the session opened. Null when there is no live session, when
+     * browser access is switched off, or when the slot is not leased for embedding,
+     * and each of those is a state in which no frame may mount.
+     */
+    public function adminEmbedUrl(): ?string
+    {
+        $session = $this->adminSession();
+
+        if ($session === null) {
+            return null;
+        }
+
+        return app(AdminTerminalService::class)->embedUrl($session);
+    }
+
+    /**
+     * Hand the browser the ticket cookie for this session.
+     *
+     * Queued rather than set, because a Livewire action answers with JSON and the
+     * cookie rides on that response. httpOnly so page script never sees the ticket —
+     * the frame needs no script access to it, only the browser's cookie jar.
+     * Path-limited to /embed/ so it is sent nowhere else. No Secure flag: this
+     * deployment serves plain HTTP, and a Secure cookie would never be sent.
+     */
+    private function rememberEmbedTicket(AdminTerminalService $service, TerminalSession $session): void
+    {
+        if (! config('infrastructure.terminal.browser_access_enabled')) {
+            return;
+        }
+
+        $ticket = $service->embedTicketFor($session);
+
+        if ($ticket === null) {
+            return;
+        }
+
+        Cookie::queue(cookie(
+            AdminTerminalService::embedCookieName((int) $session->ttyd_port),
+            $ticket,
+            AdminTerminalService::SESSION_MINUTES,
+            '/embed/',
+            null,
+            false,
+            true,
+            false,
+            'Lax',
+        ));
+    }
+
+    /**
+     * Take the ticket cookie back when the session closes.
+     *
+     * The ticket file is already revoked by close(), so a leftover cookie authorises
+     * nothing — but a dead secret lingering in the jar is how a later session
+     * inherits confusion, so it goes with the session.
+     */
+    private function forgetEmbedTicket(TerminalSession $session): void
+    {
+        Cookie::queue(Cookie::forget(
+            AdminTerminalService::embedCookieName((int) $session->ttyd_port),
+            '/embed/',
+        ));
     }
 
     /**
