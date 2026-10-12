@@ -6,7 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\TerminalSession;
 use App\Models\User;
 use App\Services\Terminal\AdminTerminalService;
-use App\Support\TerminalSlotGrants;
+use App\Support\TerminalSlotAuth;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
@@ -138,26 +138,20 @@ test('an unknown target is refused rather than passed anywhere', function () {
 
 // ── what the browser is handed ──────────────────────────────────────────────────────
 
-test('the address carries the token the slot was leased with', function () {
-    // The token is in the query string on purpose, and the reason is in the vhost: Apache
-    // cannot ask the portal whether a token is still valid once a browser upgrades to a
-    // WebSocket, because that leaves HTTP and never returns a response the portal could
-    // have signed. So the portal writes the answer down in slots.map and Apache reads it.
-    //
-    // That is also why the token has to be hex and 32-64 characters — TerminalSlotGrants
-    // parses /^(\d{4,5}) ([0-9a-f]{32,64})$/ and the vhost matches the same shape. A token
-    // in any other shape is refused by Apache with a 403 while the page shows a shell, so
-    // this is asserted rather than assumed.
+test('the address carries no credential at all', function () {
+    // The credential used to travel as ?t=, which put a per-session secret in the access log,
+    // in browser history and in the Referer of anything the page loads. Apache checks the
+    // per-session password file for the slot instead, so nothing has to be in the address.
     config()->set('infrastructure.terminal.browser_access_enabled', true);
 
     $session = aNodeSession(User::factory()->create(['role' => UserRole::Admin]), 'iaas-mgmt');
 
-    expect((string) $session->credential)->toMatch('/^[0-9a-f]{32,64}$/');
-
     $url = adminConsole()->browserUrl($session);
 
-    expect($url)->toBe(sprintf('/terminal/38000/?t=%s', $session->credential))
-        ->and((string) $url)->toMatch('#^/terminal/\d+/\?t=[0-9a-f]{32,64}$#');
+    expect($url)->toBe('/terminal/38000/')
+        ->and((string) $url)->not->toContain((string) $session->credential)
+        ->and((string) $url)->not->toContain('?')
+        ->and((string) $url)->not->toContain('t=');
 });
 
 test('the credential handed to the operator is the one the session was opened with', function () {
@@ -262,17 +256,40 @@ test('a node session is identified by asking, not by container_name being null',
 
 // ── the lease file ──────────────────────────────────────────────────────────────────
 
-test('a granted slot is readable back with its token', function () {
-    $path = storage_path('framework/testing/slots-'.bin2hex(random_bytes(6)).'.map');
+// ── the lease file ───────────────────────────────────────────────────────────────────
 
-    $grants = new TerminalSlotGrants($path);
-    $token = bin2hex(random_bytes(24));
+test('a leased slot is a password file, and it is gone when revoked', function () {
+    // The file's existence is the lease. The vhost tests for it on every request, so writing
+    // it opens the slot and deleting it closes it — a single shared map was tried first and
+    // can do neither, because it is read once when the server starts and a slot leased after
+    // that is never reachable.
+    $directory = storage_path('framework/testing/htpasswd-'.bin2hex(random_bytes(6)));
+    $auth = new TerminalSlotAuth($directory);
+    $credential = bin2hex(random_bytes(24));
 
-    $grants->grant(38000, $token);
+    expect($auth->isLeased(38000))->toBeFalse();
 
-    // The round trip matters more than the write: the vhost reads this file with a
-    // RewriteMap, so a line that TerminalSlotGrants cannot parse back is a terminal that
-    // answers 403 while the page shows a working shell.
-    expect((new TerminalSlotGrants($path))->all())->toHaveKey(38000)
-        ->and((new TerminalSlotGrants($path))->all()[38000])->toBe($token);
+    $auth->grant(38000, $credential);
+
+    expect($auth->isLeased(38000))->toBeTrue()
+        ->and($auth->leasedPorts())->toBe([38000]);
+
+    // The format matters more than the write: this file is read by Apache, not by the
+    // portal, so "written" and "readable by the web server" are different claims.
+    $line = trim((string) file_get_contents($auth->path(38000)));
+
+    expect($line)->toStartWith(TerminalSlotAuth::USERNAME.':$2y$')
+        ->and($line)->not->toContain($credential);
+
+    // The hash is one the server can actually check, which a substring assertion would not
+    // have told us.
+    expect(password_verify($credential, explode(':', $line, 2)[1]))->toBeTrue()
+        ->and(password_verify('something-else', explode(':', $line, 2)[1]))->toBeFalse();
+
+    $auth->revoke(38000);
+
+    expect($auth->isLeased(38000))->toBeFalse()
+        ->and($auth->leasedPorts())->toBe([]);
+
+    array_map('unlink', (array) glob($directory.'/*'));
 });

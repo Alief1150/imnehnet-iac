@@ -172,6 +172,27 @@ final class Terminal extends Page
      *
      * @return array{user: string, password: string}|null
      */
+    /**
+     * The pair this student's browser must present for their own session.
+     *
+     * Read from the session row rather than regenerated, so what is offered is the credential
+     * Apache is actually checking. Scoped to the one environment asked about, so one student is
+     * never handed another's.
+     *
+     * @return array{user: string, password: string}|null
+     */
+    public function studentCredentials(LabEnvironment $environment): ?array
+    {
+        $session = $this->sessionFor($environment);
+
+        return $session === null
+            ? null
+            : [
+                'user' => \App\Support\TerminalSlotAuth::USERNAME,
+                'password' => (string) $session->credential,
+            ];
+    }
+
     public function adminCredentials(): ?array
     {
         $session = $this->adminSession();

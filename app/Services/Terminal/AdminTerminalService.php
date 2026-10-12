@@ -4,7 +4,7 @@ namespace App\Services\Terminal;
 
 use App\Models\TerminalSession;
 use App\Models\User;
-use App\Support\TerminalSlotGrants;
+use App\Support\TerminalSlotAuth;
 use App\Services\ActivityLogService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -54,8 +54,6 @@ use Throwable;
 class AdminTerminalService
 {
     /** The Basic-auth username half. Fixed and arbitrary; not the portal account. */
-    private const AUTH_USER = 'imnehnet';
-
     /** Bytes of credential per session. */
     private const CREDENTIAL_BYTES = 24;
 
@@ -209,7 +207,7 @@ class AdminTerminalService
             'expires_at' => Carbon::now()->addMinutes(self::SESSION_MINUTES),
             ]);
 
-            $this->slotGrants()->grant($port, $credential);
+            $this->slotAuth()->grant($port, $credential);
         } catch (Throwable $exception) {
             // No orphaned shell when the database or grant file fails.
             $this->terminate($pid);
@@ -246,7 +244,7 @@ class AdminTerminalService
             $this->terminate($pid);
         }
 
-        $this->slotGrants()->revoke((int) $session->ttyd_port);
+        $this->slotAuth()->revoke((int) $session->ttyd_port);
 
         $session->forceFill(['closed_at' => Carbon::now()])->save();
 
@@ -305,7 +303,11 @@ class AdminTerminalService
             return null;
         }
 
-        return sprintf('/terminal/%d/?t=%s', (int) $session->ttyd_port, rawurlencode((string) $session->credential));
+        // No credential here, and none in a query string. Apache checks this slot's per-session
+        // password file, so the secret is presented as HTTP Basic rather than carried in an
+        // address — where it was before, and where it was written to the access log, to browser
+        // history and to the Referer of anything the page loads.
+        return sprintf('/terminal/%d/', (int) $session->ttyd_port);
     }
 
     /**
@@ -316,7 +318,7 @@ class AdminTerminalService
     public function credentialsFor(TerminalSession $session): array
     {
         return [
-            'user' => self::AUTH_USER,
+            'user' => TerminalSlotAuth::USERNAME,
             'password' => (string) $session->credential,
         ];
     }
@@ -404,29 +406,53 @@ class AdminTerminalService
             ...$node['command'],
         ];
 
-        $process = new Process($this->logged($command, $this->logPath($port)), null, [
-            'TERM' => 'xterm-256color',
-            'LANG' => 'C.UTF-8',
-            'LC_ALL' => 'C.UTF-8',
-        ]);
+        $log = $this->logPath($port);
 
-        $process->setTimeout(null);
-        $process->start();
+        // proc_open with the descriptors already pointing at a file, and no wrapper object.
+        //
+        // Symfony's Process kills its child in __destruct() — vendor/symfony/process/Process.php
+        // line 224 — which runs when this request ends. So the listener bound its port and was
+        // dead a second later, and ttyd's own log showed nothing but the signal. PHP does not
+        // touch a raw proc_open child at shutdown, so the listener outlives its request by
+        // construction rather than by a flag being set.
+        //
+        // The command is an array, so PHP execs it directly: no shell, and nothing to quote.
+        $descriptors = [
+            0 => ['file', '/dev/null', 'r'],
+            1 => ['file', $log, 'a'],
+            2 => ['file', $log, 'a'],
+        ];
 
-        $pid = $process->getPid();
+        $environment = $this->environment();
+        $command = in_array('setsid', $environment, true) ? $command : array_merge(['setsid'], $command);
 
-        if (! is_int($pid)) {
+        $handle = proc_open($command, $descriptors, $pipes, null, $environment);
+
+        if (! is_resource($handle)) {
+            throw new RuntimeException(sprintf(
+                'The terminal process could not be started. See %s for the reason.',
+                $log,
+            ));
+        }
+
+        $status = proc_get_status($handle);
+
+        // Deliberately not calling proc_close(): it waits for the child, which is the opposite
+        // of what this is for. The handle goes out of scope and the listener keeps running.
+        $pid = (int) ($status['pid'] ?? 0);
+
+        if ($pid <= 1) {
             throw new RuntimeException('The terminal process could not be started.');
         }
 
-        // ttyd exits at once if it cannot bind. Without this pause a missing binary would
-        // be recorded as a session that opened, and the browser handed a URL to nothing.
+        // ttyd exits at once if it cannot bind. Without this pause a failure is recorded as a
+        // session that opened, and the browser is handed an address to a dead port.
         usleep(300_000);
 
         if (! $this->processIsAlive($pid)) {
             throw new RuntimeException(sprintf(
                 'The terminal process did not start. See %s for the reason.',
-                $this->logPath($port),
+                $log,
             ));
         }
 
@@ -439,21 +465,9 @@ class AdminTerminalService
             return false;
         }
 
-        try {
-            $probe = new Process(['kill', '-0', (string) $pid], null, [
-                'LANG' => 'C.UTF-8',
-                'LC_ALL' => 'C.UTF-8',
-            ]);
-            $probe->setTimeout(2);
-            $probe->run();
-
-            return $probe->isSuccessful();
-        } catch (Throwable) {
-            // Genuinely fine here: the question is only "is this process still around",
-            // and anything that prevents an answer means it is not reachable, which is
-            // the answer. A throw is not an error in this narrow question.
-            return false;
-        }
+        // posix_kill with signal 0 tests for existence without sending anything. A Process per
+        // probe would be a process per probe, and its destructor signals its own child.
+        return @posix_kill($pid, 0);
     }
 
     /**
@@ -487,36 +501,27 @@ class AdminTerminalService
             return;
         }
 
-        foreach ([(string) $pid, '-'.$pid] as $target) {
-            try {
-                $kill = new Process(['kill', $target], null, [
-                    'LANG' => 'C.UTF-8',
-                    'LC_ALL' => 'C.UTF-8',
-                ]);
-                $kill->setTimeout(3);
-                $kill->run();
-            } catch (Throwable) {
-                // Already gone, or never existed. Either is the state we wanted.
+        // SIGHUP first, because ttyd forwards it and the shell gets to exit on its own terms;
+        // SIGTERM next for one that ignores it; SIGKILL only for one that has stopped answering.
+        // TerminalService::terminate() takes the same sequence, deliberately.
+        //
+        // The process group is not signalled. It would reach processes beyond the one this
+        // service started, and the group ttyd belongs to is inherited rather than made for it,
+        // so a signal aimed at the group is as likely to reach something unrelated as the shell
+        // being closed.
+        foreach ([defined('SIGHUP') ? SIGHUP : 1, defined('SIGTERM') ? SIGTERM : 15] as $signal) {
+            @posix_kill($pid, $signal);
+
+            for ($wait = 0; $wait < 10 && $this->processIsAlive($pid); $wait++) {
+                usleep(100_000);
+            }
+
+            if (! $this->processIsAlive($pid)) {
+                return;
             }
         }
 
-        // Give ttyd a moment to take its shell with it before escalating.
-        for ($attempt = 0; $attempt < 10 && $this->processIsAlive($pid); $attempt++) {
-            usleep(100_000);
-        }
-
-        if ($this->processIsAlive($pid)) {
-            try {
-                $kill = new Process(['kill', '-9', (string) $pid], null, [
-                    'LANG' => 'C.UTF-8',
-                    'LC_ALL' => 'C.UTF-8',
-                ]);
-                $kill->setTimeout(3);
-                $kill->run();
-            } catch (Throwable) {
-                // The state we wanted, reached.
-            }
-        }
+        @posix_kill($pid, 9);
     }
 
     /**
@@ -597,31 +602,34 @@ class AdminTerminalService
         return $probe->isSuccessful();
     }
 
-    private function slotGrants(): TerminalSlotGrants
+    private function slotAuth(): TerminalSlotAuth
     {
-        return new TerminalSlotGrants((string) config('infrastructure.terminal.slot_map_file'));
+        return new TerminalSlotAuth((string) config('infrastructure.terminal.auth_directory'));
     }
 
     /**
-     * The same command, with its output redirected to a file.
+     * The environment a listener is started in.
      *
-     * Symfony's Process has no setOutputFile — it collects stdout and stderr on pipes and
-     * offers nothing to attach a file to. This process outlives the request that started
-     * it, so those pipes are never drained: they fill, and the shell stops accepting
-     * input. The redirect has to come from the command itself.
+     * PATH is inherited rather than left to chance: the ssh the lab nodes are reached through is
+     * found by name, and a listener with a bare PATH opens no shell at all.
      *
-     * exec, so the pid handed back is ttyd's own and not a wrapper's. terminate() signals
-     * the process group, and a shell wrapper sitting in that group would be a different
-     * process from the one the session row names.
-     *
-     * @param  list<string>  $command
      * @return list<string>
      */
-    private function logged(array $command, string $logPath): array
+    private function environment(): array
     {
-        $parts = array_map('escapeshellarg', $command);
+        $pairs = [
+            'TERM=xterm-256color',
+            'LANG=C.UTF-8',
+            'LC_ALL=C.UTF-8',
+        ];
 
-        return ['sh', '-c', 'exec '.implode(' ', $parts).' >> '.escapeshellarg($logPath).' 2>&1'];
+        $path = getenv('PATH');
+
+        if (is_string($path) && $path !== '') {
+            $pairs[] = 'PATH='.$path;
+        }
+
+        return $pairs;
     }
 
     private function logPath(int $port): string

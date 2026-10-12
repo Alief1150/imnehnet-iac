@@ -254,13 +254,61 @@
 
                 <div id="{{ $terminalId }}" class="bg-[#0b1118]">
                     @if ($url !== null)
-                        <div data-lenis-prevent class="min-h-[32rem] bg-[#0b1118]">
-                            <iframe
-                                src="{{ $url }}"
-                                class="block h-[32rem] w-full border-0 bg-[#0b1118]"
-                                title="Terminal for {{ $environment->container_name }}"
-                                allow="clipboard-write"
-                            ></iframe>
+                        {{-- A tab, not a frame.
+
+                             The gate is HTTP Basic: Apache checks this slot's per-session
+                             password file with Require valid-user. An iframe cannot send an
+                             Authorization header — there is no attribute for it — so an
+                             embedded frame would reach ttyd, be answered with a 401 it cannot
+                             answer, and render a blank panel that reads as a broken terminal
+                             rather than as a login.
+
+                             The address carries no credential. Apache answers an
+                             unauthenticated request with a challenge, so the browser prompts on
+                             its own; what the prompt needs is below, because a student has no way
+                             to read it out of the database. --}}
+                        <div data-lenis-prevent class="min-h-[24rem] bg-[#0b1118] px-6 py-10">
+                            <div class="mx-auto max-w-md text-center">
+                                <div class="mx-auto flex size-12 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-teal-400">
+                                    {!! \App\Support\Lucide::html('terminal') !!}
+                                </div>
+                                <h3 class="mt-4 text-sm font-semibold text-white">
+                                    Shell ready on {{ $environment->container_name }}
+                                </h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-400">
+                                    The browser asks for this session's credential once, when it
+                                    opens. It is below, and it is not written into the address.
+                                </p>
+                                <a href="{{ $url }}" target="_blank" rel="noopener"
+                                   class="mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-teal-700">
+                                    {!! \App\Support\Lucide::html('terminal') !!}
+                                    Open Shell
+                                </a>
+                            </div>
+
+                            @php($studentCredentials = $this->studentCredentials($environment))
+
+                            @if ($studentCredentials !== null)
+                                <details class="mx-auto mt-6 max-w-md rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3 text-left">
+                                    <summary class="cursor-pointer list-none text-xs font-semibold text-slate-300 hover:text-white">
+                                        Session credential
+                                    </summary>
+                                    <dl class="mt-3 space-y-2 font-mono text-xs">
+                                        <div class="flex items-baseline gap-3">
+                                            <dt class="w-20 shrink-0 text-slate-500">username</dt>
+                                            <dd class="text-slate-200">{{ $studentCredentials['user'] }}</dd>
+                                        </div>
+                                        <div class="flex items-baseline gap-3">
+                                            <dt class="w-20 shrink-0 text-slate-500">password</dt>
+                                            <dd class="select-all break-all text-teal-300">{{ $studentCredentials['password'] }}</dd>
+                                        </div>
+                                    </dl>
+                                    <p class="mt-3 text-[11px] leading-relaxed text-slate-500">
+                                        Closing the session revokes this. Closing the tab does not —
+                                        the reaper does, once the session's window has passed.
+                                    </p>
+                                </details>
+                            @endif
                         </div>
                     @else
                         <div class="flex min-h-[32rem] items-center justify-center px-6 py-12 text-center text-slate-300">

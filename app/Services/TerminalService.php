@@ -7,7 +7,7 @@ use App\Models\LabEnvironment;
 use App\Models\TerminalSession;
 use App\Models\User;
 use App\Support\EnvironmentWorkspace;
-use App\Support\TerminalSlotGrants;
+use App\Support\TerminalSlotAuth;
 use Illuminate\Contracts\Container\Container;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -56,7 +56,7 @@ class TerminalService
         private readonly array $portRange,
         private readonly string $logDirectory,
         private readonly int $probeTimeoutSeconds,
-        private readonly TerminalSlotGrants $grants,
+        private readonly TerminalSlotAuth $auth,
         private readonly ?ActivityLogService $activity = null,
     ) {}
 
@@ -76,8 +76,8 @@ class TerminalService
             ],
             logDirectory: (string) config('infrastructure.terminal.log_directory'),
             probeTimeoutSeconds: (int) config('infrastructure.probe_timeout_seconds', 3),
-            grants: new TerminalSlotGrants(
-                (string) config('infrastructure.terminal.slot_map_file'),
+            auth: new TerminalSlotAuth(
+                (string) config('infrastructure.terminal.auth_directory'),
             ),
             activity: $app->make(ActivityLogService::class),
         );
@@ -138,7 +138,7 @@ class TerminalService
         // exist. Writing it first would let a browser reach a slot whose ttyd
         // has not bound yet, which presents as a terminal that loads and then
         // sits there empty.
-        $this->grants->grant($port, $credential);
+        $this->auth->grant($port, $credential);
 
         // Recorded after the grant exists, so the log never claims a shell was
         // opened before the browser could actually have reached one.
@@ -182,7 +182,7 @@ class TerminalService
         // granted but dead is smaller than the window in which it is withdrawn
         // but still reachable.
         if ($session->ttyd_port !== null && is_numeric($session->ttyd_port)) {
-            $this->grants->revoke((int) $session->ttyd_port);
+            $this->auth->revoke((int) $session->ttyd_port);
         }
     }
 
@@ -292,15 +292,14 @@ class TerminalService
             return null;
         }
 
-        if (! config('infrastructure.terminal.relay_enabled')) {
+        if (! config('infrastructure.terminal.browser_access_enabled')) {
             return null;
         }
 
-        return sprintf(
-            '/terminal/%s/?t=%s',
-            $session->ttyd_port,
-            $session->credential,
-        );
+        // No credential in the address. Apache checks this slot's per-session password file,
+        // so the secret is presented as HTTP Basic rather than carried in a query string,
+        // where it would be written to the access log and to browser history.
+        return sprintf('/terminal/%s/', $session->ttyd_port);
     }
 
     /**
@@ -352,7 +351,6 @@ class TerminalService
             '-p', (string) $port,
             '-W',
             '-t', 'titleFixed='.$this->shellUser.'@'.$containerName,
-            '-c', 'imnehnet:'.$credential,
             'incus',
             'exec',
             $this->incusRemote.$containerName,
@@ -372,29 +370,53 @@ class TerminalService
         // request, and a pipe nobody drains would fill and block the shell. A
         // file also keeps the reason a session refused to open, which is the
         // difference between a diagnosable failure and a blank terminal.
-        $process = new Process($this->logged($command, $this->logPath($port)), null, [
-            'TERM' => 'xterm-256color',
-            'LANG' => 'C.UTF-8',
-            'LC_ALL' => 'C.UTF-8',
-        ]);
-        $process->setTimeout(null);
+        $log = $this->logPath($port);
 
-        $process->start();
+        // proc_open with the descriptors already pointing at a file, and no wrapper object.
+        //
+        // Symfony's Process kills its child in __destruct() — vendor/symfony/process/Process.php
+        // line 224 — which runs when this request ends. So the listener bound its port and was
+        // dead a second later, and ttyd's own log showed nothing but the signal. PHP does not
+        // touch a raw proc_open child at shutdown, so the listener outlives its request by
+        // construction rather than by a flag being set.
+        //
+        // The command is an array, so PHP execs it directly: no shell, and nothing to quote.
+        $descriptors = [
+            0 => ['file', '/dev/null', 'r'],
+            1 => ['file', $log, 'a'],
+            2 => ['file', $log, 'a'],
+        ];
 
-        $pid = $process->getPid();
+        $environment = $this->environment();
+        $command = in_array('setsid', $environment, true) ? $command : array_merge(['setsid'], $command);
 
-        if (! is_int($pid)) {
+        $handle = proc_open($command, $descriptors, $pipes, null, $environment);
+
+        if (! is_resource($handle)) {
+            throw new RuntimeException(sprintf(
+                'The terminal process could not be started. See %s for the reason.',
+                $log,
+            ));
+        }
+
+        $status = proc_get_status($handle);
+
+        // Deliberately not calling proc_close(): it waits for the child, which is the opposite
+        // of what this is for. The handle goes out of scope and the listener keeps running.
+        $pid = (int) ($status['pid'] ?? 0);
+
+        if ($pid <= 1) {
             throw new RuntimeException('The terminal process could not be started.');
         }
 
-        // ttyd exits immediately when it cannot bind. Catching that here turns a
-        // silent failure into a refused session instead of a blank terminal.
-        usleep(250_000);
+        // ttyd exits at once if it cannot bind. Without this pause a failure is recorded as a
+        // session that opened, and the browser is handed an address to a dead port.
+        usleep(300_000);
 
         if (! $this->isTerminalProcess($pid)) {
             throw new RuntimeException(sprintf(
                 'The terminal process did not start. See %s for the reason.',
-                $this->logPath($port),
+                $log,
             ));
         }
 
@@ -506,25 +528,28 @@ class TerminalService
     }
 
     /**
-     * The same command, with its output redirected to a file.
+     * The environment a listener is started in.
      *
-     * Symfony's Process has no setOutputFile — it collects stdout and stderr on pipes and
-     * offers nothing to attach a file to. This process outlives the request that started
-     * it, so those pipes are never drained: they fill, and the shell stops accepting
-     * input. The redirect has to come from the command itself.
+     * PATH is inherited rather than left to chance: the ssh the lab nodes are reached through is
+     * found by name, and a listener with a bare PATH opens no shell at all.
      *
-     * exec, so the pid handed back is ttyd's own and not a wrapper's. terminate() signals
-     * the process group, and a shell wrapper sitting in that group would be a different
-     * process from the one the session row names.
-     *
-     * @param  list<string>  $command
      * @return list<string>
      */
-    private function logged(array $command, string $logPath): array
+    private function environment(): array
     {
-        $parts = array_map('escapeshellarg', $command);
+        $pairs = [
+            'TERM=xterm-256color',
+            'LANG=C.UTF-8',
+            'LC_ALL=C.UTF-8',
+        ];
 
-        return ['sh', '-c', 'exec '.implode(' ', $parts).' >> '.escapeshellarg($logPath).' 2>&1'];
+        $path = getenv('PATH');
+
+        if (is_string($path) && $path !== '') {
+            $pairs[] = 'PATH='.$path;
+        }
+
+        return $pairs;
     }
 
     private function logPath(int $port): string

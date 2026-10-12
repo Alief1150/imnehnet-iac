@@ -206,11 +206,12 @@ return [
         'port_range_max' => (int) env('TERMINAL_PORT_RANGE_MAX', 38007),
         'log_directory' => env('TERMINAL_LOG_DIRECTORY', storage_path('logs/terminal')),
 
-        // The file Apache reads to decide which slot is leased and with which
-        // token. Its directory has to be shared between the two: the portal
-        // writes it, Apache reads it. The vhost refuses a terminal path whose
-        // token is not in this file, so an unleased slot cannot be reached.
-        'slot_map_file' => env('TERMINAL_SLOT_MAP_FILE', '/var/lib/imnehnet/terminal/slots.map'),
+        // The password file Apache reads for this slot. Its existence is the lease: the
+        // vhost tests for the file on every request, so a slot opens when the portal writes
+        // it and closes when the portal deletes it. This replaces a single "port token" map
+        // behind a RewriteMap, which could do neither — the map was read once when the server
+        // started, so a slot leased after that was never reachable.
+        'auth_directory' => env('TERMINAL_AUTH_DIRECTORY', '/var/lib/imnehnet/terminal/htpasswd'),
 
         // Whether the portal hands a browser a terminal address at all.
         //
