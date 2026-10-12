@@ -445,3 +445,74 @@ A live guided lab is running against `ctf-student@imnehnet.test` (password
 `Koral-Mekanisme-9917`), owned by session `#16`. Its containers are the attacker
 `attacker-106` and the victim `victim-web-106` at `10.20.0.106`, permitted as a
 pair, with `ctf-http` active on the victim.
+
+## 6. Terminal — what is proven, and what it cost
+
+The administrative console opens a real shell on IAAS-MGMT, LAB-ENV or LAB-ATK, and a student
+opens one inside their own container. Both were proven end to end against the running host on
+all three nodes: HTTP 401 with no credential, HTTP 200 with the session's own, HTTP 401 with a
+wrong one, HTTP 403 once the session is closed. That is the whole chain — service, lease file,
+Apache, listener.
+
+### Three faults that made it impossible, in the order they had to be found
+
+**The listener died seconds after it started.** ttyd bound its port and was gone a second later,
+and its own log carried nothing but `received signal: SIGTERM`. Symfony's `Process` kills its
+child in `__destruct__` (`vendor/symfony/process/Process.php:224`), which runs when the request
+ends — correct for a command whose output you meant to collect, wrong for a listener meant to
+outlive the request. Both services now use `proc_open` with the descriptors already pointed at a
+log file, and there is no wrapper object to fire. `setsid` is prepended so the listener leads its
+own session and a signal aimed at it cannot reach the web server or a worker nearby.
+
+**The token gate could not work, and looked like it could.** The vhost gated `/terminal/` on a
+`RewriteMap` lookup against a single `port token` file. A `txt:` map is read when the server
+starts, so a slot leased afterwards is never in it — and the lookup was keyed by a rewrite
+backreference, which does not resolve, so every lookup returned NONE and *every* request was
+refused, a correct token included. Two repairs were tried and both were wrong: comparing against
+`%2` (a backreference that did not exist, because the URI condition captured nothing) and against
+`%1` (keying the lookup by the token, when the map is keyed by port). What settled it was a
+bisect — removing only the map condition, with the capture conditions untouched, answered 503
+instead of 403 — which places the fault on the lookup and nowhere else. The gate is now a
+password file per slot: its existence is the lease, tested per request, and `Require valid-user`
+checks the same file. Verified that a slot written after the last reload is reachable without a
+reload, and gone the moment its file is deleted.
+
+**Nobody could hold a lecturer account.** `UserRole` had a `Lecturer` case and `users.role` was an
+ENUM of `admin, student`, so every insert was refused by the database and
+`canOperateInfrastructure()` returned true for a role no account could hold.
+
+### Ownership of the terminal directory — this is the part to get right on a new host
+
+```
+/var/lib/imnehnet/terminal/htpasswd   root:www-data  2770   (setgid)
+```
+
+Three facts have to hold together, and each was got wrong at least once:
+
+- `iaas` must be in group `www-data` (`usermod -aG www-data iaas`), or the portal cannot write a
+  lease — the web requests run as `www-data` and would be fine, while artisan and any queue
+  worker could not.
+- the directory must be **setgid**, or each file the portal writes inherits group `iaas` and Apache
+  loses the ability to read it. `chgrp` by hand does not survive: the file is replaced on every
+  session.
+- the directory must be group-**writable** (2770, not 2750), because writing the lease is the
+  mechanism.
+
+The old `slots.map` directory at the same path had the same three faults, which is why the gate
+refused everything even once the rules were correct.
+
+### Two things that are deliberately not how they look
+
+Both terminal pages open the shell in a **tab**, not an iframe, and offer the credential behind a
+disclosure. HTTP Basic cannot be answered from inside an iframe — there is no attribute for an
+Authorization header — so an embedded frame reaches ttyd, gets a 401 it cannot answer, and
+renders a blank panel that reads as a broken terminal. The address itself carries no credential;
+that was the other half of the change, since a token in a query string is written to the access
+log, to browser history and to the Referer of anything the page loads.
+
+Two open items, both honest rather than finished: the administrative shell refuses to spawn unless
+the PHP process is running as `iaas`, which is true for artisan but **not** for php-fpm — so
+opening a session from the admin panel in a browser still needs a dedicated runner, and the error
+message says so. And `deploy/apache/imnehnet-portal.conf` is what the portal's own deployment
+would install; the copy on this host was edited by hand, so the two must be reconciled by a human
+with sudo rather than assumed identical.
