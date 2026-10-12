@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\LabEnvironment;
 use App\Models\TerminalSession;
 use App\Services\TerminalService;
+use App\Services\Terminal\AdminTerminalService;
 use App\Support\Lucide;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -46,10 +47,182 @@ final class Terminal extends Page
     public ?int $selectedEnvironmentId = null;
 
     /**
-     * Admin Terminal selects infrastructure hosts, not student LabEnvironment
-     * records. Transport is intentionally added in the next phase.
+ * Admin Terminal selects infrastructure hosts, not student LabEnvironment
+     * records. Transport is attached by AdminTerminalService, which is the only
+     * thing that may start one.
      */
     public string $selectedAdminTarget = 'iaas-mgmt';
+
+    /**
+     * Open a shell on the selected node.
+     *
+     * Every refusal is turned into a message on the page rather than an exception,
+     * because the refusals are the expected cases here: an unprivileged role, a node
+     * that will not answer, a slot that is already in use. A stack trace for any of
+     * those tells an operator nothing they can act on.
+     */
+    public function openAdminSession(): void
+    {
+        $user = auth()->user();
+
+        if ($user === null) {
+            $this->deny();
+
+            return;
+        }
+
+        try {
+            $session = app(AdminTerminalService::class)->open($user, $this->selectedAdminTarget);
+
+            Notification::make()
+                ->title('Shell opened')
+                ->body(sprintf('Connected to %s as %s.', $session->target_node, $session->shell_user))
+                ->success()
+                ->send();
+        } catch (\Throwable $exception) {
+            Notification::make()
+                ->title('Could not open a shell')
+                ->body($exception->getMessage())
+                ->danger()
+                ->persistent()
+                ->send();
+        }
+    }
+
+    /**
+     * Close this person's live shell on the selected node.
+     */
+    public function closeAdminSession(): void
+    {
+        $session = $this->adminSession();
+
+        if ($session === null) {
+            return;
+        }
+
+        app(AdminTerminalService::class)->close($session);
+
+        Notification::make()
+            ->title('Shell closed')
+            ->body('The listener was stopped and its credential revoked.')
+            ->success()
+            ->send();
+    }
+
+    /**
+     * This person's live shell on the selected node, if there is one.
+     *
+     * Scoped to the signed-in user rather than to "the newest row for this node": a
+     * node can have one shell per person, and an administrator must never be shown
+     * another administrator's terminal.
+     */
+    public function adminSession(): ?TerminalSession
+    {
+        $user = auth()->user();
+
+        if ($user === null || ! $user->canOperateInfrastructure()) {
+            return null;
+        }
+
+        return TerminalSession::query()
+            ->where('user_id', $user->getKey())
+            ->where('target_kind', 'node')
+            ->where('target_node', $this->selectedAdminTarget)
+            ->whereNull('closed_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * The URL the browser opens for the shell.
+     *
+     * Null when there is no live session, and null again when browser access is switched
+     * off — the same gate terminalUrl() applies, because an administrative shell is a
+     * shell like any other and a deployment that has decided not to hand shells to
+     * browsers has not decided that administrators are the exception.
+     *
+     * No credential in the path or the query. ttyd's -c is HTTP Basic auth, verified on
+     * this host: no credential answers 401, the right one answers 200 and upgrades the
+     * websocket. A query parameter is not read as a credential by anything, and it is
+     * written to the access log, to browser history, and to the Referer of anything the
+     * page loads. The secret is offered to the operator separately by
+     * AdminTerminalService::credentialsFor().
+     */
+    public function adminUrl(): ?string
+    {
+        if (! config('infrastructure.terminal.browser_access_enabled')) {
+            return null;
+        }
+
+        $session = $this->adminSession();
+
+        if ($session === null) {
+            return null;
+        }
+
+        return app(AdminTerminalService::class)->browserUrl($session);
+    }
+
+    /**
+     * The pair the browser must present, for the operator to be handed.
+     *
+     * Surfaced rather than embedded. An iframe cannot send an Authorization header —
+     * there is no attribute for it — so the shell opens in its own tab and the browser is
+     * prompted once.
+     *
+     * @return array{user: string, password: string}|null
+     */
+    public function adminCredentials(): ?array
+    {
+        $session = $this->adminSession();
+
+        return $session === null
+            ? null
+            : app(AdminTerminalService::class)->credentialsFor($session);
+    }
+
+    /**
+     * Whether the shell is alive, for the badge.
+     *
+     * Reports NOT REACHABLE rather than Disconnected when a session exists but the
+     * deployment is not handing addresses to browsers. Those are different situations and
+     * the operator has to be able to tell them apart: one is a shell that died, the other
+     * is a shell that is fine and cannot be seen.
+     */
+    public function adminSessionState(): array
+    {
+        $session = $this->adminSession();
+
+        if ($session === null) {
+            return [
+                'connected' => false,
+                'reachable' => false,
+                'label' => 'Disconnected',
+                'duration' => 'Not started',
+            ];
+        }
+
+        $connected = app(AdminTerminalService::class)->isConnected($session);
+        $reachable = (bool) config('infrastructure.terminal.browser_access_enabled');
+
+        return [
+            'connected' => $connected,
+            'reachable' => $reachable,
+            'label' => match (true) {
+                ! $connected => 'Disconnected',
+                ! $reachable => 'Not reachable',
+                default => 'Connected',
+            },
+            'duration' => $session->created_at === null
+                ? 'Not started'
+                : sprintf(
+                    '%02d:%02d:%02d',
+                    intdiv((int) $session->created_at->diffInSeconds(now()), 3600),
+                    intdiv((int) $session->created_at->diffInSeconds(now()) % 3600, 60),
+                    (int) $session->created_at->diffInSeconds(now()) % 60,
+                ),
+        ];
+    }
 
     /**
      * @return list<array{key:string,name:string,role:string,address:?string,health:string,healthLabel:string,detail:?string}>
@@ -94,7 +267,7 @@ final class Terminal extends Page
 
     public function selectAdminTarget(string $target): void
     {
-        if (! auth()->user()?->isAdmin()) {
+        if (! auth()->user()?->canOperateInfrastructure()) {
             abort(403);
         }
 
@@ -128,7 +301,7 @@ final class Terminal extends Page
 
     public function getSubheading(): string|Htmlable|null
     {
-        return auth()->user()?->isAdmin()
+        return auth()->user()?->canOperateInfrastructure()
             ? 'Secure administrative console for authorized IMNEHNET lab environments.'
             : 'Secure shell access to your assigned IMNEHNET lab environment.';
     }

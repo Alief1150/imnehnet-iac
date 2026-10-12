@@ -133,7 +133,7 @@ test('the page hands the browser no address while browser access is off', functi
     expect($page->terminalUrl(runningEnv()))->toBeNull();
 });
 
-test('the page states that browser access is off, and mounts no frame', function () {
+test('the admin page does not mount a terminal iframe without an authorized session', function () {
     config()->set('infrastructure.terminal.browser_access_enabled', false);
 
     $this->actingAs(anAdmin());
@@ -141,7 +141,7 @@ test('the page states that browser access is off, and mounts no frame', function
 
     $this->get(Terminal::getUrl(panel: 'admin'))
         ->assertSuccessful()
-        ->assertSee('Browser access is switched off')
+        ->assertSee('Disconnected')
         ->assertDontSee('<iframe', false);
 });
 
@@ -182,16 +182,18 @@ test('an administrator sees every environment', function () {
         ->toContain('lab-one', 'lab-two');
 });
 
-test('the page prints container names from the inventory and nothing else', function () {
+test('the admin page shows the three infrastructure nodes and no student containers', function () {
     $this->actingAs(anAdmin());
     runningEnv(['container_name' => 'lab-web-smoke']);
 
-    $content = $this->get(Terminal::getUrl(panel: 'admin'))->assertSuccessful()->getContent();
+    $content = $this->get(Terminal::getUrl(panel: 'admin'))
+        ->assertSuccessful()->getContent();
 
-    // The reference container and the containers that are not in the inventory
-    // must never appear: the page renders what the database says exists.
     expect($content)
-        ->toContain('lab-web-smoke')
+        ->toContain('IAAS-MGMT')
+        ->toContain('LAB-ENV')
+        ->toContain('LAB-ATK')
+        ->not->toContain('lab-web-smoke')
         ->not->toContain('lab-tofu-test')
         ->not->toContain('victim-demo');
 });

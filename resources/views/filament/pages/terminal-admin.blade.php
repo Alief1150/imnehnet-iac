@@ -1,7 +1,22 @@
+{{--
+    The administrative console.
+
+    A real shell on an infrastructure node, opened by AdminTerminalService and nothing
+    else. The frame only appears once a session exists, so there is no state in which the
+    page shows a terminal that is not there.
+
+    The target list carries each node's health from InfrastructureTopologyService, so the
+    three cards here and the three plane cards on the Infrastructure page cannot disagree
+    about whether a node is up.
+--}}
 <x-filament-panels::page>
     @php
         $targets = collect($this->adminTargets());
         $selected = $targets->firstWhere('key', $this->selectedAdminTarget) ?? $targets->first();
+        $session = $this->adminSession();
+        $state = $this->adminSessionState();
+        $url = $this->adminUrl();
+        $browserAccess = (bool) config('infrastructure.terminal.browser_access_enabled');
     @endphp
 
     <div class="space-y-5">
@@ -13,10 +28,24 @@
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Choose the infrastructure node for this administrative terminal.</p>
                     </div>
 
-                    <button type="button" disabled class="inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg bg-teal-600 px-3.5 text-sm font-semibold text-white opacity-55 shadow-sm">
-                        {!! \App\Support\Lucide::html('plus') !!}
-                        New Session
-                    </button>
+                    <div class="flex items-center gap-2">
+                        @if ($session)
+                            <button type="button" wire:click="closeAdminSession"
+                                    wire:loading.attr="disabled"
+                                    class="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-300 px-3.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-white/15 dark:text-gray-200 dark:hover:bg-white/5">
+                                {!! \App\Support\Lucide::html('trash') !!}
+                                Close Session
+                            </button>
+                        @endif
+
+                        <button type="button" wire:click="openAdminSession"
+                                wire:loading.attr="disabled"
+                                wire:target="openAdminSession"
+                                class="inline-flex h-9 items-center gap-2 rounded-lg bg-teal-600 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
+                            {!! \App\Support\Lucide::html($session ? 'rotate-ccw' : 'plus') !!}
+                            {{ $session ? 'Reconnect' : 'New Session' }}
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid gap-3 md:grid-cols-3">
@@ -27,17 +56,14 @@
                             $isDegraded = $target['health'] === 'degraded';
                         @endphp
 
-                        <button
-                            type="button"
-                            wire:click="selectAdminTarget('{{ $target['key'] }}')"
-                            wire:key="admin-terminal-target-{{ $target['key'] }}"
-                            aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
-                            @class([
-                                'group relative min-h-24 rounded-xl border p-4 text-left transition duration-150',
-                                'border-teal-500 bg-teal-50/70 ring-1 ring-teal-500/15 dark:border-teal-500 dark:bg-teal-500/10' => $isSelected,
-                                'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-900 dark:hover:border-white/20 dark:hover:bg-white/[0.03]' => ! $isSelected,
-                            ])
-                        >
+                        <button type="button" wire:click="selectAdminTarget('{{ $target['key'] }}')"
+                                wire:key="admin-terminal-target-{{ $target['key'] }}"
+                                aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                                @class([
+                                    'group relative min-h-24 rounded-xl border p-4 text-left transition duration-150',
+                                    'border-teal-500 bg-teal-50/70 ring-1 ring-teal-500/15 dark:border-teal-500 dark:bg-teal-500/10' => $isSelected,
+                                    'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-900 dark:hover:border-white/20 dark:hover:bg-white/[0.03]' => ! $isSelected,
+                                ])>
                             <div class="flex items-start gap-3">
                                 <span @class([
                                     'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border',
@@ -50,7 +76,7 @@
                                 </span>
 
                                 <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300">
-                                    {!! \App\Support\Lucide::html($target['key'] === 'lab-env' ? 'database' : 'server') !!}
+                                    {!! \App\Support\Lucide::html($target['key'] === 'lab-env' ? 'database' : ($target['key'] === 'lab-atk' ? 'shield' : 'server')) !!}
                                 </span>
 
                                 <span class="min-w-0 flex-1">
@@ -62,7 +88,7 @@
                                     'mt-1 inline-flex items-center gap-1.5 text-xs font-medium',
                                     'text-emerald-600 dark:text-emerald-400' => $isOnline,
                                     'text-amber-600 dark:text-amber-400' => $isDegraded,
-                                    'text-rose-600 dark:text-rose-400' => ! $isOnline && ! $isDegraded && $target['health'] === 'offline',
+                                    'text-rose-600 dark:text-rose-400' => ! $isOnline && ! $isDegraded,
                                     'text-gray-500 dark:text-gray-400' => $target['health'] === 'unknown',
                                 ])>
                                     <span class="size-1.5 rounded-full bg-current"></span>
@@ -72,6 +98,16 @@
                         </button>
                     @endforeach
                 </div>
+
+                {{-- What opening a shell actually does, said where the button is.
+                     A control that grants root-adjacent access with no statement of what
+                     it grants is a control nobody can consent to. --}}
+                <p class="mt-4 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    Opening a session runs a shell on the selected node as a privileged account and is
+                    recorded in the activity log. The listener is bound to loopback and carries a
+                    per-session credential; it is not reachable from the lab network. Opening a new
+                    session on a node closes the one already there and revokes its credential.
+                </p>
             </div>
         </section>
 
@@ -85,46 +121,163 @@
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <h2 class="text-sm font-semibold text-gray-950 dark:text-white">{{ $selected['name'] }}</h2>
-                                <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-300">
-                                    <span class="size-1.5 rounded-full bg-gray-400"></span>
-                                    Disconnected
+                                {{-- Three states, not two. A shell that is running but that
+                                     this deployment will not hand to a browser is neither
+                                     Connected nor Disconnected, and collapsing it into
+                                     either one sends the operator to look for a dead
+                                     listener that is in fact fine. --}}
+                                <span @class([
+                                    'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                                    'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' => $state['connected'] && $state['reachable'],
+                                    'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' => $state['connected'] && ! $state['reachable'],
+                                    'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-300' => ! $state['connected'],
+                                ])>
+                                    <span @class([
+                                        'size-1.5 rounded-full',
+                                        'bg-emerald-500' => $state['connected'] && $state['reachable'],
+                                        'bg-amber-500' => $state['connected'] && ! $state['reachable'],
+                                        'bg-gray-400' => ! $state['connected'],
+                                    ])></span>
+                                    {{ $state['label'] }}
                                 </span>
                             </div>
                             <p class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
                                 {{ $selected['address'] ?: 'Address unavailable' }}
+                                @if ($session?->shell_user)
+                                    &middot; {{ $session->shell_user }}
+                                @endif
                             </p>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-1">
-                        <button type="button" disabled title="Available after terminal transport integration" class="inline-flex size-8 cursor-not-allowed items-center justify-center rounded-lg text-gray-400 opacity-60">
-                            {!! \App\Support\Lucide::html('maximize') !!}
-                        </button>
-                        <button type="button" disabled title="Available after terminal transport integration" class="inline-flex size-8 cursor-not-allowed items-center justify-center rounded-lg text-gray-400 opacity-60">
-                            {!! \App\Support\Lucide::html('ellipsis-vertical') !!}
-                        </button>
-                    </div>
+                    @if ($url)
+                        <a href="{{ $url }}" target="_blank" rel="noopener"
+                           title="Open the shell in a new tab"
+                           class="inline-flex h-8 items-center gap-2 rounded-lg border border-gray-300 px-3 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-white/15 dark:text-gray-200 dark:hover:bg-white/5">
+                            {!! \App\Support\Lucide::html('terminal') !!}
+                            Open Shell
+                        </a>
+                    @endif
                 </header>
 
-                <div class="relative flex min-h-[31rem] items-center justify-center bg-[#0b1118] px-6 py-12 text-center">
-                    <div class="max-w-md">
-                        <div class="mx-auto flex size-12 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-teal-400 shadow-sm">
-                            {!! \App\Support\Lucide::html('terminal') !!}
+                @if (! $browserAccess)
+                    {{-- The deployment is not handing shells to browsers. Said here rather
+                         than implied by an absence: an administrator looking at a blank
+                         panel has no way to tell a misconfiguration from a fault. --}}
+                    <div class="flex min-h-[31rem] flex-col items-center justify-center bg-[#0b1118] px-6 py-12 text-center">
+                        <div class="max-w-md">
+                            <div class="mx-auto flex size-12 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-amber-400 shadow-sm">
+                                {!! \App\Support\Lucide::html('terminal') !!}
+                            </div>
+                            <h3 class="mt-4 text-sm font-semibold text-white">Browser access is switched off</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-400">
+                                @if ($session)
+                                    The shell on <strong>{{ $selected['name'] }}</strong> is running, but this
+                                    deployment does not hand terminal addresses to browsers, so there is nothing
+                                    for a browser to open. This is a deployment setting, not a fault in the
+                                    session.
+                                @else
+                                    Sessions can be opened, but this deployment does not hand terminal addresses
+                                    to browsers. Set
+                                    <code class="rounded bg-slate-800 px-1 py-0.5 font-mono text-xs">infrastructure.terminal.browser_access_enabled</code>
+                                    to reach a shell from a page.
+                                @endif
+                            </p>
                         </div>
-                        <h3 class="mt-4 text-sm font-semibold text-white">Terminal transport not connected</h3>
-                        <p class="mt-2 text-sm leading-6 text-slate-400">
-                            The administrative terminal UI is ready. Real-time shell transport for {{ $selected['name'] }} will be attached in the WebSocket integration phase.
-                        </p>
                     </div>
-                </div>
+                @elseif (! $url)
+                    {{-- No frame is mounted here, and that is deliberate.
+
+                         ttyd's -c is HTTP Basic auth — verified on this host: no credential
+                         answers 401 with www-authenticate: Basic realm="ttyd", the right
+                         one answers 200 and upgrades the websocket. An iframe cannot send
+                         an Authorization header; there is no attribute for it. So an
+                         embedded frame here would show a blank 401 that looks like a
+                         broken shell, and the only reason to discover that is to open the
+                         page and try. The shell opens in its own tab instead, where the
+                         browser presents the challenge and the operator answers it. --}}
+                    <div class="flex min-h-[31rem] flex-col items-center justify-center bg-[#0b1118] px-6 py-12 text-center">
+                        <div class="max-w-md">
+                            <div class="mx-auto flex size-12 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-teal-400 shadow-sm">
+                                {!! \App\Support\Lucide::html('terminal') !!}
+                            </div>
+                            <h3 class="mt-4 text-sm font-semibold text-white">
+                                {{ match (true) {
+                                    $session !== null => 'Shell running, browser cannot attach',
+                                    $selected['health'] !== 'healthy' => 'Target not reachable',
+                                    default => 'No open session',
+                                } }}
+                            </h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-400">
+                                @if ($session !== null)
+                                    The listener is up on the loopback port, but the session has no address the
+                                    browser will be given. Close it and open a new one.
+                                @elseif ($selected['health'] !== 'healthy')
+                                    The probe for {{ $selected['name'] }} did not report a healthy state, so a shell
+                                    would not survive. See the Infrastructure page for what it reports.
+                                @else
+                                    Choose <strong>{{ $selected['name'] }}</strong> and press
+                                    <strong>New Session</strong>. The shell runs on the node itself, not in your
+                                    browser.
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                @else
+                    <div class="bg-[#0b1118] px-5 py-8">
+                        <div class="flex flex-col items-center gap-5 py-6 text-center">
+                            <div class="mx-auto flex size-12 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-teal-400 shadow-sm">
+                                {!! \App\Support\Lucide::html('terminal') !!}
+                            </div>
+                            <div class="max-w-md">
+                                <h3 class="text-sm font-semibold text-white">Shell ready on {{ $selected['name'] }}</h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-400">
+                                    The browser asks for this session's credential once. It is below, and it is
+                                    not written into the address — a query string would be copied into the access
+                                    log and into browser history.
+                                </p>
+                                <a href="{{ $url }}" target="_blank" rel="noopener"
+                                   class="mt-5 inline-flex h-9 items-center gap-2 rounded-lg bg-teal-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-teal-700">
+                                    {!! \App\Support\Lucide::html('terminal') !!}
+                                    Open Shell
+                                </a>
+                            </div>
+                        </div>
+
+                        @if ($credentials = $this->adminCredentials())
+                            {{-- Behind a disclosure rather than shown inline: it is a secret
+                                 that lives as long as the session does, and a page that
+                                 displays one by default is a page that photographs one. --}}
+                            <details class="mx-auto max-w-md rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3 text-left">
+                                <summary class="cursor-pointer list-none text-xs font-semibold text-slate-300 hover:text-white">
+                                    Session credential
+                                </summary>
+                                <dl class="mt-3 space-y-2 font-mono text-xs">
+                                    <div class="flex items-baseline gap-3">
+                                        <dt class="w-20 shrink-0 text-slate-500">username</dt>
+                                        <dd class="text-slate-200">{{ $credentials['user'] }}</dd>
+                                    </div>
+                                    <div class="flex items-baseline gap-3">
+                                        <dt class="w-20 shrink-0 text-slate-500">password</dt>
+                                        <dd class="select-all break-all text-teal-300">{{ $credentials['password'] }}</dd>
+                                    </div>
+                                </dl>
+                                <p class="mt-3 text-[11px] leading-relaxed text-slate-500">
+                                    Closing the session revokes this. Closing the tab does not — the reaper does,
+                                    after the session's own window expires.
+                                </p>
+                            </details>
+                        @endif
+                    </div>
+                @endif
 
                 <footer class="grid border-t border-gray-200 bg-white sm:grid-cols-3 sm:divide-x sm:divide-gray-200 dark:border-white/10 dark:bg-gray-900 dark:sm:divide-white/10">
                     <div class="flex items-center gap-3 px-5 py-3.5">
                         <span class="flex size-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">{!! \App\Support\Lucide::html('clock') !!}</span>
-                        <div><p class="text-[11px] text-gray-400">Session Duration</p><p class="text-xs font-semibold text-gray-700 dark:text-gray-200">Not started</p></div>
+                        <div><p class="text-[11px] text-gray-400">Session Duration</p><p class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{ $state['duration'] }}</p></div>
                     </div>
                     <div class="flex items-center gap-3 border-t border-gray-200 px-5 py-3.5 sm:border-t-0 dark:border-white/10">
-                        <span class="flex size-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">{!! \App\Support\Lucide::html('user') !!}</span>
+                        <span class="flex size-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">{!! \App\Support\Lucide::html('users') !!}</span>
                         <div class="min-w-0"><p class="text-[11px] text-gray-400">User</p><p class="truncate text-xs font-semibold text-gray-700 dark:text-gray-200">{{ auth()->user()?->name ?? 'Administrator' }}</p></div>
                     </div>
                     <div class="flex items-center gap-3 border-t border-gray-200 px-5 py-3.5 sm:border-t-0 dark:border-white/10">
