@@ -596,3 +596,17 @@ applies: an upgrade with no credential answers 401, verified live in both direct
 `sites-enabled/imnehnet-portal.conf` is a symlink to `sites-available` again, so there is one
 vhost file rather than a hand copy drifting from the repository. If it is ever a copy again,
 that drift is how three versions of one vhost came to exist.
+
+Two more facts the gate depends on, both found the hard way:
+
+- **The address pattern must admit the client's subpaths.** The page is `/`, the handshake is
+  `/token` and the shell is `/ws`. An early version of the embed rules anchored the address at
+  the bare slot root, so the page loaded 200 while `/token` and `/ws` answered 403 behind it —
+  a console that renders and never connects, proven by its own access log. The pattern now
+  allows subpaths while still binding the port to the cookie's ticket.
+- **The websocket needs the `tty` subprotocol.** The client opens
+  `new WebSocket(url, ["tty"])`, and on this host's libwebsockets build an upgrade without it
+  completes (101) but runs no protocol handler: no shell is spawned, nothing is ever sent, and
+  the connection sits open and silent. With the subprotocol the server logs `started process`
+  and streams. Any future proof that "the shell works" must type a command and read the echo
+  back — page 200 and handshake 101 have both been green on a dead shell.
