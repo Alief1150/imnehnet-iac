@@ -34,9 +34,13 @@ talking to two terminals at once.
 or by hopping through IAAS-MGMT. Any note that gives it as the portal's address is
 wrong for anyone outside.
 
-To see the course as a student: `ctf-student@imnehnet.test` / `Koral-Mekanisme-9917`.
-It owns a finished lab, so the page opens on the results — `Finish Lab` clears it back
-to a fresh run. The administrator is `imnehnetkelompok5@gmail.com`.
+To see the course as a student, sign in as `ctf-student@imnehnet.test`. Its password is not
+written here: it belongs to a real account, and a password that is committed is a password
+that has to be changed rather than edited. The same value appears in
+`tests/Feature/Filament/StudentRegistrationTest.php`, where it is a fixture for an account
+the factory creates and no account has. It owns a finished lab, so the page opens on the
+results — `Finish Lab` clears it back to a fresh run. The administrator is
+`imnehnetkelompok5@gmail.com`, whose password is likewise not written down anywhere.
 
 Nothing here is held on a laptop. Every container, database row and process lives on
 IAAS-MGMT, LAB-ENV and LAB-ATK, so the machine this was written on can be switched off
@@ -441,8 +445,7 @@ terminal token gate returning 403 on a bogus token. Port 80 is the one to use:
 `artisan serve` is a single worker and serialises two students talking to two
 terminals at once.
 
-A live guided lab is running against `ctf-student@imnehnet.test` (password
-`Koral-Mekanisme-9917`), owned by session `#16`. Its containers are the attacker
+A live guided lab is running against `ctf-student@imnehnet.test`, owned by session `#16`. Its containers are the attacker
 `attacker-106` and the victim `victim-web-106` at `10.20.0.106`, permitted as a
 pair, with `ctf-http` active on the victim.
 
