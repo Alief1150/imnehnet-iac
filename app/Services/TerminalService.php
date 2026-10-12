@@ -358,22 +358,26 @@ class TerminalService
             $this->incusRemote.$containerName,
             '--user', (string) $shellUid,
             '--',
+            // bash -l, not bash -i — see AdminTerminalService::NODES. The ttyd build this
+            // project is configured to use segfaults on an interactive shell command, so
+            // this line was one of the two reasons a student terminal had never once
+            // opened a shell.
             'bash',
-            '-i',
+            '-l',
         ];
 
-        $process = new Process($command, null, [
+        $this->prepareLogDirectory();
+
+        // Output goes to a file rather than a pipe. This process outlives the
+        // request, and a pipe nobody drains would fill and block the shell. A
+        // file also keeps the reason a session refused to open, which is the
+        // difference between a diagnosable failure and a blank terminal.
+        $process = new Process($this->logged($command, $this->logPath($port)), null, [
             'TERM' => 'xterm-256color',
             'LANG' => 'C.UTF-8',
             'LC_ALL' => 'C.UTF-8',
         ]);
         $process->setTimeout(null);
-        // Output goes to a file rather than a pipe. This process outlives the
-        // request, and a pipe nobody drains would fill and block the shell. A
-        // file also keeps the reason a session refused to open, which is the
-        // difference between a diagnosable failure and a blank terminal.
-        $this->prepareLogDirectory();
-        $process->setOutputFile($this->logPath($port));
 
         $process->start();
 
@@ -499,6 +503,28 @@ class TerminalService
         if (! is_dir($this->logDirectory)) {
             @mkdir($this->logDirectory, 0o775, true);
         }
+    }
+
+    /**
+     * The same command, with its output redirected to a file.
+     *
+     * Symfony's Process has no setOutputFile — it collects stdout and stderr on pipes and
+     * offers nothing to attach a file to. This process outlives the request that started
+     * it, so those pipes are never drained: they fill, and the shell stops accepting
+     * input. The redirect has to come from the command itself.
+     *
+     * exec, so the pid handed back is ttyd's own and not a wrapper's. terminate() signals
+     * the process group, and a shell wrapper sitting in that group would be a different
+     * process from the one the session row names.
+     *
+     * @param  list<string>  $command
+     * @return list<string>
+     */
+    private function logged(array $command, string $logPath): array
+    {
+        $parts = array_map('escapeshellarg', $command);
+
+        return ['sh', '-c', 'exec '.implode(' ', $parts).' >> '.escapeshellarg($logPath).' 2>&1'];
     }
 
     private function logPath(int $port): string

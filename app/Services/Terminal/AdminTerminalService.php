@@ -4,9 +4,9 @@ namespace App\Services\Terminal;
 
 use App\Models\TerminalSession;
 use App\Models\User;
+use App\Support\TerminalSlotGrants;
 use App\Services\ActivityLogService;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -18,68 +18,60 @@ use Throwable;
  *
  * ── Why this is separate from TerminalService ──────────────────────────────────────
  *
- * They are not the same thing with a different argument. A student shell is a shell
- * inside a container they were handed, running as a uid resolved from that container, and
- * the whole point is that it can reach nothing else. This one is a shell on the host that
- * runs the portal, as an account that can sudo — it reaches everything by construction.
- * Sharing one class would mean every rule about the first had to be stated as an exception
- * to the second, and the day someone adds a method and forgets which half it belongs to is
- * the day a student gets a root shell.
+ * They are not the same thing with a different argument. A student shell is a shell inside
+ * a container they were handed, running as a uid resolved from that container, and the whole
+ * point is that it reaches nothing else. This one is a shell on the host that runs the
+ * portal, as an account that can sudo — it reaches everything by construction. Sharing one
+ * class would mean every rule about the first had to be stated as an exception to the
+ * second, and the day someone adds a method and forgets which half it belongs to is the day
+ * a student gets a root shell.
  *
- * ── The five rules, all enforced here rather than at the call sites ────────────────
+ * ── The five rules ─────────────────────────────────────────────────────────────────
  *
- * 1. Only an elevated role. Checked against the role, not against a panel the caller
- *    happened to be rendering.
- * 2. ttyd binds loopback only, and carries a per-session credential. Anyone who reaches
- *    the port still needs the credential, and anyone who reaches the page still needs the
- *    session. Two locks, neither of which depends on the other.
- * 3. One session per user per node. A second open closes the first, so a credential that
- *    leaked from an abandoned tab stops working when the tab is closed rather than living
- *    until its expiry.
- * 4. Every open and close is recorded, before the shell exists and after it is gone. An
- *    audit written on success records nothing about the failures, which are the ones worth
- *    reading.
- * 5. The session is ephemeral. The record survives; the process does not. There is no
- *    path here that leaves a shell running on the host.
+ * 1. Only an elevated role. Asked of the role on the account, not of the panel that happens
+ *    to be rendering the page.
+ * 2. The listener is loopback only and carries a per-session credential. Neither lock
+ *    depends on the other.
+ * 3. One session per person per node. A second open closes the first rather than failing.
+ * 4. Every open, close and refusal is recorded — the refusal before the shell exists.
+ * 5. The record survives, the process does not. Nothing here leaves a shell running.
  *
- * ── On the shell's privileges ──────────────────────────────────────────────────────
+ * ── The credential ────────────────────────────────────────────────────────────────
  *
- * The brief is that this is an administrative console: the operator may sudo, and the
- * point is being able to act on the machine rather than observe it. That is granted
- * deliberately rather than as an oversight. What limits it is not the absence of privilege
- * but the four rules above — an elevated role, a loopback listener with a credential, a
- * one-session cap, and an audit trail.
+ * ttyd's `-c` is HTTP Basic authentication in the form username:password, verified against
+ * 1.7.7 on this host: no credential answers 401, the right one answers 200 and upgrades the
+ * websocket, and a wrong one answers 401 again.
+ *
+ * It is deliberately not in the URL. A query string is written to the access log, to browser
+ * history and to the Referer of anything the page loads, and this secret is good for two
+ * hours. The page therefore offers a link and the browser is prompted once.
+ *
+ * An iframe cannot send an Authorization header — there is no attribute for it — so the
+ * shell opens in its own tab rather than embedded. Authenticated-proxy mode (-H) would allow
+ * embedding, but it moves the decision to the web server configuration where one mistake
+ * exposes every slot at once rather than one session.
  */
 class AdminTerminalService
 {
-    /**
-     * Audit actions, named so the two cannot drift apart.
-     *
-     * Plain strings rather than cases on ActivityAction, which is an enum of the
-     * environment lifecycle. These are administration events and do not belong to it.
-     */
-    private const ACTION_OPEN = 'ADMIN_TERMINAL_OPEN';
+    /** The Basic-auth username half. Fixed and arbitrary; not the portal account. */
+    private const AUTH_USER = 'imnehnet';
 
-    private const ACTION_CLOSE = 'ADMIN_TERMINAL_CLOSE';
-
-    /** Bytes of credential per session. Long enough not to be guessed, short enough not to linger. */
+    /** Bytes of credential per session. */
     private const CREDENTIAL_BYTES = 24;
 
     /** How long a session may live if nobody closes it. */
     private const SESSION_MINUTES = 120;
 
+    private const ACTION_OPEN = 'ADMIN_TERMINAL_OPEN';
+
+    private const ACTION_CLOSE = 'ADMIN_TERMINAL_CLOSE';
+
     /**
-     * The nodes that may be opened, and how to reach each one.
+     * The nodes that may be opened, and how to reach each.
      *
-     * The management host is the only one reached directly; the two compute planes are
-     * reached over SSH as a named account on each. Stated here rather than discovered, so
-     * that what this feature can possibly reach is readable in one place — a shell feature
-     * whose targets are resolved at runtime from configuration is one whose reach nobody
-     * can state.
-     *
-     * `command` is what ttyd runs. For the local node it is a login shell; for the others
-     * it is ssh into a fixed account on a fixed address, so a name from a request never
-     * becomes part of the command line.
+     * Declared, not discovered. A shell feature whose targets come from configuration has a
+     * reach nobody can state. Each command is a fixed argument vector, so no name from a
+     * request ever becomes part of a command line.
      *
      * @var list<array{key: string, label: string, role: string, address: ?string, command: list<string>}>
      */
@@ -89,7 +81,19 @@ class AdminTerminalService
             'label' => 'IAAS-MGMT',
             'role' => 'Management Plane',
             'address' => null,
-            'command' => ['bash', '-i'],
+            // bash -l, not bash -i.
+            //
+            // Measured on this host: /home/iaas/bin/ttyd 1.7.7-40e79c7 (static) segfaults
+            // when the command is an interactive shell. `bash`, `bash -l`, `/bin/bash -l`
+            // and `sh` all serve HTTP 200 on the same binary; only -i crashes it. /usr/bin/
+            // ttyd 1.7.4 takes bash -i without complaint, so the flag is safe there and
+            // fatal here — and a console that works on one ttyd build and not the next is
+            // a console waiting for a reinstall to break.
+            //
+            // A login shell is also the right shell for this: it reads /etc/profile, so it
+            // is the environment an operator gets at a console rather than an interactive
+            // shell with no login context.
+            'command' => ['bash', '-l'],
         ],
         [
             'key' => 'lab-env',
@@ -98,6 +102,8 @@ class AdminTerminalService
             'address' => 'lab@192.168.100.20',
             'command' => [
                 'ssh',
+                '-i', '/home/iaas/.ssh/imnehnet_ansible',
+                '-o', 'IdentitiesOnly=yes',
                 '-o', 'StrictHostKeyChecking=accept-new',
                 '-o', 'BatchMode=yes',
                 '-o', 'ConnectTimeout=10',
@@ -128,24 +134,29 @@ class AdminTerminalService
     /**
      * The nodes this person may open, for the target list.
      *
-     * @return list<array<string, mixed>>
+     * @return list<array{key: string, label: string, role: string, address: ?string}>
      */
     public function availableNodes(): array
     {
-        return array_map(fn (array $node): array => [
-            'key' => $node['key'],
-            'label' => $node['label'],
-            'role' => $node['role'],
-            'address' => $node['address'],
-        ], self::NODES);
+        $nodes = [];
+
+        foreach (self::NODES as $node) {
+            $nodes[] = [
+                'key' => $node['key'],
+                'label' => $node['label'],
+                'role' => $node['role'],
+                'address' => $node['address'],
+            ];
+        }
+
+        return $nodes;
     }
 
     /**
      * Open a shell on a node.
      *
-     * @throws RuntimeException when the person may not, or the node is unknown, or the
-     *                           listener did not come up. Every one of those is a refusal
-     *                           rather than a silent empty terminal.
+     * @throws RuntimeException when the person may not, the node is unknown, or the listener
+     *                           did not come up.
      */
     public function open(User $user, string $nodeKey): TerminalSession
     {
@@ -153,8 +164,8 @@ class AdminTerminalService
 
         $node = $this->node($nodeKey);
 
-        // Before the shell exists, not after. A refused attempt is the one a reader of the
-        // log needs, and a log written on success would not contain it.
+        // Before the shell exists. A log written only on success contains nothing about
+        // the attempts that failed, which are the ones worth reading.
         $this->activity->record(
             actor: $user,
             action: self::ACTION_OPEN,
@@ -163,14 +174,28 @@ class AdminTerminalService
             description: sprintf('Requested an administrative shell on %s.', $node['label']),
         );
 
-        $this->closeExistingFor($user, $node['key']);
+        $existing = TerminalSession::query()
+            ->where('user_id', $user->getKey())
+            ->where('target_kind', 'node')
+            ->where('target_node', $node['key'])
+            ->whereNull('closed_at')
+            ->orderByDesc('created_at')
+            ->first();
+
+        // Reconnect reuses the existing PTY, preserving shell history and running tasks.
+        if ($existing && $this->isConnected($existing)) {
+            return $existing;
+        }
+        if ($existing) {
+            $this->close($existing);
+        }
 
         $port = $this->reservePort();
-        $credential = Str::random(self::CREDENTIAL_BYTES);
+        $credential = bin2hex(random_bytes(self::CREDENTIAL_BYTES));
+        $pid = $this->spawn($node, $port);
 
-        $pid = $this->spawn($node, $port, $credential);
-
-        $session = TerminalSession::query()->create([
+        try {
+            $session = TerminalSession::query()->create([
             'user_id' => $user->getKey(),
             'lab_environment_id' => null,
             'target_kind' => 'node',
@@ -182,9 +207,17 @@ class AdminTerminalService
             'shell_uid' => null,
             'shell_user' => $this->loginName($node),
             'expires_at' => Carbon::now()->addMinutes(self::SESSION_MINUTES),
-        ]);
+            ]);
 
-        $this->grant($port, $credential);
+            $this->slotGrants()->grant($port, $credential);
+        } catch (Throwable $exception) {
+            // No orphaned shell when the database or grant file fails.
+            $this->terminate($pid);
+            if (isset($session)) {
+                $session->forceFill(['closed_at' => Carbon::now()])->save();
+            }
+            throw $exception;
+        }
 
         $this->activity->record(
             actor: $user,
@@ -203,18 +236,17 @@ class AdminTerminalService
     }
 
     /**
-     * Close a session: kill the listener and drop its credential.
+     * Close a session: stop the listener and drop its credential.
      */
     public function close(TerminalSession $session): void
     {
         $pid = (int) $session->pid;
-        $port = (int) $session->ttyd_port;
 
         if ($pid > 0) {
             $this->terminate($pid);
         }
 
-        $this->revoke($port);
+        $this->slotGrants()->revoke((int) $session->ttyd_port);
 
         $session->forceFill(['closed_at' => Carbon::now()])->save();
 
@@ -233,9 +265,8 @@ class AdminTerminalService
     /**
      * Close every session that has outlived its window.
      *
-     * A tab that is closed without logging out leaves the listener running. This is the
-     * backstop for that, and it is the reason there is no code path in this class that
-     * leaves a shell up: closing is not the only way out.
+     * The backstop for a tab closed without logging out, and the reason there is no path
+     * through this class that leaves a shell up: closing is not the only way out.
      */
     public function reapExpired(): int
     {
@@ -252,7 +283,7 @@ class AdminTerminalService
                 $this->close($session);
                 $reaped++;
             } catch (Throwable $exception) {
-                // One stubborn session must not stop the rest from being closed.
+                // One stubborn session must not stop the rest being closed.
                 Log::warning('An expired administrative shell could not be closed.', [
                     'session' => $session->getKey(),
                     'error' => $exception->getMessage(),
@@ -266,55 +297,64 @@ class AdminTerminalService
     /**
      * The path the browser reaches the shell on.
      *
-     * Loopback port plus credential, never the port alone. A reader who has the URL and
-     * not the credential gets a refusal from ttyd, which is the second lock.
+     * No credential, here or in a query string: it would be written to the access log.
      */
     public function browserUrl(TerminalSession $session): ?string
     {
-        if ($session->closed_at !== null) {
+        if (! config('infrastructure.terminal.browser_access_enabled') || ! $this->isConnected($session)) {
             return null;
         }
 
-        return sprintf('/terminal/%d/', (int) $session->ttyd_port);
+        return sprintf('/terminal/%d/?t=%s', (int) $session->ttyd_port, rawurlencode((string) $session->credential));
+    }
+
+    /**
+     * The pair the browser must present, read from the session rather than regenerated.
+     *
+     * @return array{user: string, password: string}
+     */
+    public function credentialsFor(TerminalSession $session): array
+    {
+        return [
+            'user' => self::AUTH_USER,
+            'password' => (string) $session->credential,
+        ];
     }
 
     public function isConnected(TerminalSession $session): bool
     {
         return $session->closed_at === null
+            && $session->expires_at !== null
+            && $session->expires_at->isFuture()
             && (int) $session->pid > 0
             && $this->processIsAlive((int) $session->pid);
     }
 
-    // ── the rules ────────────────────────────────────────────────────────────────
+    // ── the rules ───────────────────────────────────────────────────────────────
 
     /**
-     * Rule one.
-     *
-     * Asked of the role on the account rather than of the panel serving the page. A panel
-     * is a rendering concern; the authority to open a shell on the portal's own host does
-     * not follow from being rendered inside one.
-     *
-     * @throws RuntimeException
+     * Rule one. Asked of the role, not of the panel serving the page: being rendered
+     * inside the admin panel is not authority to open a shell on the host that runs it.
      */
     private function assertMayOperate(User $user): void
     {
-        if (! $user->role->canOperateInfrastructure()) {
-            $this->activity->record(
-                actor: $user,
-                action: self::ACTION_OPEN,
-                resource: null,
-                status: 'failed',
-                description: 'Refused: the role may not operate the infrastructure.',
-            );
-
-            throw new RuntimeException('You may not open an administrative shell.');
+        if ($user->role->canOperateInfrastructure()) {
+            return;
         }
+
+        $this->activity->record(
+            actor: $user,
+            action: self::ACTION_OPEN,
+            resource: null,
+            status: 'failed',
+            description: 'Refused: the role may not operate the infrastructure.',
+        );
+
+        throw new RuntimeException('You may not open an administrative shell.');
     }
 
     /**
      * @return array{key: string, label: string, role: string, address: ?string, command: list<string>}
-     *
-     * @throws RuntimeException on a key that is not one of the three.
      */
     private function node(string $key): array
     {
@@ -327,34 +367,31 @@ class AdminTerminalService
         throw new RuntimeException('That is not a node this console can open.');
     }
 
-    /**
-     * The account a shell lands in, for the record.
-     */
     private function loginName(array $node): string
     {
-        return $node['address'] ?? $this->localUser();
+        return $node['address'] ?? (string) (get_current_user() ?: 'iaas');
     }
 
-    private function localUser(): string
-    {
-        return (string) (get_current_user() ?: 'iaas');
-    }
-
-    // ── the listener ─────────────────────────────────────────────────────────────
+    // ── the listener ───────────────────────────────────────────────────────────
 
     /**
      * Start ttyd on loopback and return its pid.
      *
-     * Rule two, in one line: `-i 127.0.0.1` and a per-session credential. Loopback means
-     * nothing on the lab network can reach the port at all; the credential means that even
-     * something already on this machine, if it reached it, still gets nothing.
-     *
-     * Output goes to a file and not a pipe. This process outlives the request, and a pipe
-     * nobody drains fills and blocks the shell.
+     * Output goes to a file rather than a pipe: this process outlives the request, and a
+     * pipe nobody drains fills and blocks the shell.
      */
-    private function spawn(array $node, int $port, string $credential): int
+    private function spawn(array $node, int $port): int
     {
-        $binary = (string) config('infrastructure.ttyd_binary', 'ttyd');
+        // PHP-FPM usually runs as www-data, not iaas. Never present that as an
+        // administrative shell. Configure a dedicated iaas-owned runner first.
+        $effectiveUser = function_exists('posix_geteuid') && function_exists('posix_getpwuid')
+            ? (posix_getpwuid(posix_geteuid())['name'] ?? null)
+            : null;
+        if ($effectiveUser !== 'iaas') {
+            throw new RuntimeException('Admin terminal runner is not iaas. A dedicated shell runner is required for this web runtime.');
+        }
+
+        $binary = (string) config('infrastructure.terminal.binary', 'ttyd');
 
         $command = [
             $binary,
@@ -362,18 +399,18 @@ class AdminTerminalService
             '-p', (string) $port,
             '-W',
             '-t', 'titleFixed='.$this->loginName($node).'@'.$node['key'],
-            '-c', 'imnehnet:'.$credential,
+            // Apache validates the per-session token from slots.map.
+            // Do not enable a second Basic Auth prompt inside an iframe.
             ...$node['command'],
         ];
 
-        $process = new Process($command, null, [
+        $process = new Process($this->logged($command, $this->logPath($port)), null, [
             'TERM' => 'xterm-256color',
             'LANG' => 'C.UTF-8',
             'LC_ALL' => 'C.UTF-8',
         ]);
 
         $process->setTimeout(null);
-        $process->setOutputFile($this->logPath($port));
         $process->start();
 
         $pid = $process->getPid();
@@ -382,9 +419,8 @@ class AdminTerminalService
             throw new RuntimeException('The terminal process could not be started.');
         }
 
-        // ttyd exits immediately when it cannot bind, or when the binary is missing.
-        // Without this pause a missing ttyd would be recorded as a session that opened,
-        // and the browser would be handed a URL to nothing.
+        // ttyd exits at once if it cannot bind. Without this pause a missing binary would
+        // be recorded as a session that opened, and the browser handed a URL to nothing.
         usleep(300_000);
 
         if (! $this->processIsAlive($pid)) {
@@ -404,30 +440,105 @@ class AdminTerminalService
         }
 
         try {
-            $result = Process::run(['kill', '-0', (string) $pid], 2);
+            $probe = new Process(['kill', '-0', (string) $pid], null, [
+                'LANG' => 'C.UTF-8',
+                'LC_ALL' => 'C.UTF-8',
+            ]);
+            $probe->setTimeout(2);
+            $probe->run();
 
-            return $result->isSuccessful();
+            return $probe->isSuccessful();
         } catch (Throwable) {
+            // Genuinely fine here: the question is only "is this process still around",
+            // and anything that prevents an answer means it is not reachable, which is
+            // the answer. A throw is not an error in this narrow question.
             return false;
         }
     }
 
     /**
-     * Close a listener.
+     * Stop a listener and the shell under it.
      *
-     * The process group, not just the pid. ttyd forks a shell, so killing only ttyd would
-     * leave the shell running with nothing attached to it — which is the exact state this
-     * class exists to prevent, reached by being half-finished.
+     * The process group, not just the pid: ttyd forks a shell, so killing only ttyd would
+     * leave the shell running with nothing attached — the exact state this class exists to
+     * prevent, reached by being half finished.
+     */
+    /**
+     * Stop a listener, but only if that pid is still ours.
+     *
+     * Signalling is the one irreversible thing this class does. A pid sits in a table for as
+     * long as the session row survives, and the operating system reuses numbers: by the time
+     * the reaper runs, the pid in an expired row may belong to a php-fpm worker, an sshd or a
+     * queue worker. Killing that would take down something this class never started, so an
+     * unverified pid is refused rather than acted on.
+     *
+     * TerminalService::terminate() draws the same line, and this is now the second copy of it
+     * in the codebase. Duplicated rather than extracted because the two services resolve the
+     * binary by different paths and share nothing else — but a third copy is the sign that it
+     * wants extracting.
+     *
+     * The group is signalled, not only the pid: ttyd forks a shell, so stopping just ttyd
+     * leaves the shell running with nothing attached, which is the state this class exists to
+     * prevent reached by being half finished.
      */
     private function terminate(int $pid): void
     {
-        foreach (['-' . $pid, (string) $pid] as $target) {
+        if ($pid <= 1 || ! $this->isTerminalProcess($pid) || ! $this->processIsAlive($pid)) {
+            return;
+        }
+
+        foreach ([(string) $pid, '-'.$pid] as $target) {
             try {
-                Process::run(['kill', $target], 3);
+                $kill = new Process(['kill', $target], null, [
+                    'LANG' => 'C.UTF-8',
+                    'LC_ALL' => 'C.UTF-8',
+                ]);
+                $kill->setTimeout(3);
+                $kill->run();
             } catch (Throwable) {
                 // Already gone, or never existed. Either is the state we wanted.
             }
         }
+
+        // Give ttyd a moment to take its shell with it before escalating.
+        for ($attempt = 0; $attempt < 10 && $this->processIsAlive($pid); $attempt++) {
+            usleep(100_000);
+        }
+
+        if ($this->processIsAlive($pid)) {
+            try {
+                $kill = new Process(['kill', '-9', (string) $pid], null, [
+                    'LANG' => 'C.UTF-8',
+                    'LC_ALL' => 'C.UTF-8',
+                ]);
+                $kill->setTimeout(3);
+                $kill->run();
+            } catch (Throwable) {
+                // The state we wanted, reached.
+            }
+        }
+    }
+
+    /**
+     * Whether this pid is one of our terminal listeners.
+     *
+     * Read from /proc at the moment of the kill rather than remembered from the moment the
+     * session opened, because remembering is precisely what goes wrong: the answer has to
+     * hold now, not then.
+     */
+    private function isTerminalProcess(int $pid): bool
+    {
+        if ($pid <= 1) {
+            return false;
+        }
+
+        $cmdline = @file_get_contents("/proc/{$pid}/cmdline");
+
+        if ($cmdline === false || $cmdline === '') {
+            return false;
+        }
+
+        return str_contains($cmdline, basename((string) config('infrastructure.terminal.binary', 'ttyd')));
     }
 
     // ── ports ───────────────────────────────────────────────────────────────────
@@ -435,20 +546,19 @@ class AdminTerminalService
     /**
      * The first port in the configured window that nothing is listening on.
      *
-     * Read from the same window Apache proxies, because a port the proxy does not know is
-     * a port the browser cannot reach. Reserving one outside that window would produce a
-     * session that opened and could not be displayed.
+     * Inside the window Apache proxies, because a port the proxy does not know is a port
+     * the browser cannot reach.
      */
     private function reservePort(): int
     {
-        $min = (int) config('infrastructure.port_range_min', 38000);
-        $max = (int) config('infrastructure.port_range_max', 38007);
+        $min = (int) config('infrastructure.terminal.port_range_min', 38000);
+        $max = (int) config('infrastructure.terminal.port_range_max', 38007);
 
-        $taken = DB::connection('imnehnet')
+        $taken = (new TerminalSession)->getConnection()
             ->table('terminal_sessions')
             ->whereNull('closed_at')
             ->pluck('ttyd_port')
-            ->map(fn ($p): int => (int) $p)
+            ->map(fn ($port): int => (int) $port)
             ->all();
 
         for ($port = $min; $port <= $max; $port++) {
@@ -466,62 +576,57 @@ class AdminTerminalService
 
     private function portIsFree(int $port): bool
     {
-        try {
-            $result = Process::run(
-                ['sh', '-c', sprintf('ss -ltn "sport = :%d" | tail -n +2 | grep -q . && exit 1 || exit 0', $port)],
-                3,
-            );
+        $probe = new Process([
+            'sh',
+            '-c',
+            sprintf('ss -ltn "sport = :%d" | tail -n +2 | grep -q . && exit 1 || exit 0', $port),
+        ], null, [
+            'LANG' => 'C.UTF-8',
+            'LC_ALL' => 'C.UTF-8',
+        ]);
 
-            return $result->isSuccessful();
-        } catch (Throwable) {
-            // If it cannot be told, assume taken. A port believed free and already bound
-            // fails to bind and the session is refused; a port believed taken is merely
-            // unavailable, which is the safer of the two mistakes.
-            return false;
-        }
+        $probe->setTimeout(3);
+
+        // No catch. An earlier version answered false on any Throwable, on the reasoning
+        // that a port believed taken is safer than one believed free — and that turned a
+        // programming error into eight ports wrongly reported as occupied, with no symptom
+        // except a refusal that named the wrong cause. If this cannot be determined it
+        // should say so rather than guess.
+        $probe->run();
+
+        return $probe->isSuccessful();
     }
 
-    // ── credential storage ──────────────────────────────────────────────────────
+    private function slotGrants(): TerminalSlotGrants
+    {
+        return new TerminalSlotGrants((string) config('infrastructure.terminal.slot_map_file'));
+    }
 
     /**
-     * Where the credential is kept, and the one thing that must be true of it.
+     * The same command, with its output redirected to a file.
      *
-     * Apache reads this directory to proxy /terminal/<port>/ and ttyd checks the
-     * credential against it. It is loopback-only and readable by the web user, which is why
-     * the port is not the secret.
+     * Symfony's Process has no setOutputFile — it collects stdout and stderr on pipes and
+     * offers nothing to attach a file to. This process outlives the request that started
+     * it, so those pipes are never drained: they fill, and the shell stops accepting
+     * input. The redirect has to come from the command itself.
+     *
+     * exec, so the pid handed back is ttyd's own and not a wrapper's. terminate() signals
+     * the process group, and a shell wrapper sitting in that group would be a different
+     * process from the one the session row names.
+     *
+     * @param  list<string>  $command
+     * @return list<string>
      */
-    private function grantsPath(): string
+    private function logged(array $command, string $logPath): array
     {
-        return (string) config('infrastructure.terminal_grants_path', '/var/lib/imnehnet/terminal');
-    }
+        $parts = array_map('escapeshellarg', $command);
 
-    private function grant(int $port, string $credential): void
-    {
-        $path = $this->grantPath($port);
-
-        @mkdir(dirname($path), 0770, true);
-
-        file_put_contents($path, $credential);
-        @chmod($path, 0640);
-    }
-
-    private function revoke(int $port): void
-    {
-        $path = $this->grantPath($port);
-
-        if (is_file($path)) {
-            @unlink($path);
-        }
-    }
-
-    private function grantPath(int $port): string
-    {
-        return $this->grantsPath().'/'.$port.'.grant';
+        return ['sh', '-c', 'exec '.implode(' ', $parts).' >> '.escapeshellarg($logPath).' 2>&1'];
     }
 
     private function logPath(int $port): string
     {
-        $dir = (string) config('infrastructure.terminal_log_path', '/var/log/imnehnet/terminal');
+        $dir = (string) config('infrastructure.terminal.log_directory', storage_path('logs/terminal'));
 
         if (! is_dir($dir)) {
             @mkdir($dir, 0770, true);
@@ -535,10 +640,9 @@ class AdminTerminalService
     /**
      * Rule three: one live session per person per node.
      *
-     * A second open closes the first rather than failing. The reason to prefer that over
-     * a refusal is that the common cause is a tab that was reloaded, and answering that
-     * with an error teaches people to open several — which is the state the cap exists to
-     * prevent. Closing the old one also revokes its credential immediately.
+     * Closing the old one rather than failing, because the common cause is a reloaded tab
+     * and answering that with an error teaches people to open several — the state the cap
+     * exists to prevent. It also revokes the old credential immediately.
      */
     private function closeExistingFor(User $user, string $nodeKey): void
     {

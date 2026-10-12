@@ -30,7 +30,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::connection('imnehnet')->table('terminal_sessions', function (Blueprint $table): void {
+        Schema::connection(config('infrastructure.environment_connection'))->table('terminal_sessions', function (Blueprint $table): void {
             $table->string('target_kind')
                 ->default('container')
                 ->after('lab_environment_id')
@@ -45,7 +45,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::connection('imnehnet')->table('terminal_sessions', function (Blueprint $table): void {
+        Schema::connection(config('infrastructure.environment_connection'))->table('terminal_sessions', function (Blueprint $table): void {
             $table->dropColumn(['target_kind', 'target_node']);
         });
     }
