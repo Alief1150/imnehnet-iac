@@ -207,6 +207,26 @@
       "received_at": "2026-09-25T11:52:31+07:00",
       "source": "telegram-upload",
       "notes": "Catatan bootstrap ringkas yang menunjuk ke handoff utama dan aturan kerja aman; tidak menggantikan AGENTS.md atau docs/status.md."
+    },
+    {
+      "id": "imnehnet-approval-logbook-kelompok-5-2026-10-12",
+      "title": "Lembar Pengesahan Proposal dan Logbook Kegiatan PBL IMNEHNET",
+      "document_type": "approval-and-logbook",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "signed-project-record",
+      "authority": "academic-approval-and-activity-record-not-runtime-state",
+      "path": "documents/administrative/2026-10-12-lembar-pengesahan-dan-logbook-imnehnet-kelompok-5.pdf",
+      "original_filename": "Lembar_Pengesahan_dan_Logbook_IMNEHNET_Kelompok5.pdf",
+      "media_type": "application/pdf",
+      "page_count": 6,
+      "size_bytes": 13178091,
+      "sha256": "d9076a43f126ad1260863bf1c358d99d953d89b3a51f9675d92f8ff45cb7e5fc",
+      "received_at": "2026-10-12T17:29:30+07:00",
+      "source": "telegram-upload",
+      "notes": "Dokumen bertanda tangan digital disimpan utuh sebagai rekaman administratif dan logbook kegiatan. Dokumen memuat metadata audit penandatanganan sehingga repository harus tetap privat; isinya tidak menggantikan docs/status.md sebagai sumber fakta runtime."
     }
   ]
 }

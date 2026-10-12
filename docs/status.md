@@ -183,3 +183,8 @@ Verified on 2026-09-25:
 
 - The backend automation breakpoint is archived in Markdown and PDF under `documents/handoffs/`, with a separate compact Hermes context note.
 - The handoff is a sanitized implementation snapshot. It does not contain passwords, private keys, `.env`, OpenTofu state contents, raw audit logs, or runtime identity mappings.
+
+Verified on 2026-10-12:
+
+- The signed approval sheet and PBL activity logbook are archived intact at `documents/administrative/2026-10-12-lembar-pengesahan-dan-logbook-imnehnet-kelompok-5.pdf` and catalogued in `documents/index.json`.
+- The PDF has 6 A4 pages, size 13178091 bytes, and SHA-256 `d9076a43f126ad1260863bf1c358d99d953d89b3a51f9675d92f8ff45cb7e5fc`. It is an administrative/activity record, not evidence of runtime deployment, and the repository must remain private because the signed source contains personal and signature-audit metadata.
