@@ -42,6 +42,8 @@
                         <div>
                             <button type="button" wire:click="selectAdminTarget('{{ $target['key'] }}')"
                                     wire:key="admin-terminal-target-{{ $target['key'] }}"
+                                    wire:loading.attr="disabled"
+                                    wire:loading.class="opacity-60"
                                     aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
                                     @class([
                                         'group relative min-h-24 w-full rounded-xl border p-4 text-left transition duration-150',
