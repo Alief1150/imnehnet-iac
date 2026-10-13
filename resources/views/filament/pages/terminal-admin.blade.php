@@ -40,13 +40,15 @@
                         @endphp
 
                         <div>
-                            <button type="button" wire:click="selectAdminTarget('{{ $target['key'] }}')"
-                                    wire:key="admin-terminal-target-{{ $target['key'] }}"
-                                    wire:loading.attr="disabled"
-                                    wire:loading.class="opacity-60"
-                                    aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                            {{-- A plain link, not a Livewire action. Choosing a node is a
+                                 navigation: a full load always boots a working component
+                                 and shows the browser's own loading state, while an
+                                 in-place update of this tree has been observed to leave
+                                 it unresponsive until a manual refresh. --}}
+                            <a href="{{ request()->fullUrlWithQuery(['target' => $target['key']]) }}"
+                                    @if ($isSelected) aria-current="true" @endif
                                     @class([
-                                        'group relative min-h-24 w-full rounded-xl border p-4 text-left transition duration-150',
+                                        'group relative min-h-24 block w-full rounded-xl border p-4 text-left transition duration-150',
                                         'border-teal-500 bg-teal-50/70 ring-1 ring-teal-500/15 dark:border-teal-500 dark:bg-teal-500/10' => $isSelected,
                                         'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-900 dark:hover:border-white/20 dark:hover:bg-white/[0.03]' => ! $isSelected,
                                     ])>
@@ -81,7 +83,7 @@
                                     {{ $target['healthLabel'] }}
                                 </span>
                             </div>
-                        </button>
+                        </a>
 
                         {{-- Beside the card, never inside it: a button in a button is
                              invalid markup, and the inner click would also select. One

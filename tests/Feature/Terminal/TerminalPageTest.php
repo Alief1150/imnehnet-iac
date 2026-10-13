@@ -195,6 +195,8 @@ test('the admin page shows the three infrastructure nodes and no student contain
         ->toContain('LAB-ENV')
         ->toContain('LAB-ATK')
         ->toContain('wire:loading')
+        ->toContain('target=lab-env')
+        ->toContain('target=lab-atk')
         ->not->toContain('lab-web-smoke')
         ->not->toContain('lab-tofu-test')
         ->not->toContain('victim-demo');
