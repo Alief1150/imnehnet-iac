@@ -293,3 +293,96 @@ test('opening for an unknown node is refused without touching the selection', fu
 
     $page->assertSet('selectedAdminTarget', 'iaas-mgmt');
 });
+
+test('closing for a node closes that nodes shell and forgets its ticket', function () {
+    config()->set('infrastructure.terminal.browser_access_enabled', true);
+
+    $user = anAdmin();
+
+    $session = TerminalSession::query()->create([
+        'user_id' => $user->getKey(),
+        'lab_environment_id' => null,
+        'target_kind' => 'node',
+        'target_node' => 'lab-atk',
+        'container_name' => null,
+        'pid' => (string) getmypid(),
+        'ttyd_port' => '38002',
+        'credential' => bin2hex(random_bytes(24)),
+        'shell_user' => 'labatk',
+        'expires_at' => now()->addMinutes(30),
+    ]);
+
+    // The mock closes the row for real instead of signalling anything: what is
+    // under test is the page's wiring — the right session is closed and the
+    // ticket cookie goes with it — not the process handling.
+    $service = Mockery::mock(App\Services\Terminal\AdminTerminalService::class);
+    $service->shouldReceive('close')->once()->with(Mockery::on(
+        fn (TerminalSession $s): bool => $s->is($session)
+    ))->andReturnUsing(
+        fn (TerminalSession $s) => $s->forceFill(['closed_at' => now()])->save()
+    );
+    app()->instance(App\Services\Terminal\AdminTerminalService::class, $service);
+
+    Livewire::actingAs($user)->test(Terminal::class)
+        ->call('closeAdminSessionFor', 'lab-atk')
+        ->assertSet('selectedAdminTarget', 'lab-atk');
+
+    expect($session->fresh()->closed_at)->not->toBeNull();
+
+    $forgotten = Cookie::queued('imnehnet_slot_38002');
+
+    expect($forgotten)->not->toBeNull()
+        ->and($forgotten->getValue())->toBeNull();
+});
+
+test('closing for an unknown node is refused without touching the selection', function () {
+    Livewire::actingAs(anAdmin())->test(Terminal::class)
+        ->call('closeAdminSessionFor', '../../etc/passwd')
+        ->assertSet('selectedAdminTarget', 'iaas-mgmt');
+});
+
+test('the selected target survives a reload through the address', function () {
+    // The panel header names the selected node's address: the management
+    // plane's own address for the default, the attacker plane's for
+    // ?target=lab-atk, and the default again for a value outside the declared
+    // set, which is reset rather than trusted.
+    $this->actingAs(anAdmin());
+
+    $this->get(Terminal::getUrl(panel: 'admin'))
+        ->assertSuccessful()
+        ->assertSee('192.168.100.10', false);
+
+    $this->get(Terminal::getUrl(panel: 'admin').'?target=lab-atk')
+        ->assertSuccessful()
+        ->assertSee('192.168.100.30', false);
+
+    $this->get(Terminal::getUrl(panel: 'admin').'?target=nope')
+        ->assertSuccessful()
+        ->assertSee('192.168.100.10', false);
+});
+
+test('only the node holding a shell offers to close it', function () {
+    $admin = anAdmin();
+
+    TerminalSession::query()->create([
+        'user_id' => $admin->getKey(),
+        'lab_environment_id' => null,
+        'target_kind' => 'node',
+        'target_node' => 'lab-env',
+        'container_name' => null,
+        'pid' => (string) getmypid(),
+        'ttyd_port' => '38000',
+        'credential' => bin2hex(random_bytes(24)),
+        'shell_user' => 'lab',
+        'expires_at' => now()->addMinutes(30),
+    ]);
+
+    $this->actingAs($admin);
+
+    $content = $this->get(Terminal::getUrl(panel: 'admin'))
+        ->assertSuccessful()->getContent();
+
+    expect($content)
+        ->toContain("closeAdminSessionFor('lab-env')")
+        ->not->toContain("closeAdminSessionFor('lab-atk')");
+});

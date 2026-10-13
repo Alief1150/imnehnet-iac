@@ -29,25 +29,6 @@
                         <h2 class="text-base font-semibold text-gray-950 dark:text-white">Select Target</h2>
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Choose the infrastructure node for this administrative terminal.</p>
                     </div>
-
-                    <div class="flex items-center gap-2">
-                        @if ($session)
-                            <button type="button" wire:click="closeAdminSession"
-                                    wire:loading.attr="disabled"
-                                    class="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-300 px-3.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-white/15 dark:text-gray-200 dark:hover:bg-white/5">
-                                {!! \App\Support\Lucide::html('trash') !!}
-                                Close Session
-                            </button>
-                        @endif
-
-                        <button type="button" wire:click="openAdminSession"
-                                wire:loading.attr="disabled"
-                                wire:target="openAdminSession"
-                                class="inline-flex h-9 items-center gap-2 rounded-lg bg-teal-600 px-3.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
-                            {!! \App\Support\Lucide::html($session ? 'rotate-ccw' : 'plus') !!}
-                            {{ $session ? 'Reconnect' : 'New Session' }}
-                        </button>
-                    </div>
                 </div>
 
                 <div class="grid gap-3 md:grid-cols-3">
@@ -112,6 +93,17 @@
                             {!! \App\Support\Lucide::html('terminal') !!}
                             Open shell
                         </button>
+
+                        @if ($this->hasAdminSession($target['key']))
+                            <button type="button" wire:click="closeAdminSessionFor('{{ $target['key'] }}')"
+                                    wire:key="admin-terminal-close-{{ $target['key'] }}"
+                                    wire:loading.attr="disabled"
+                                    title="Close the shell on {{ $target['name'] }}"
+                                    class="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:border-white/15 dark:text-gray-300 dark:hover:bg-white/5">
+                                {!! \App\Support\Lucide::html('trash') !!}
+                                Close
+                            </button>
+                        @endif
                     </div>
                     @endforeach
                 </div>

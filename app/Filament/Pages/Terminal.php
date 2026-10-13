@@ -12,6 +12,7 @@ use Filament\Pages\Page;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cookie;
+use Livewire\Attributes\Url;
 use RuntimeException;
 use Throwable;
 
@@ -48,10 +49,15 @@ final class Terminal extends Page
     public ?int $selectedEnvironmentId = null;
 
     /**
- * Admin Terminal selects infrastructure hosts, not student LabEnvironment
+     * Admin Terminal selects infrastructure hosts, not student LabEnvironment
      * records. Transport is attached by AdminTerminalService, which is the only
      * thing that may start one.
+     *
+     * Kept in the address so a reload lands back on the chosen node instead of
+     * falling back to the first one: the address bar is the only piece of page
+     * state that survives a refresh.
      */
+    #[Url(as: 'target')]
     public string $selectedAdminTarget = 'iaas-mgmt';
 
     /**
@@ -151,6 +157,56 @@ final class Terminal extends Page
     }
 
     /**
+     * Close this person's live shell on the named node.
+     *
+     * Scoped by argument rather than by selection, so each target card can offer
+     * its own close button next to its open one: closing a shell never depends
+     * on the selected node being the right one at click time. The selection
+     * follows the node, so the panel shows what was just closed.
+     */
+    public function closeAdminSessionFor(string $node): void
+    {
+        $user = auth()->user();
+
+        if ($user === null || ! $user->canOperateInfrastructure()) {
+            $this->deny();
+
+            return;
+        }
+
+        $allowed = collect($this->adminTargets())->pluck('key');
+
+        if (! $allowed->contains($node)) {
+            $this->deny();
+
+            return;
+        }
+
+        $session = TerminalSession::query()
+            ->where('user_id', $user->getKey())
+            ->where('target_kind', 'node')
+            ->where('target_node', $node)
+            ->whereNull('closed_at')
+            ->orderByDesc('id')
+            ->first();
+
+        $this->selectedAdminTarget = $node;
+
+        if ($session === null) {
+            return;
+        }
+
+        app(AdminTerminalService::class)->close($session);
+        $this->forgetEmbedTicket($session);
+
+        Notification::make()
+            ->title('Shell closed')
+            ->body('The listener was stopped and its credential revoked.')
+            ->success()
+            ->send();
+    }
+
+    /**
      * This person's live shell on the selected node, if there is one.
      *
      * Scoped to the signed-in user rather than to "the newest row for this node": a
@@ -172,6 +228,28 @@ final class Terminal extends Page
             ->whereNull('closed_at')
             ->orderByDesc('id')
             ->first();
+    }
+
+    /**
+     * Whether this person holds a live shell on the named node.
+     *
+     * Read per card so each target can offer its own close button. One indexed
+     * lookup per card per render — three small queries, not a scan.
+     */
+    public function hasAdminSession(string $node): bool
+    {
+        $user = auth()->user();
+
+        if ($user === null || ! $user->canOperateInfrastructure()) {
+            return false;
+        }
+
+        return TerminalSession::query()
+            ->where('user_id', $user->getKey())
+            ->where('target_kind', 'node')
+            ->where('target_node', $node)
+            ->whereNull('closed_at')
+            ->exists();
     }
 
     /**
@@ -434,6 +512,14 @@ final class Terminal extends Page
     public function mount(): void
     {
         $this->selectedEnvironmentId = $this->environments()->first()?->id;
+
+        // A value from the address bar is user input: reset anything outside the
+        // declared set rather than rendering a node the console cannot open.
+        $allowed = collect($this->adminTargets())->pluck('key');
+
+        if (! $allowed->contains($this->selectedAdminTarget)) {
+            $this->selectedAdminTarget = 'iaas-mgmt';
+        }
     }
 
     public function selectEnvironment(int $environmentId): void
