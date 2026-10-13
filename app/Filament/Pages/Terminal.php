@@ -64,6 +64,42 @@ final class Terminal extends Page
      */
     public function openAdminSession(): void
     {
+        $this->openAdminSessionOn($this->selectedAdminTarget);
+    }
+
+    /**
+     * Open a shell on the named node, selecting it first.
+     *
+     * One click instead of select-then-open, so a shell never depends on an
+     * earlier selection round trip having applied. The selection is set before
+     * the shell exists: if the open fails, the panel shows that node with no
+     * session and the reason, rather than some other node.
+     */
+    public function openAdminSessionFor(string $node): void
+    {
+        $allowed = collect($this->adminTargets())->pluck('key');
+
+        if (! $allowed->contains($node)) {
+            $this->deny();
+
+            return;
+        }
+
+        $this->selectedAdminTarget = $node;
+
+        $this->openAdminSessionOn($node);
+    }
+
+    /**
+     * Open a shell on a node key the caller has already decided.
+     *
+     * Every refusal is turned into a message on the page rather than an exception,
+     * because the refusals are the expected cases here: an unprivileged role, a node
+     * that will not answer, a slot that is already in use. A stack trace for any of
+     * those tells an operator nothing they can act on.
+     */
+    private function openAdminSessionOn(string $nodeKey): void
+    {
         $user = auth()->user();
 
         if ($user === null) {
@@ -74,7 +110,7 @@ final class Terminal extends Page
 
         try {
             $service = app(AdminTerminalService::class);
-            $session = $service->open($user, $this->selectedAdminTarget);
+            $session = $service->open($user, $nodeKey);
 
             $this->rememberEmbedTicket($service, $session);
 
@@ -377,7 +413,7 @@ final class Terminal extends Page
         }
     }
 
-    public function selectAdminTarget(string $target): void
+    public function selectAdminTarget(mixed $target): void
     {
         if (! auth()->user()?->canOperateInfrastructure()) {
             abort(403);
@@ -385,7 +421,9 @@ final class Terminal extends Page
 
         $allowed = collect($this->adminTargets())->pluck('key');
 
-        if (! $allowed->contains($target)) {
+        // Refused, not fatal: a caller reaching this with anything but a declared
+        // key is lost, and a 500 would not tell them which keys exist.
+        if (! is_string($target) || ! $allowed->contains($target)) {
             abort(404);
         }
 

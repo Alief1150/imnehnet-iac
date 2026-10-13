@@ -58,14 +58,15 @@
                             $isDegraded = $target['health'] === 'degraded';
                         @endphp
 
-                        <button type="button" wire:click="selectAdminTarget('{{ $target['key'] }}')"
-                                wire:key="admin-terminal-target-{{ $target['key'] }}"
-                                aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
-                                @class([
-                                    'group relative min-h-24 rounded-xl border p-4 text-left transition duration-150',
-                                    'border-teal-500 bg-teal-50/70 ring-1 ring-teal-500/15 dark:border-teal-500 dark:bg-teal-500/10' => $isSelected,
-                                    'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-900 dark:hover:border-white/20 dark:hover:bg-white/[0.03]' => ! $isSelected,
-                                ])>
+                        <div>
+                            <button type="button" wire:click="selectAdminTarget('{{ $target['key'] }}')"
+                                    wire:key="admin-terminal-target-{{ $target['key'] }}"
+                                    aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                                    @class([
+                                        'group relative min-h-24 w-full rounded-xl border p-4 text-left transition duration-150',
+                                        'border-teal-500 bg-teal-50/70 ring-1 ring-teal-500/15 dark:border-teal-500 dark:bg-teal-500/10' => $isSelected,
+                                        'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-white/10 dark:bg-gray-900 dark:hover:border-white/20 dark:hover:bg-white/[0.03]' => ! $isSelected,
+                                    ])>
                             <div class="flex items-start gap-3">
                                 <span @class([
                                     'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border',
@@ -98,6 +99,20 @@
                                 </span>
                             </div>
                         </button>
+
+                        {{-- Beside the card, never inside it: a button in a button is
+                             invalid markup, and the inner click would also select. One
+                             click opens that node's shell directly, so a shell never
+                             depends on an earlier selection round trip having applied. --}}
+                        <button type="button" wire:click="openAdminSessionFor('{{ $target['key'] }}')"
+                                wire:key="admin-terminal-open-{{ $target['key'] }}"
+                                wire:loading.attr="disabled"
+                                title="Open a shell on {{ $target['name'] }} now"
+                                class="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-teal-600/30 bg-teal-600/10 px-3 text-[11px] font-semibold text-teal-700 hover:bg-teal-600/20 disabled:opacity-60 dark:text-teal-300 dark:hover:bg-teal-500/20">
+                            {!! \App\Support\Lucide::html('terminal') !!}
+                            Open shell
+                        </button>
+                    </div>
                     @endforeach
                 </div>
 

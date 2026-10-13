@@ -8,6 +8,7 @@ use App\Models\LabEnvironment;
 use App\Models\TerminalSession;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cookie;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -198,8 +199,7 @@ test('the admin page shows the three infrastructure nodes and no student contain
         ->not->toContain('victim-demo');
 });
 
-test('the admin page mounts an embedded frame for a leased session', function () {
-    // A mounted frame is a claim that a shell is behind it. The row alone is not
+test('the admin page mounts an embedded frame for a leased session', function () {    // A mounted frame is a claim that a shell is behind it. The row alone is not
     // enough for that claim — the slot must also be leased for embedding, which is
     // the ticket file the vhost tests for.
     config()->set('infrastructure.terminal.browser_access_enabled', true);
@@ -238,4 +238,58 @@ test('the admin page mounts an embedded frame for a leased session', function ()
     $pageTickets->revokeAll();
     array_map('unlink', (array) glob($directory.'/*'));
     @rmdir($directory);
+});
+
+test('opening for a node selects it and queues its ticket without spawning', function () {
+    // The service is mocked so no process starts: what is under test is the
+    // page's wiring — the right node is opened, the selection follows it, and
+    // the ticket cookie is queued. The real spawn is proven against the running
+    // host, never in a unit run.
+    config()->set('infrastructure.terminal.browser_access_enabled', true);
+
+    $user = anAdmin();
+
+    $session = TerminalSession::query()->create([
+        'user_id' => $user->getKey(),
+        'lab_environment_id' => null,
+        'target_kind' => 'node',
+        'target_node' => 'lab-env',
+        'container_name' => null,
+        'pid' => (string) getmypid(),
+        'ttyd_port' => '38001',
+        'credential' => bin2hex(random_bytes(24)),
+        'shell_user' => 'lab',
+        'expires_at' => now()->addMinutes(30),
+    ]);
+
+    $service = Mockery::mock(App\Services\Terminal\AdminTerminalService::class);
+    $service->shouldReceive('open')->once()->with($user, 'lab-env')->andReturn($session);
+    $service->shouldReceive('embedTicketFor')->once()->andReturn('abc123ticket');
+    // The call re-renders the page, which asks whether the session is alive
+    // and for its direct address.
+    $service->shouldReceive('isConnected')->andReturn(true);
+    $service->shouldReceive('browserUrl')->andReturn('/terminal/38001/');
+    $service->shouldReceive('embedUrl')->andReturn('/embed/38001/');
+    app()->instance(App\Services\Terminal\AdminTerminalService::class, $service);
+
+    Livewire::actingAs($user)->test(Terminal::class)
+        ->call('openAdminSessionFor', 'lab-env')
+        ->assertSet('selectedAdminTarget', 'lab-env');
+
+    // Queued, not set: a Livewire action answers with JSON and the cookie rides
+    // on that response, so the jar — not the test response — is what proves it.
+    $queued = Cookie::queued('imnehnet_slot_38001');
+
+    expect($queued)->not->toBeNull()
+        ->and($queued->getValue())->toBe('abc123ticket');
+
+    // The mock intercepted the open: no real shell was started for this.
+    expect(TerminalSession::query()->count())->toBe(1);
+});
+
+test('opening for an unknown node is refused without touching the selection', function () {
+    $page = Livewire::actingAs(anAdmin())->test(Terminal::class)
+        ->call('openAdminSessionFor', '../../etc/passwd');
+
+    $page->assertSet('selectedAdminTarget', 'iaas-mgmt');
 });
