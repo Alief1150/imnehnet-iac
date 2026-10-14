@@ -178,6 +178,11 @@ return [
 
     'wazuh_health_url' => env('WAZUH_HEALTH_URL', 'https://127.0.0.1:55000'),
 
+    // The dashboard is a different service on a different port than the API, so
+    // it gets its own probe: the login page answering 200 means the interface
+    // operators actually open is up.
+    'wazuh_dashboard_url' => env('WAZUH_DASHBOARD_URL', 'https://127.0.0.1:8443/app/login'),
+
     'prometheus_health_url' => env('PROMETHEUS_HEALTH_URL', 'http://127.0.0.1:9090/-/healthy'),
     'prometheus_query_url' => env('PROMETHEUS_QUERY_URL', 'http://127.0.0.1:9090/api/v1/query'),
     'prometheus_range_url' => env('PROMETHEUS_RANGE_URL', 'http://127.0.0.1:9090/api/v1/query_range'),

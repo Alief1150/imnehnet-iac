@@ -186,30 +186,67 @@ final class MonitoringService
                 'check' => fn (): bool => $this->reachable((string) config('infrastructure.grafana_health_url'), $timeout, null),
             ],
             [
-                'key' => 'wazuh',
-                'label' => 'Wazuh',
+                'key' => 'wazuh_dashboard',
+                'label' => 'Wazuh Dashboard',
+                'url' => (string) config('infrastructure.console_base_url').':8443',
+                'description' => 'Security operations interface over the Wazuh indexer.',
+                'scope' => 'Alert triage and agent inventory',
+                'check' => fn (): bool => $this->reachable((string) config('infrastructure.wazuh_dashboard_url'), $timeout, null, verifyTls: false),
+            ],
+            [
+                'key' => 'wazuh_api',
+                'label' => 'Wazuh API',
                 'url' => (string) config('infrastructure.console_base_url').':'.(string) config('infrastructure.wazuh_console_port'),
-                'description' => 'Security information and event management. Separate concern from resource monitoring.',
-                'scope' => 'Security events from hosts and containers',
-                'check' => fn (): bool => $this->reachable((string) config('infrastructure.wazuh_health_url'), $timeout, null, verifyTls: false),
+                'description' => 'Management API the portal would query for security telemetry.',
+                'scope' => 'Agents, alerts and manager status',
+                'check' => fn (): bool => $this->apiReachable((string) config('infrastructure.wazuh_health_url'), $timeout),
             ],
         ];
 
         $backends = [];
 
         foreach ($definitions as $definition) {
+            $started = hrtime(true);
+            $healthy = (bool) $definition['check']();
+
             $backends[] = new MonitoringBackend(
                 key: $definition['key'],
                 label: $definition['label'],
                 url: $definition['url'],
                 description: $definition['description'],
                 scope: $definition['scope'],
-                status: $definition['check']() ? 'healthy' : 'offline',
+                status: $healthy ? 'healthy' : 'offline',
                 checkedAt: Carbon::now(),
+                latencyMs: (int) ((hrtime(true) - $started) / 1_000_000),
             );
         }
 
         return $backends;
+    }
+
+    /**
+     * Whether an authenticated API answers at all.
+     *
+     * 401 and 403 are the API refusing an unauthenticated request, which is the
+     * correct behaviour — the same rule the plane probes apply to the Incus API.
+     * Reporting that as offline would be wrong: it confuses "protected" with
+     * "down", and the operator cannot tell which one to fix.
+     */
+    private function apiReachable(string $url, int $timeout): bool
+    {
+        if ($url === '') {
+            return false;
+        }
+
+        try {
+            $status = Http::timeout($timeout)->withOptions(['verify' => false])->get($url)->status();
+
+            return in_array($status, [200, 401, 403], true);
+        } catch (Throwable $exception) {
+            Log::debug('Management API probe failed.', ['url' => $url, 'error' => $exception->getMessage()]);
+
+            return false;
+        }
     }
 
     private function reachable(string $url, int $timeout, ?string $expectedBody, bool $verifyTls = true): bool

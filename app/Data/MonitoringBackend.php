@@ -14,6 +14,7 @@ final readonly class MonitoringBackend
         public string $scope,
         public string $status,
         public DateTimeInterface $checkedAt,
+        public ?int $latencyMs = null,
     ) {}
 
     /** @return array<string, mixed> */
@@ -27,6 +28,7 @@ final readonly class MonitoringBackend
             'scope' => $this->scope,
             'status' => $this->status,
             'checked_at' => $this->checkedAt->format(DateTimeInterface::ATOM),
+            'latency_ms' => $this->latencyMs,
         ];
     }
 }
