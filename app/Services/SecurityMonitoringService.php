@@ -12,14 +12,6 @@ use Throwable;
 final class SecurityMonitoringService
 {
     /**
-     * Wazuh alert levels follow the SIEM severity scale: 0-6 informational,
-     * 7-11 warning, 12-15 critical.
-     */
-    private const CRITICAL_FROM = 12;
-
-    private const WARNING_FROM = 7;
-
-    /**
      * @return array<string, array<string, mixed>>
      */
     public function summary(): array
@@ -137,45 +129,45 @@ final class SecurityMonitoringService
 
     private function alertCounts(string $url, string $token, int $timeout): SecuritySummary
     {
-        $count = function (array $query) use ($url, $token, $timeout): ?int {
-            $value = Http::timeout($timeout)
+        $inventory = function (array $query) use ($url, $token, $timeout): ?int {
+            $total = Http::timeout($timeout)
                 ->withOptions(['verify' => false])
                 ->withToken($token)
-                ->get($url.'/security/alerts', $query)
-                ->json('data.affected_items.0.total_items');
+                ->get($url.'/agents', $query + ['limit' => 1, 'select' => 'id'])
+                ->json('data.total_affected_items');
 
-            return is_int($value) ? $value : null;
+            return is_int($total) ? $total : null;
         };
 
-        $total = $count(['limit' => 1]);
-        $critical = $count(['limit' => 1, 'level' => self::CRITICAL_FROM.'..15']);
-        $warning = $count(['limit' => 1, 'level' => self::WARNING_FROM.'..'.(self::CRITICAL_FROM - 1)]);
+        $total = $inventory([]);
+        $active = $inventory(['status' => 'active']);
 
-        if ($total === null) {
+        if ($total === null || $active === null) {
             return $this->unavailable(
                 'wazuh',
                 'Wazuh',
                 'degraded',
-                'The Wazuh API authenticated but the alert query returned no usable result.',
-                $url.'/security/alerts',
+                'The Wazuh API authenticated but the agent query returned no usable result.',
+                $url.'/agents',
             );
         }
+
+        $quiet = $total - $active;
 
         return new SecuritySummary(
             key: 'wazuh',
             label: 'Wazuh',
-            status: $critical > 0 ? 'degraded' : 'healthy',
+            status: $quiet > 0 ? 'degraded' : 'healthy',
             summary: sprintf(
-                '%d active alert(s), %d critical, %d warning.',
+                '%d agent(s) enrolled, %d reporting.',
                 $total,
-                $critical ?? 0,
-                $warning ?? 0,
+                $active,
             ),
-            source: $url.'/security/alerts',
+            source: $url.'/agents',
             checkedAt: Carbon::now(),
             alertCount: $total,
-            criticalCount: $critical ?? 0,
-            warningCount: $warning ?? 0,
+            criticalCount: $quiet,
+            warningCount: 0,
         );
     }
 
