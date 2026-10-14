@@ -40,12 +40,16 @@
                         @endphp
 
                         <div>
-                            {{-- A plain link, not a Livewire action. Choosing a node is a
-                                 navigation: a full load always boots a working component
-                                 and shows the browser's own loading state, while an
-                                 in-place update of this tree has been observed to leave
-                                 it unresponsive until a manual refresh. --}}
-                            <a href="{{ request()->fullUrlWithQuery(['target' => $target['key']]) }}"
+                            {{-- A plain link, not a Livewire action, and addressed from
+                                 the page's own URL, never the current request: during a
+                                 Livewire update the request IS the update endpoint, so a
+                                 href built from it addresses /livewire-*/update and the
+                                 next click answers 405. Choosing a node is a navigation:
+                                 a full load always boots a working component and shows
+                                 the browser's own loading state, while an in-place
+                                 update of this tree has been observed to leave it
+                                 unresponsive until a manual refresh. --}}
+                            <a href="{{ \App\Filament\Pages\Terminal::getUrl(panel: 'admin') }}?target={{ $target['key'] }}"
                                     @if ($isSelected) aria-current="true" @endif
                                     @class([
                                         'group relative min-h-24 block w-full rounded-xl border p-4 text-left transition duration-150',
@@ -261,7 +265,20 @@
                 <footer class="grid border-t border-gray-200 bg-white sm:grid-cols-3 sm:divide-x sm:divide-gray-200 dark:border-white/10 dark:bg-gray-900 dark:sm:divide-white/10">
                     <div class="flex items-center gap-3 px-5 py-3.5">
                         <span class="flex size-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">{!! \App\Support\Lucide::html('clock') !!}</span>
-                        <div><p class="text-[11px] text-gray-400">Session Duration</p><p class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{ $state['duration'] }}</p></div>
+                        <div><p class="text-[11px] text-gray-400">Session Duration</p>
+                            @if ($session?->created_at)
+                                {{-- Ticks client-side so the clock runs without reloads or
+                                     polling: the server stamps the start once, the page
+                                     counts from there. The initial text is the server's
+                                     own figure, so nothing depends on script running. --}}
+                                <p class="text-xs font-semibold text-gray-700 dark:text-gray-200"
+                                   x-data="{ start: {{ $session->created_at->timestamp }}, now: Math.floor(Date.now() / 1000) }"
+                                   x-init="setInterval(() => { now = Math.floor(Date.now() / 1000) }, 1000)"
+                                   x-text="(() => { const s = Math.max(0, now - start); const p = (n) => String(n).padStart(2, '0'); return p(Math.floor(s / 3600)) + ':' + p(Math.floor(s % 3600 / 60)) + ':' + p(s % 60); })()">{{ $state['duration'] }}</p>
+                            @else
+                                <p class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{ $state['duration'] }}</p>
+                            @endif
+                        </div>
                     </div>
                     <div class="flex items-center gap-3 border-t border-gray-200 px-5 py-3.5 sm:border-t-0 dark:border-white/10">
                         <span class="flex size-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">{!! \App\Support\Lucide::html('users') !!}</span>

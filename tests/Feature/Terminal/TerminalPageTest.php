@@ -364,8 +364,7 @@ test('the selected target survives a reload through the address', function () {
         ->assertSee('192.168.100.10', false);
 });
 
-test('only the node holding a shell offers to close it', function () {
-    $admin = anAdmin();
+test('only the node holding a shell offers to close it', function () {    $admin = anAdmin();
 
     TerminalSession::query()->create([
         'user_id' => $admin->getKey(),
@@ -388,4 +387,42 @@ test('only the node holding a shell offers to close it', function () {
     expect($content)
         ->toContain("closeAdminSessionFor('lab-env')")
         ->not->toContain("closeAdminSessionFor('lab-atk')");
+});
+
+test('target links address the page even after a Livewire update', function () {
+    // During an update the request IS the update endpoint, so a href built
+    // from it addresses /livewire-*/update and the next click answers 405.
+    // The cards must address the page's own URL instead — this renders one
+    // update and then reads what it produced.
+    Livewire::actingAs(anAdmin())->test(Terminal::class)
+        ->call('selectAdminTarget', 'lab-env')
+        ->assertSee('/admin/terminal?target=lab-env', false)
+        ->assertDontSee('/update?target=');
+});
+
+test('the session clock ticks without reloads', function () {
+    $admin = anAdmin();
+
+    TerminalSession::query()->create([
+        'user_id' => $admin->getKey(),
+        'lab_environment_id' => null,
+        'target_kind' => 'node',
+        'target_node' => 'iaas-mgmt',
+        'container_name' => null,
+        'pid' => (string) getmypid(),
+        'ttyd_port' => '38000',
+        'credential' => bin2hex(random_bytes(24)),
+        'shell_user' => 'iaas',
+        'expires_at' => now()->addMinutes(30),
+    ]);
+
+    $this->actingAs($admin);
+
+    // The server stamps the start once; the page counts from there every
+    // second. The initial text stays server-rendered for readers without
+    // script, so both halves are asserted.
+    $this->get(Terminal::getUrl(panel: 'admin'))
+        ->assertSuccessful()
+        ->assertSee('Session Duration')
+        ->assertSee('setInterval', false);
 });
