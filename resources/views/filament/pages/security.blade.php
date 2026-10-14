@@ -15,7 +15,7 @@
     </style>
     @php
         $kpis = $this->kpis();
-        $trend = $this->alertTrend();
+        $chart = $this->chart();
         $donut = $this->severityDonut();
         $integrations = collect($this->integrations());
         $grafana = $integrations->firstWhere('key', 'grafana');
@@ -25,7 +25,7 @@
         $range = $this->selectedRange();
         $ranges = collect(\App\Services\SecurityDashboard::RANGES)->mapWithKeys(fn ($seconds, $key) => [$key => strtoupper($key)])->all();
         $baseUrl = \App\Filament\Pages\Security::getUrl(panel: 'admin');
-        $gridlines = [25, 50, 75];
+
         $integrationCards = [
             ['entry' => $grafana, 'name' => 'Grafana', 'blurb' => 'View dashboards and visualizations'],
             ['entry' => $wazuhDash, 'name' => 'Wazuh', 'blurb' => 'Investigate alerts and manage agents'],
@@ -68,17 +68,31 @@
                     $deltaFlat = ! is_numeric($delta['value'] ?? null);
                     $deltaUp = ! $deltaFlat && (float) $delta['value'] > 0;
                     $deltaDown = ! $deltaFlat && (float) $delta['value'] < 0;
+                    $tintStyles = [
+                        'rose' => ['chip' => 'bg-rose-500/10 text-rose-600 dark:text-rose-400', 'hex' => '#f43f5e'],
+                        'teal' => ['chip' => 'bg-teal-500/10 text-teal-600 dark:text-teal-400', 'hex' => '#14b8a6'],
+                        'blue' => ['chip' => 'bg-blue-500/10 text-blue-600 dark:text-blue-400', 'hex' => '#3b82f6'],
+                        'emerald' => ['chip' => 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', 'hex' => '#10b981'],
+                    ];
+                    $tint = $tintStyles[$kpi['tint'] ?? 'teal'] ?? $tintStyles['teal'];
+                    $barValues = array_slice(array_values(array_filter(array_map(fn ($p) => is_numeric($p[1] ?? null) ? (float) $p[1] : null, $kpi['spark'] ?? []), fn ($v) => $v !== null)), -24);
+                    $barMax = $barValues === [] ? 0 : max($barValues);
+                    $barCount = count($barValues);
+                    $barSlot = $barCount > 0 ? 100 / $barCount : 100;
+                    $barRects = '';
+                    foreach ($barValues as $barIndex => $barValue) {
+                        $barHeight = $barMax > 0 ? max(5, $barValue / $barMax * 96) : 0;
+                        $barRects .= sprintf('<rect x="%.2f" y="%.2f" width="%.2f" height="%.2f" rx="1.5" fill="%s" opacity="%s" />', $barIndex * $barSlot + $barSlot * 0.18, 100 - $barHeight, $barSlot * 0.64, $barHeight, $tint['hex'], $barIndex === $barCount - 1 ? '1' : '0.45');
+                    }
                 @endphp
                 <article class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2.5">
-                            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">{!! \App\Support\Lucide::html($kpi['icon'] ?? 'shield-alert') !!}</span>
+                            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg {{ $tint['chip'] }}">{!! \App\Support\Lucide::html($kpi['icon'] ?? 'shield-alert') !!}</span>
                             <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $kpi['label'] }}</h3>
                         </div>
-                        @if (count($spark) > 1)
-                            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="im-spark-svg w-24" role="img" aria-label="{{ $kpi['label'] }} recent trend">
-                                <polyline points="{{ $sparkPoints }}" fill="none" stroke="#2dd4bf" stroke-width="6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
+                        @if ($barCount > 1)
+                            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="im-spark-svg w-24" role="img" aria-label="{{ $kpi['label'] }} recent trend">{!! $barRects !!}</svg>
                         @endif
                     </div>
                     <div class="mt-3 flex items-baseline gap-1.5">
@@ -117,6 +131,38 @@
             @endif
         </section>
 
+        @php $coverage = $this->coverage(); @endphp
+        <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900" aria-label="Environment coverage">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-base font-semibold text-gray-950 dark:text-white">Environment coverage</h3>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Alerts per plane in 24h, straight from the SIEM log. A quiet plane renders as quiet — the portal never fills a gap with a guess.</p>
+                </div>
+                @if (! $coverage['ok'])
+                    <span class="rounded-full bg-gray-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-gray-500 dark:text-gray-400">collecting</span>
+                @endif
+            </div>
+            <div class="mt-4 overflow-x-auto">
+                <table class="table w-full min-w-[640px] text-left text-sm">
+                    <thead class="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                        <tr><th class="py-2.5 pr-4 font-medium">Node</th><th class="py-2.5 pr-4 font-medium">Role</th><th class="py-2.5 pr-4 font-medium">Agent</th><th class="py-2.5 pr-4 text-right font-medium">Alerts</th><th class="py-2.5 pr-4 font-medium">Last seen</th><th class="py-2.5 font-medium">State</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        @foreach ($coverage['rows'] as $row)
+                            <tr>
+                                <td class="py-2.5 pr-4 font-mono text-xs font-semibold text-gray-900 dark:text-white">{{ $row['node'] }}</td>
+                                <td class="py-2.5 pr-4 text-xs text-gray-600 dark:text-gray-300">{{ $row['role'] }}</td>
+                                <td class="py-2.5 pr-4 font-mono text-xs text-gray-500 dark:text-gray-400">{{ $row['agent'] }}</td>
+                                <td class="py-2.5 pr-4 text-right font-mono text-xs text-gray-900 dark:text-white">{{ $row['total'] !== null ? number_format((float) $row['total']) : '—' }}</td>
+                                <td class="whitespace-nowrap py-2.5 pr-4 text-xs text-gray-500 dark:text-gray-400">{{ $row['last'] ? \Illuminate\Support\Carbon::createFromTimestamp($row['last'])->diffForHumans() : '—' }}</td>
+                                <td class="py-2.5"><span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase {{ ($row['state'] ?? '') === 'reporting' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-gray-500/10 text-gray-500 dark:text-gray-400' }}">{{ $row['state'] }}</span></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         {{-- Trend + severity --}}
         <div class="im-chartrow grid gap-6 xl:grid-cols-3">
             <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 xl:col-span-2">
@@ -125,26 +171,35 @@
                         <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Trend</h3>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             Total security alerts over time ·
-                            @if ($trend['from_label'] && $trend['to_label'])
-                                {{ $trend['from_label'] }} → {{ $trend['to_label'] }}
+                            @if (! ($chart['empty'] ?? true))
+                                {{ $chart['from_label'] }} → {{ $chart['to_label'] }}
                             @else
-                                {{ $trend['coverage'] }}
+                                {{ $chart['coverage'] }}
                             @endif
                         </p>
                     </div>
                 </div>
                 <div class="mt-4">
-                    @if (count($trend['series']) > 1)
-                        @php
-                            $line = collect($trend['series'])->map(fn ($p) => sprintf('%.2f,%.2f', $p[0], $p[1]))->implode(' ');
-                            $area = '0,100 '.$line.' 100,100';
-                        @endphp
-                        <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="im-chart-svg" role="img" aria-label="Alert counts over time">
-                            @foreach ($gridlines as $gridline)
-                                <line x1="0" y1="{{ $gridline }}" x2="100" y2="{{ $gridline }}" stroke="currentColor" stroke-opacity=".12" stroke-width=".5" vector-effect="non-scaling-stroke" />
+                    @if (! ($chart['empty'] ?? true))
+                        <div class="mb-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span class="relative flex size-2">
+                                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-60"></span>
+                                <span class="relative inline-flex size-2 rounded-full bg-teal-500"></span>
+                            </span>
+                            <span>Latest hour: <span class="font-mono font-semibold text-gray-900 dark:text-white">{{ number_format((float) $chart['last']['v']) }}</span> alerts at {{ $chart['last']['label'] }} · peak {{ $chart['peak'] >= 1000 ? number_format($chart['peak'] / 1000, 1).'k' : (int) $chart['peak'] }} · {{ $chart['from_label'] }} → {{ $chart['to_label'] }}</span>
+                        </div>
+                        <svg viewBox="0 0 200 100" class="h-44 w-full" role="img" aria-label="Alert counts over time">
+                            @foreach ($chart['yticks'] as $tick)
+                                <line x1="26" y1="{{ 6 + $tick['y'] * 0.82 }}" x2="196" y2="{{ 6 + $tick['y'] * 0.82 }}" stroke="currentColor" stroke-opacity=".12" stroke-width=".5" />
+                                <text x="23" y="{{ 8 + $tick['y'] * 0.82 }}" text-anchor="end" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
                             @endforeach
-                            <polygon points="{{ $area }}" fill="#2dd4bf" fill-opacity="0.15" />
-                            <polyline points="{{ $line }}" fill="none" stroke="#2dd4bf" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+                            @foreach ($chart['xticks'] as $tick)
+                                <text x="{{ 24 + $tick['x'] * 1.72 }}" y="97" text-anchor="middle" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
+                            @endforeach
+                            <g transform="translate(24,6) scale(1.72,0.82)">
+                                <path d="{{ $chart['area'] }}" fill="#2dd4bf" fill-opacity="0.15" stroke="none" />
+                                <path d="{{ $chart['line'] }}" fill="none" stroke="#2dd4bf" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+                            </g>
                         </svg>
                     @else
                         <div class="flex h-44 items-center justify-center rounded-lg border border-dashed border-gray-200 text-center text-sm text-gray-400 dark:border-gray-800">
@@ -210,6 +265,9 @@
                             <div class="min-w-0">
                                 <p class="text-sm font-semibold text-gray-900 dark:text-white">Open {{ $card['name'] }}</p>
                                 <p class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{{ $card['blurb'] }}</p>
+                                @if (! empty($entry['url']))
+                                    <p class="mt-0.5 truncate font-mono text-[11px] text-gray-400 dark:text-gray-500">{{ parse_url($entry['url'], PHP_URL_HOST) }}</p>
+                                @endif
                             </div>
                         </div>
                         <div class="flex shrink-0 items-center gap-2">

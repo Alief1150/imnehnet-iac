@@ -23,6 +23,18 @@ final class SecurityDashboard
     public const RANGES = ['24h' => 86400, '7d' => 604800];
 
     /**
+     * Every plane that must appear on the coverage panel, in display order.
+     * The agent column names the SIEM reporter; anything else that reports
+     * is listed after these as an unmapped reporter.
+     */
+    public const NODES = [
+        ['agent' => 'Linux-Mint-Host', 'node' => 'server-imnehnet', 'role' => 'Physical host'],
+        ['agent' => 'iaas-mgmt', 'node' => 'IAAS-MGMT', 'role' => 'Management plane'],
+        ['agent' => 'LAB-ENV', 'node' => 'LAB-ENV', 'role' => 'Defender lab plane'],
+        ['agent' => 'LAB-ATK', 'node' => 'LAB-ATK', 'role' => 'Attacker lab plane'],
+    ];
+
+    /**
      * The four headline cards.
      *
      * @param  array<string, mixed>  $telemetry
@@ -40,6 +52,7 @@ final class SecurityDashboard
         return [
             'alerts' => [
                 'label' => 'Active Alerts',
+                'tint' => 'rose',
                 'icon' => 'shield-alert',
                 'value' => is_array($day) ? ($day['total'] ?? null) : null,
                 'unit' => null,
@@ -50,6 +63,7 @@ final class SecurityDashboard
             ],
             'agents' => [
                 'label' => 'Wazuh Agents',
+                'tint' => 'teal',
                 'icon' => 'activity',
                 'value' => isset($alerts['agents_24h']) && is_array($alerts['agents_24h']) ? count($alerts['agents_24h']) : null,
                 'unit' => null,
@@ -60,6 +74,7 @@ final class SecurityDashboard
             ],
             'failed' => [
                 'label' => 'Failed Logins',
+                'tint' => 'blue',
                 'icon' => 'users',
                 'value' => $failed['total_24h'] ?? null,
                 'unit' => null,
@@ -74,6 +89,7 @@ final class SecurityDashboard
             ],
             'isolation' => [
                 'label' => 'Isolation Policy',
+                'tint' => 'emerald',
                 'icon' => 'shield-check',
                 'value' => $isolation['percent'] ?? null,
                 'unit' => '%',
@@ -147,6 +163,208 @@ final class SecurityDashboard
             'missing' => isset($vis['missing']) && is_array($vis['missing']) ? array_values($vis['missing']) : [],
             'state' => ($vis['ok'] ?? false) ? 'ready' : 'unknown',
         ];
+    }
+
+    /**
+     * Chart geometry the blade draws without thinking: a smoothed line, a
+     * filled area, labelled axes and date ticks, all scaled to a nice
+     * ceiling so quiet days still show their shape.
+     *
+     * @param  list<array{0: int, array<string, mixed>}>  $hourly
+     * @return array<string, mixed>
+     */
+    public function chart(array $hourly, string $range): array
+    {
+        $seconds = self::RANGES[$range] ?? self::RANGES['24h'];
+        $now = time();
+        $raw = [];
+
+        foreach ($hourly as $entry) {
+            [$ts, $bucket] = $entry;
+
+            if ($ts < $now - $seconds) {
+                continue;
+            }
+
+            $raw[] = ['ts' => $ts, 'v' => (float) ($bucket['total'] ?? 0)];
+        }
+
+        if ($raw === []) {
+            return ['empty' => true, 'coverage' => 'no samples in this window yet'];
+        }
+
+        $stride = (int) max(1, floor(count($raw) / 60));
+        $sampled = [];
+
+        foreach ($raw as $index => $point) {
+            if ($index % $stride === 0 || $index === count($raw) - 1) {
+                $sampled[] = $point;
+            }
+        }
+
+        $count = count($sampled);
+        $peak = max(array_map(fn (array $point): float => $point['v'], $sampled));
+        $ymax = $this->niceCeil($peak);
+
+        $plot = [];
+
+        foreach ($sampled as $index => $point) {
+            $plot[] = [
+                $count > 1 ? $index * 100 / ($count - 1) : 50.0,
+                $peak > 0 ? 100 - min(100, max(0, $point['v'] / $ymax * 100)) : 100,
+                $point['v'],
+                $point['ts'],
+            ];
+        }
+
+        $coords = array_map(fn (array $point): array => [$point[0], $point[1]], $plot);
+        $line = $this->smoothPath($coords);
+        $area = sprintf('M%.2f,100 %s L%.2f,100 Z', $plot[0][0], $line, $plot[$count - 1][0]);
+
+        $yticks = [];
+
+        foreach ([0, 0.25, 0.5, 0.75, 1] as $fraction) {
+            $yticks[] = ['y' => 100 - $fraction * 100, 'label' => $this->compactCount($ymax * $fraction)];
+        }
+
+        $tickCount = min($count, 5);
+        $xticks = [];
+
+        for ($i = 0; $i < $tickCount; $i++) {
+            $point = $plot[(int) round($i * ($count - 1) / max(1, $tickCount - 1))];
+            $xticks[] = ['x' => $point[0], 'label' => Carbon::createFromTimestamp((int) $point[3])->format('d M H:i')];
+        }
+
+        $last = end($plot);
+
+        return [
+            'empty' => false,
+            'line' => $line,
+            'area' => $area,
+            'yticks' => $yticks,
+            'xticks' => $xticks,
+            'ymax' => $ymax,
+            'peak' => $peak,
+            'last' => ['v' => $last[2], 'label' => Carbon::createFromTimestamp((int) $last[3])->format('d M H:i')],
+            'from_label' => Carbon::createFromTimestamp($plot[0][3])->format('d M H:i'),
+            'to_label' => Carbon::createFromTimestamp((int) $last[3])->format('d M H:i'),
+            'coverage' => sprintf('%d hourly buckets', $count),
+        ];
+    }
+
+    /**
+     * One row per plane: reporting with its numbers, quiet when the SIEM
+     * heard nothing, unknown when nothing was collected at all.
+     *
+     * @param  array<string, mixed>  $telemetry
+     * @return array{ok: bool, rows: list<array<string, mixed>>}
+     */
+    public function coverage(array $telemetry): array
+    {
+        $alerts = $telemetry['alerts'] ?? null;
+        $ok = is_array($alerts) && ($alerts['ok'] ?? false);
+        $byAgent = $ok && isset($alerts['by_agent']) && is_array($alerts['by_agent']) ? $alerts['by_agent'] : [];
+        $rows = [];
+
+        foreach (self::NODES as $node) {
+            $stats = $byAgent[$node['agent']] ?? null;
+
+            $rows[] = [
+                'node' => $node['node'],
+                'role' => $node['role'],
+                'agent' => $node['agent'],
+                'state' => ! $ok ? 'unknown' : ($stats === null ? 'quiet' : 'reporting'),
+                'total' => $stats['total'] ?? null,
+                'low' => $stats['low'] ?? null,
+                'med' => $stats['med'] ?? null,
+                'high' => $stats['high'] ?? null,
+                'last' => $stats['last'] ?? null,
+                'ip' => $stats['ip'] ?? null,
+            ];
+        }
+
+        foreach ($byAgent as $name => $stats) {
+            if (collect(self::NODES)->contains(fn (array $node): bool => $node['agent'] === $name)) {
+                continue;
+            }
+
+            $rows[] = [
+                'node' => $name,
+                'role' => 'Unmapped reporter',
+                'agent' => $name,
+                'state' => 'reporting',
+                'total' => $stats['total'] ?? null,
+                'low' => $stats['low'] ?? null,
+                'med' => $stats['med'] ?? null,
+                'high' => $stats['high'] ?? null,
+                'last' => $stats['last'] ?? null,
+                'ip' => $stats['ip'] ?? null,
+            ];
+        }
+
+        return ['ok' => $ok, 'rows' => $rows];
+    }
+
+    private function niceCeil(float $value): float
+    {
+        if ($value <= 0) {
+            return 1.0;
+        }
+
+        $magnitude = 10 ** floor(log10($value));
+
+        foreach ([1, 2, 2.5, 5, 10] as $step) {
+            if ($step * $magnitude >= $value) {
+                return (float) ($step * $magnitude);
+            }
+        }
+
+        return 10.0 * $magnitude;
+    }
+
+    private function compactCount(float $value): string
+    {
+        if ($value >= 1000) {
+            return rtrim(rtrim(sprintf('%.1f', $value / 1000), '0'), '.').'k';
+        }
+
+        return (string) (int) round($value);
+    }
+
+    /**
+     * @param  list<array{0: float, 1: float}>  $points
+     */
+    private function smoothPath(array $points): string
+    {
+        $count = count($points);
+
+        if ($count === 1) {
+            return sprintf('M%.2f,%.2f', $points[0][0], $points[0][1]);
+        }
+
+        if ($count === 2) {
+            return sprintf('M%.2f,%.2f L%.2f,%.2f', $points[0][0], $points[0][1], $points[1][0], $points[1][1]);
+        }
+
+        $path = sprintf('M%.2f,%.2f', $points[0][0], $points[0][1]);
+
+        for ($i = 0; $i < $count - 1; $i++) {
+            $before = $points[max(0, $i - 1)];
+            $from = $points[$i];
+            $to = $points[$i + 1];
+            $after = $points[min($count - 1, $i + 2)];
+            $path .= sprintf(
+                ' C%.2f,%.2f %.2f,%.2f %.2f,%.2f',
+                $from[0] + ($to[0] - $before[0]) / 6,
+                $from[1] + ($to[1] - $before[1]) / 6,
+                $to[0] - ($after[0] - $from[0]) / 6,
+                $to[1] - ($after[1] - $from[1]) / 6,
+                $to[0],
+                $to[1]
+            );
+        }
+
+        return $path;
     }
 
     /**

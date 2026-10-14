@@ -388,3 +388,64 @@ test('the wazuh summary degrades when the agent inventory is unreadable', functi
 
     expect($wazuh->status)->toBe('degraded');
 });
+
+test('alerts group per-agent totals with last seen and ip', function () {
+    $now = 1_700_000_000;
+    $telemetry = app(SecurityTelemetryCollector::class)->collect(
+        cannedSecurityFs(cannedAlertsWithIps($now, ['10.30.0.9', '10.30.0.9']), ''),
+        $now,
+        fn (array $command, int $timeout): array => ['successful' => false, 'stdout' => '', 'stderr' => '']
+    );
+
+    $byAgent = $telemetry['alerts']['by_agent'];
+
+    expect($byAgent['lab-0']['total'])->toBe(1)
+        ->and($byAgent['lab-1']['total'])->toBe(1)
+        ->and($byAgent['lab-1']['ip'])->toBe('10.30.0.9')
+        ->and($byAgent['lab-1']['last'])->toBe($now - 1200);
+});
+
+test('coverage lists every known node before unmapped reporters', function () {
+    $rows = securityDashboard()->coverage(['alerts' => ['ok' => true, 'by_agent' => [
+        'LAB-ENV' => ['total' => 3, 'low' => 3, 'med' => 0, 'high' => 0, 'last' => 1_700_000_000, 'ip' => '192.168.100.20'],
+        'mystery-box' => ['total' => 1, 'low' => 1, 'med' => 0, 'high' => 0, 'last' => 1_700_000_000, 'ip' => null],
+    ]]]);
+
+    expect(array_column($rows['rows'], 'node'))->toBe(['server-imnehnet', 'IAAS-MGMT', 'LAB-ENV', 'LAB-ATK', 'mystery-box'])
+        ->and($rows['rows'][2]['state'])->toBe('reporting')
+        ->and($rows['rows'][0]['state'])->toBe('quiet')
+        ->and($rows['rows'][4]['role'])->toBe('Unmapped reporter');
+});
+
+test('coverage without telemetry renders unknown, not zeros', function () {
+    $rows = securityDashboard()->coverage([]);
+
+    expect($rows['ok'])->toBeFalse()
+        ->and($rows['rows'][0]['state'])->toBe('unknown')
+        ->and($rows['rows'][0]['total'])->toBeNull();
+});
+
+test('the chart scales axes to a nice ceiling with date ticks', function () {
+    $now = time();
+    $hourly = [];
+
+    foreach ([1, 2, 3, 4, 5, 8] as $index => $total) {
+        $hourly[] = [$now - (6 - $index) * 3600, ['total' => $total]];
+    }
+
+    $chart = securityDashboard()->chart($hourly, '24h');
+
+    expect($chart['empty'])->toBeFalse()
+        ->and($chart['ymax'])->toEqual(10.0)
+        ->and(count($chart['xticks']))->toBe(5)
+        ->and(count($chart['yticks']))->toBe(5)
+        ->and($chart['line'])->toStartWith('M')
+        ->and($chart['area'])->toContain('L100.00,100 Z');
+});
+
+test('an empty chart carries its reason instead of axes', function () {
+    $chart = securityDashboard()->chart([], '24h');
+
+    expect($chart['empty'])->toBeTrue()
+        ->and($chart['coverage'])->toBe('no samples in this window yet');
+});

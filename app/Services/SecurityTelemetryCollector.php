@@ -235,6 +235,35 @@ final class SecurityTelemetryCollector
         ))));
         sort($agentIps);
 
+        $byAgent = [];
+
+        foreach ($day as $alert) {
+            $name = $alert['agent'];
+
+            if ($name === 'unknown') {
+                continue;
+            }
+
+            $byAgent[$name] ??= ['total' => 0, 'low' => 0, 'med' => 0, 'high' => 0, 'last' => 0, 'ip' => null];
+            $byAgent[$name]['total']++;
+
+            if ($alert['severity'] === 'high') {
+                $byAgent[$name]['high']++;
+            } elseif ($alert['severity'] === 'medium') {
+                $byAgent[$name]['med']++;
+            } else {
+                $byAgent[$name]['low']++;
+            }
+
+            $byAgent[$name]['last'] = max($byAgent[$name]['last'], $alert['ts']);
+
+            if ($alert['ip'] !== null) {
+                $byAgent[$name]['ip'] = $alert['ip'];
+            }
+        }
+
+        ksort($byAgent);
+
         $recent = array_slice(array_reverse($alerts), 0, 10);
 
         return [
@@ -252,6 +281,7 @@ final class SecurityTelemetryCollector
             'prev_day_total' => count($prev),
             'agents_24h' => $agents,
             'agent_ips_24h' => $agentIps,
+            'by_agent' => $byAgent,
             'hourly' => $hourly,
             'recent' => $recent,
         ];

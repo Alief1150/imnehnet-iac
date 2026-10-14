@@ -162,6 +162,27 @@ final class Security extends Page
         return $this->memoTelemetry ??= app(SecurityTelemetryCollector::class)->telemetry();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function chart(): array
+    {
+        return app(SecurityDashboard::class)->chart(
+            $this->memoTelemetry()['alerts']['hourly'] ?? [],
+            $this->selectedRange(),
+        );
+    }
+
+    /**
+     * @return array{ok: bool, rows: list<array<string, mixed>>}
+     */
+    public function coverage(): array
+    {
+        return app(SecurityDashboard::class)->coverage(
+            $this->memoTelemetry(),
+        );
+    }
+
     public static function canAccess(): bool
     {
         return auth()->user()?->isAdmin() === true;
