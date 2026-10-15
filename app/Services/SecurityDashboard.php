@@ -245,6 +245,14 @@ final class SecurityDashboard
             'xticks' => $xticks,
             'ymax' => $ymax,
             'peak' => $peak,
+            'dots' => array_map(
+                fn (array $point): array => [
+                    'x' => $point[0],
+                    'y' => $point[1],
+                    'label' => sprintf('%s alerts at %s', number_format($point[2]), Carbon::createFromTimestamp((int) $point[3])->format('d M H:i')),
+                ],
+                $plot
+            ),
             'last' => ['v' => $last[2], 'label' => Carbon::createFromTimestamp((int) $last[3])->format('d M H:i')],
             'from_label' => Carbon::createFromTimestamp($plot[0][3])->format('d M H:i'),
             'to_label' => Carbon::createFromTimestamp((int) $last[3])->format('d M H:i'),

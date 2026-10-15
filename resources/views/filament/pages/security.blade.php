@@ -204,6 +204,14 @@
                             <g transform="translate(24,6) scale(1.72,0.82)">
                                 <path d="{{ $chart['area'] }}" fill="#2dd4bf" fill-opacity="0.15" stroke="none" />
                                 <path d="{{ $chart['line'] }}" fill="none" stroke="#2dd4bf" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+                                @foreach ($chart['dots'] as $dot)
+                                    <circle cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="3.2" fill="transparent">
+                                        <title>{{ $dot['label'] }}</title>
+                                    </circle>
+                                    @if (count($chart['dots']) <= 24)
+                                        <circle cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="1.5" fill="#2dd4bf" vector-effect="non-scaling-stroke" />
+                                    @endif
+                                @endforeach
                             </g>
                         </svg>
                     @else
@@ -228,7 +236,9 @@
                                             pathLength="100"
                                             stroke="{{ $slice['color'] }}"
                                             stroke-dasharray="{{ number_format($slice['share'], 1) }} {{ number_format(100 - $slice['share'], 1) }}"
-                                            stroke-dashoffset="{{ number_format($offset, 1) }}" />
+                                            stroke-dashoffset="{{ number_format($offset, 1) }}">
+                                        <title>{{ $slice['label'] }}: {{ $slice['count'] }} ({{ number_format($slice['share'], 1) }}%)</title>
+                                    </circle>
                                     @php $offset -= $slice['share']; @endphp
                                 @endif
                             @endforeach

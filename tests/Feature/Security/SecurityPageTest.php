@@ -463,3 +463,16 @@ test('a failed portal sign-in is counted within the day', function () {
     expect($telemetry['failed_logins']['portal_24h'])->toBe(1)
         ->and($telemetry['failed_logins']['total_24h'])->toBe(1);
 });
+
+test('chart points carry hover labels for tooltips', function () {
+    $now = time();
+    $hourly = [
+        [$now - 3600, ['total' => 5]],
+        [$now, ['total' => 3]],
+    ];
+
+    $dots = securityDashboard()->chart($hourly, '24h')['dots'];
+
+    expect($dots)->toHaveCount(2)
+        ->and($dots[0]['label'])->toContain('5 alerts at');
+});
