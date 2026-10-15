@@ -30,6 +30,8 @@ final class Security extends Page
     #[Url(as: 'range')]
     public string $range = '24h';
 
+    public string $sev = 'all';
+
     public function mount(): void
     {
         if (! array_key_exists($this->range, SecurityDashboard::RANGES)) {
@@ -81,9 +83,30 @@ final class Security extends Page
     /**
      * @return list<array<string, mixed>>
      */
+    public function setSev(string $sev): void
+    {
+        if (! in_array($sev, ['all', 'low', 'medium', 'high'], true)) {
+            return;
+        }
+
+        $this->sev = $sev;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
     public function recentAlerts(): array
     {
-        return $this->memoTelemetry()['alerts']['recent'] ?? [];
+        $recent = $this->memoTelemetry()['alerts']['recent'] ?? [];
+
+        if ($this->sev === 'all') {
+            return $recent;
+        }
+
+        return array_values(array_filter(
+            $recent,
+            fn (array $alert): bool => ($alert['severity'] ?? 'low') === $this->sev,
+        ));
     }
 
     /**

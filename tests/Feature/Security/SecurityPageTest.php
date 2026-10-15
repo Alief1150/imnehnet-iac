@@ -476,3 +476,31 @@ test('chart points carry hover labels for tooltips', function () {
     expect($dots)->toHaveCount(2)
         ->and($dots[0]['label'])->toContain('5 alerts at');
 });
+
+test('recent alerts can be filtered by severity', function () {
+    app(SecurityTelemetryCollector::class)->collect(
+        cannedSecurityFs(cannedAlerts(), ''),
+        1_700_000_000,
+        fn (array $command, int $timeout): array => ['successful' => false, 'stdout' => '', 'stderr' => '']
+    );
+
+    $page = Livewire::actingAs(aSecurityAdmin())->test(Security::class);
+
+    $page->set('sev', 'high');
+
+    $recent = $page->instance()->recentAlerts();
+
+    expect($recent)->not->toBeEmpty();
+
+    foreach ($recent as $alert) {
+        expect($alert['severity'])->toBe('high');
+    }
+});
+
+test('an unknown severity filter is refused', function () {
+    $page = Livewire::actingAs(aSecurityAdmin())->test(Security::class);
+
+    $page->call('setSev', 'critical');
+
+    expect($page->instance()->sev)->toBe('all');
+});

@@ -10,7 +10,7 @@
         .im-security .im-donut-svg { display:block; width:100%; height:190px; max-height:190px; overflow:hidden; }
         .im-security .im-panel { min-width:0; overflow:hidden; }
         @media(max-width:1279px) { .im-security .im-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-        @media(max-width:1023px) { .im-security .im-chartrow, .im-security .im-halves { grid-template-columns:minmax(0,1fr); } }
+        @media(max-width:767px) { .im-security .im-chartrow, .im-security .im-halves { grid-template-columns:minmax(0,1fr); } }
         @media(max-width:767px) { .im-security .im-kpis { grid-template-columns:minmax(0,1fr); } }
     </style>
     @php
@@ -169,8 +169,8 @@
         </section>
 
         {{-- Trend + severity --}}
-        <div class="im-chartrow grid gap-6 lg:grid-cols-3">
-            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-2">
+        <div class="im-chartrow grid gap-6 md:grid-cols-5">
+            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:col-span-3">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Trend</h3>
@@ -321,6 +321,11 @@
                     <a href="{{ $wazuhDash['url'] }}" target="_blank" rel="noopener noreferrer" class="shrink-0 text-xs font-semibold text-teal-600 hover:underline dark:text-teal-400">View all alerts →</a>
                 @endif
             </div>
+            <div class="mt-3 inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-white/10 dark:bg-gray-900" role="group" aria-label="Severity filter">
+                @foreach (['all' => 'All', 'low' => 'Low', 'medium' => 'Medium', 'high' => 'High'] as $sevKey => $sevLabel)
+                    <button type="button" wire:click="setSev('{{ $sevKey }}')" class="rounded-lg px-3 py-1 text-xs font-semibold {{ $this->sev === $sevKey ? 'bg-gray-950 text-white dark:bg-white dark:text-gray-950' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}">{{ $sevLabel }}</button>
+                @endforeach
+            </div>
             <div class="mt-4 overflow-x-auto">
                 <table class="table w-full min-w-[640px] text-left text-sm">
                     <thead class="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500 dark:border-gray-800 dark:text-gray-400">
@@ -337,7 +342,7 @@
                                 <td class="py-2.5 font-mono text-xs text-gray-500 dark:text-gray-400">{{ $alert['rule'] }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="py-6 text-center text-sm text-gray-400">No alerts recorded yet — the collector reads the SIEM log every minute.</td></tr>
+                            <tr><td colspan="5" class="py-6 text-center text-sm text-gray-400">{{ $this->sev === 'all' ? 'No alerts recorded yet — the collector reads the SIEM log every minute.' : 'No '.$this->sev.' alerts in this window.' }}</td></tr>
                         @endforelse
                     </tbody>
                 </table>
