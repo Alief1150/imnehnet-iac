@@ -1,17 +1,14 @@
 <x-filament-panels::page>
     {{-- Scoped layout fallback: works even when the deployed Vite bundle has not picked up new utility classes. --}}
     <style>
-        .im-security .im-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; }
-        .im-security .im-chartrow { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:1.5rem; }
-        .im-security .im-halves { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.5rem; }
-        .im-security .im-kpis > *, .im-security .im-chartrow > *, .im-security .im-halves > * { min-width:0; }
+        .im-security .im-kpis { display:grid; gap:1rem; }
+        .im-security .im-chartrow { display:grid; gap:1.5rem; }
+        .im-security .im-kpis > *, .im-security .im-chartrow > * { min-width:0; }
         .im-security .im-chart-svg { display:block; width:100%; height:180px; max-height:180px; overflow:hidden; }
         .im-security .im-spark-svg { display:block; width:100%; height:44px; max-height:44px; overflow:hidden; }
         .im-security .im-donut-svg { display:block; width:100%; height:190px; max-height:190px; overflow:hidden; }
         .im-security .im-panel { min-width:0; overflow:hidden; }
-        @media(max-width:1279px) { .im-security .im-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-        @media(max-width:767px) { .im-security .im-chartrow, .im-security .im-halves { grid-template-columns:minmax(0,1fr); } }
-        @media(max-width:767px) { .im-security .im-kpis { grid-template-columns:minmax(0,1fr); } }
+
     </style>
     @php
         $kpis = $this->kpis();
@@ -161,8 +158,8 @@
         </section>
 
         {{-- Trend + severity --}}
-        <div class="im-chartrow grid gap-6 grid-cols-5">
-            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 col-span-3">
+        <div class="im-chartrow grid gap-6 grid-cols-1 md:grid-cols-5">
+            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 col-span-1 md:col-span-3">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Trend</h3>
@@ -307,7 +304,7 @@
             <div class="flex items-start justify-between gap-3">
                 <div>
                     <h3 class="text-base font-semibold text-gray-950 dark:text-white">Recent Security Alerts</h3>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Latest security events from Wazuh and system monitoring.</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Latest event per reporter, newest first.</p>
                 </div>
                 @if ($wazuhDash !== null && ! empty($wazuhDash['url']))
                     <a href="{{ $wazuhDash['url'] }}" target="_blank" rel="noopener noreferrer" class="shrink-0 text-xs font-semibold text-teal-600 hover:underline dark:text-teal-400">View all alerts →</a>

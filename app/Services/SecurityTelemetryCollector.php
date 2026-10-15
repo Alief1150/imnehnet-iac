@@ -244,7 +244,7 @@ final class SecurityTelemetryCollector
                 continue;
             }
 
-            $byAgent[$name] ??= ['total' => 0, 'low' => 0, 'med' => 0, 'high' => 0, 'last' => 0, 'ip' => null];
+            $byAgent[$name] ??= ['total' => 0, 'low' => 0, 'med' => 0, 'high' => 0, 'last' => 0, 'ip' => null, 'last_rule' => '', 'last_desc' => '', 'last_sev' => 'low'];
             $byAgent[$name]['total']++;
 
             if ($alert['severity'] === 'high') {
@@ -255,10 +255,15 @@ final class SecurityTelemetryCollector
                 $byAgent[$name]['low']++;
             }
 
-            $byAgent[$name]['last'] = max($byAgent[$name]['last'], $alert['ts']);
+            if ($alert['ts'] >= $byAgent[$name]['last']) {
+                $byAgent[$name]['last'] = $alert['ts'];
+                $byAgent[$name]['last_rule'] = $alert['rule'];
+                $byAgent[$name]['last_desc'] = $alert['description'];
+                $byAgent[$name]['last_sev'] = $alert['severity'];
 
-            if ($alert['ip'] !== null) {
-                $byAgent[$name]['ip'] = $alert['ip'];
+                if ($alert['ip'] !== null) {
+                    $byAgent[$name]['ip'] = $alert['ip'];
+                }
             }
         }
 

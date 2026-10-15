@@ -102,19 +102,40 @@ final class Security extends Page
     }
 
     /**
+     * Newest event per reporter, newest first: one row always proves every
+     * plane is heard, where a global latest-N would drown in the noisiest one.
+     *
      * @return list<array<string, mixed>>
      */
     public function recentAlerts(): array
     {
-        $recent = $this->memoTelemetry()['alerts']['recent'] ?? [];
+        $byAgent = $this->memoTelemetry()['alerts']['by_agent'] ?? null;
+
+        if (! is_array($byAgent) || $byAgent === []) {
+            return $this->memoTelemetry()['alerts']['recent'] ?? [];
+        }
+
+        $rows = [];
+
+        foreach ($byAgent as $name => $stats) {
+            $rows[] = [
+                'ts' => $stats['last'] ?? 0,
+                'agent' => $name,
+                'description' => $stats['last_desc'] ?? '',
+                'severity' => $stats['last_sev'] ?? 'low',
+                'rule' => $stats['last_rule'] ?? '',
+            ];
+        }
+
+        usort($rows, fn (array $a, array $b): int => $b['ts'] <=> $a['ts']);
 
         if ($this->sev === 'all') {
-            return $recent;
+            return $rows;
         }
 
         return array_values(array_filter(
-            $recent,
-            fn (array $alert): bool => ($alert['severity'] ?? 'low') === $this->sev,
+            $rows,
+            fn (array $row): bool => $row['severity'] === $this->sev,
         ));
     }
 

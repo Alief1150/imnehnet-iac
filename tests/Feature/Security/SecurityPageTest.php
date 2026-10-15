@@ -523,3 +523,16 @@ test('tapping a legend row toggles that severity filter', function () {
 
     expect($page->instance()->sev)->toBe('all');
 });
+
+test('recent alerts show the newest event per reporter', function () {
+    app(SecurityTelemetryCollector::class)->collect(
+        cannedSecurityFs(cannedAlerts(), ''),
+        1_700_000_000,
+        fn (array $command, int $timeout): array => ['successful' => false, 'stdout' => '', 'stderr' => '']
+    );
+
+    $rows = Livewire::actingAs(aSecurityAdmin())->test(Security::class)->instance()->recentAlerts();
+
+    expect(array_column($rows, 'agent'))->toBe(['LAB-ENV', 'LAB-ATK'])
+        ->and($rows[0]['description'])->toBe('Intrusion attempt.');
+});
