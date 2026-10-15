@@ -232,7 +232,11 @@ final class SecurityDashboard
 
         for ($i = 0; $i < $tickCount; $i++) {
             $point = $plot[(int) round($i * ($count - 1) / max(1, $tickCount - 1))];
-            $xticks[] = ['x' => $point[0], 'label' => Carbon::createFromTimestamp((int) $point[3])->format('d M H:i')];
+            $xticks[] = [
+                'x' => $point[0],
+                'label' => Carbon::createFromTimestamp((int) $point[3])->format('d M H:i'),
+                'anchor' => $tickCount === 1 ? 'middle' : ($i === 0 ? 'start' : ($i === $tickCount - 1 ? 'end' : 'middle')),
+            ];
         }
 
         $last = end($plot);

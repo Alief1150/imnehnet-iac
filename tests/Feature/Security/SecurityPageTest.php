@@ -536,3 +536,17 @@ test('recent alerts show the newest event per reporter', function () {
     expect(array_column($rows, 'agent'))->toBe(['LAB-ENV', 'LAB-ATK'])
         ->and($rows[0]['description'])->toBe('Intrusion attempt.');
 });
+
+test('chart edge ticks anchor outward so labels never clip', function () {
+    $now = time();
+    $hourly = [];
+
+    foreach ([1, 2, 3, 4, 5, 8] as $index => $total) {
+        $hourly[] = [$now - (6 - $index) * 3600, ['total' => $total]];
+    }
+
+    $xticks = securityDashboard()->chart($hourly, '24h')['xticks'];
+
+    expect($xticks[0]['anchor'])->toBe('start')
+        ->and($xticks[count($xticks) - 1]['anchor'])->toBe('end');
+});

@@ -4,7 +4,7 @@
         .im-security .im-kpis { display:grid; gap:1rem; }
         .im-security .im-chartrow { display:grid; gap:1.5rem; }
         .im-security .im-kpis > *, .im-security .im-chartrow > * { min-width:0; }
-        .im-security .im-chart-svg { display:block; width:100%; height:180px; max-height:180px; overflow:hidden; }
+        .im-security .im-security .im-dot { transition: r .15s ease; cursor:crosshair; } .im-security .im-dot:hover { r:5; }
         .im-security .im-spark-svg { display:block; width:100%; height:44px; max-height:44px; overflow:hidden; }
         .im-security .im-donut-svg { display:block; width:100%; height:190px; max-height:190px; overflow:hidden; }
         .im-security .im-panel { min-width:0; overflow:hidden; }
@@ -182,19 +182,19 @@
                             </span>
                             <span>Latest hour: <span class="font-mono font-semibold text-gray-900 dark:text-white">{{ number_format((float) $chart['last']['v']) }}</span> alerts at {{ $chart['last']['label'] }} · peak {{ $chart['peak'] >= 1000 ? number_format($chart['peak'] / 1000, 1).'k' : (int) $chart['peak'] }} · {{ $chart['from_label'] }} → {{ $chart['to_label'] }}</span>
                         </div>
-                        <svg viewBox="0 0 200 100" class="h-44 w-full" role="img" aria-label="Alert counts over time">
+                        <svg viewBox="0 0 200 100" class="aspect-[2/1] w-full" role="img" aria-label="Alert counts over time">
                             @foreach ($chart['yticks'] as $tick)
                                 <line x1="26" y1="{{ 6 + $tick['y'] * 0.82 }}" x2="196" y2="{{ 6 + $tick['y'] * 0.82 }}" stroke="currentColor" stroke-opacity=".12" stroke-width=".5" />
                                 <text x="23" y="{{ 8 + $tick['y'] * 0.82 }}" text-anchor="end" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
                             @endforeach
                             @foreach ($chart['xticks'] as $tick)
-                                <text x="{{ 24 + $tick['x'] * 1.72 }}" y="97" text-anchor="middle" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
+                                <text x="{{ 24 + $tick['x'] * 1.72 }}" y="97" text-anchor="{{ $tick['anchor'] ?? 'middle' }}" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
                             @endforeach
                             <g transform="translate(24,6) scale(1.72,0.82)">
                                 <path d="{{ $chart['area'] }}" fill="#2dd4bf" fill-opacity="0.15" stroke="none" />
                                 <path d="{{ $chart['line'] }}" fill="none" stroke="#2dd4bf" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
                                 @foreach ($chart['dots'] as $dot)
-                                    <circle cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="3.2" fill="transparent">
+                                    <circle class="im-dot" cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="3.2" fill="transparent">
                                         <title>{{ $dot['label'] }}</title>
                                     </circle>
                                     @if (count($chart['dots']) <= 24)
@@ -216,7 +216,7 @@
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Distribution of security alerts, last 24h</p>
                 @if ($donut['total'] > 0)
                     @php $offset = 25; @endphp
-                    <div class="relative mx-auto mt-2 w-44">
+                    <div class="relative mx-auto mt-2 w-52 max-w-full">
                         <svg viewBox="0 0 42 42" class="im-donut-svg" role="img" aria-label="Alert severities, {{ $donut['total'] }} total">
                             <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke-width="6" class="stroke-gray-100 dark:stroke-gray-800" />
                             @foreach ($donut['slices'] as $slice)
@@ -247,6 +247,9 @@
                             </button>
                         @endforeach
                     </dl>
+                    @if (($donut['slices'][0]['share'] ?? 0) >= 90)
+                        <p class="mt-3 rounded-lg bg-gray-500/5 px-3 py-2 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">Routine low-level agent noise dominates this volume — triage starts at Medium and High. Click a row to filter the table.</p>
+                    @endif
                 @else
                     <div class="mt-4 flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 px-5 text-center dark:border-gray-800">
                         <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">No alerts in 24h</p>
