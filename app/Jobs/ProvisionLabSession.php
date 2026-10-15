@@ -8,7 +8,9 @@ use App\Models\LabSession;
 use App\Services\GuidedCtf\LabFirewall;
 use App\Services\GuidedCtf\LabSessionManager;
 use App\Services\GuidedCtf\LabScenario;
+use App\Services\GuidedCtf\ProvisioningTimeline;
 use App\Services\OpenTofuService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use RuntimeException;
@@ -51,6 +53,12 @@ final class ProvisionLabSession implements ShouldQueue
         LabScenario $scenario,
         LabSessionManager $sessions,
     ): void {
+        Cache::lock(
+            'imnehnet:ctf:session-lifecycle:'.$this->sessionId,
+            2700,
+        )->block(60, function () use (
+            $tofu, $firewall, $scenario, $sessions
+        ): void {
         $session = LabSession::query()->find($this->sessionId);
 
         if ($session === null) {
@@ -58,7 +66,17 @@ final class ProvisionLabSession implements ShouldQueue
             return;
         }
 
+        // A queued provisioning job must never revive a session that is
+        // being torn down or has already been deleted.
+        if (in_array($session->status, [
+            LabSessionStatus::Deleting,
+            LabSessionStatus::Deleted,
+        ], true)) {
+            return;
+        }
+
         $session->forceFill(['status' => LabSessionStatus::Provisioning])->save();
+        ProvisioningTimeline::record($this->sessionId, 'session', 'Provisioning worker started.');
 
         $victim = LabEnvironment::query()->find($session->victim_environment_id);
 
@@ -75,6 +93,7 @@ final class ProvisionLabSession implements ShouldQueue
             $cpu = (int) $victim->cpu_limit;
             $megabytes = (int) $victim->memory_limit_mb;
 
+            ProvisioningTimeline::record($this->sessionId, 'victim', 'Starting LAB-ENV victim provisioning through OpenTofu.');
             // --- 1. victim -----------------------------------------------------
             $this->applyInstance(
                 $tofu,
@@ -89,6 +108,8 @@ final class ProvisionLabSession implements ShouldQueue
                 '',
             );
 
+            ProvisioningTimeline::record($this->sessionId, 'victim', 'LAB-ENV victim provisioning completed.', 'success');
+            ProvisioningTimeline::record($this->sessionId, 'attacker', 'Starting LAB-ATK attacker provisioning through OpenTofu.');
             // --- 2. attacker ---------------------------------------------------
             $this->applyInstance(
                 $tofu,
@@ -104,16 +125,22 @@ final class ProvisionLabSession implements ShouldQueue
                 (string) config('infrastructure.attacker_acl', 'ctf-attacker'),
             );
 
+            ProvisioningTimeline::record($this->sessionId, 'attacker', 'LAB-ATK attacker provisioning completed.', 'success');
+            ProvisioningTimeline::record($this->sessionId, 'network', 'Applying paired network access policy.');
             // --- 3. permit the pair --------------------------------------------
             $firewall->permit($session->refresh());
 
+            ProvisioningTimeline::record($this->sessionId, 'network', 'Paired network access policy applied.', 'success');
+            ProvisioningTimeline::record($this->sessionId, 'scenario', 'Configuring Web Server Breach scenario.');
             // --- 4. the scenario ----------------------------------------------
             $session->forceFill(['status' => LabSessionStatus::Configuring])->save();
 
             $scenario->apply($session->refresh());
 
             $sessions->markReady($session->refresh());
+            ProvisioningTimeline::record($this->sessionId, 'ready', 'Both containers are ready. Guided CTF is available.', 'success');
         } catch (RuntimeException $exception) {
+            ProvisioningTimeline::record($this->sessionId, 'failed', 'Provisioning failed; cleanup is starting.', 'error');
             // Said plainly. A lab that half exists is worse than one that failed with a
             // reason, because the student cannot tell which of the two containers is
             // missing and neither can an operator from the page.
@@ -124,6 +151,7 @@ final class ProvisionLabSession implements ShouldQueue
 
             $this->undo($tofu, $firewall, $session->refresh(), $victim);
         }
+        });
     }
 
     /**

@@ -178,6 +178,7 @@ class LabSession extends Model
                 LabSessionStatus::Provisioning,
                 LabSessionStatus::Failed,
                 LabSessionStatus::Deleting,
+                LabSessionStatus::Deleted,
             ], true);
     }
 

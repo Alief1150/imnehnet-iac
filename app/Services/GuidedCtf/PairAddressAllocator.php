@@ -3,6 +3,8 @@
 namespace App\Services\GuidedCtf;
 
 use App\Infrastructure\Health\CommandRunner;
+use App\Models\LabEnvironment;
+use App\Models\LabSession;
 use RuntimeException;
 
 /**
@@ -84,6 +86,32 @@ class PairAddressAllocator
 
         foreach ($this->octetsInFirewall() as $octet) {
             $octets[] = $octet;
+        }
+
+        // Reserve addresses immediately after session creation, even while
+        // Incus provisioning and firewall configuration are still queued.
+        foreach (LabSession::query()
+            ->where('status', '!=', 'DELETED')
+            ->get(['victim_ip', 'attacker_ip']) as $session) {
+            foreach ([$session->victim_ip, $session->attacker_ip] as $address) {
+                $octet = $this->octetFromAddress((string) $address);
+
+                if ($octet !== null) {
+                    $octets[] = $octet;
+                }
+            }
+        }
+
+        // Orphaned or partially provisioned environments also retain their
+        // addresses until their database records have been cleaned up.
+        foreach (LabEnvironment::query()
+            ->whereNotNull('internal_ip')
+            ->pluck('internal_ip') as $address) {
+            $octet = $this->octetFromAddress((string) $address);
+
+            if ($octet !== null) {
+                $octets[] = $octet;
+            }
         }
 
         return array_values(array_unique($octets));

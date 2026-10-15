@@ -14,6 +14,7 @@ use App\Models\Objective;
 use App\Models\ObjectiveProgress;
 use App\Models\User;
 use App\Services\ActivityLogService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -55,19 +56,51 @@ class LabSessionManager
      */
     public function start(User $user, Course $course): LabSession
     {
-        if ($existing = $this->activeSessionFor($user, $course)) {
-            // Rejoining is not an error. A student who refreshes, or clicks Start Lab
-            // twice, should get their lab rather than a second one.
-            return $existing;
-        }
+        // One lock per authenticated user, shared by all web processes.
+        // Keep the lock until both environments and the session are committed.
+        return Cache::lock(
+            'imnehnet:ctf:user-start:'.$user->getKey(),
+            60,
+        )->block(15, function () use ($user, $course): LabSession {
+            // Recheck inside the lock. Checking before acquiring it is racy.
+            // A DELETING session still occupies quota until teardown succeeds.
+            $existing = LabSession::query()
+                ->where('user_id', $user->getKey())
+                ->whereIn('status', [
+                    LabSessionStatus::Creating->value,
+                    LabSessionStatus::Provisioning->value,
+                    LabSessionStatus::Configuring->value,
+                    LabSessionStatus::Ready->value,
+                    LabSessionStatus::Running->value,
+                    LabSessionStatus::Completed->value,
+                    LabSessionStatus::Failed->value,
+                    LabSessionStatus::Stopped->value,
+                    LabSessionStatus::Resetting->value,
+                    LabSessionStatus::Deleting->value,
+                ])
+                ->latest('id')
+                ->first();
 
-        $pair = $this->addresses->allocate();
+            if ($existing !== null) {
+                if ((int) $existing->course_id !== (int) $course->getKey()) {
+                    throw new RuntimeException(
+                        'User already has a lab assigned to another course.'
+                    );
+                }
 
-        return DB::connection((string) config('infrastructure.environment_connection'))
-            ->transaction(function () use ($user, $course, $pair): LabSession {
+                return $existing;
+            }
+
+            // Shared across all users: allocation and reservation must be atomic.
+            return Cache::lock('imnehnet:ctf:pair-allocation', 60)
+                ->block(30, function () use ($user, $course): LabSession {
+                    $pair = $this->addresses->allocate();
+
+                    return DB::connection((string) config('infrastructure.environment_connection'))
+                ->transaction(function () use ($user, $course, $pair): LabSession {
                 $victim = LabEnvironment::query()->create([
                     'user_id' => $user->getKey(),
-                    'container_name' => $this->victimName($course, $pair['octet']),
+                    'container_name' => $this->victimName($user),
                     // Stored as a remote name. The configuration carries the trailing
                     // colon because that is how the Incus command line spells it, and
                     // adding another colon when a target is built produced
@@ -102,7 +135,7 @@ class LabSessionManager
                  */
                 $attacker = LabEnvironment::query()->create([
                     'user_id' => $user->getKey(),
-                    'container_name' => $this->attackerName($pair['octet']),
+                    'container_name' => $this->attackerName($user),
                     'incus_remote' => rtrim((string) config('infrastructure.incus_attacker_remote', 'lab-atk'), ':'),
                     'incus_project' => 'default',
                     'image' => (string) config('infrastructure.attacker_image', 'images:kali'),
@@ -145,7 +178,9 @@ class LabSessionManager
                 }
 
                 return $session;
-            });
+                });
+                });
+        });
     }
 
     /**
@@ -367,6 +402,8 @@ class LabSessionManager
                 LabSessionStatus::Completed->value,
                 LabSessionStatus::Failed->value,
                 LabSessionStatus::Stopped->value,
+                LabSessionStatus::Resetting->value,
+                LabSessionStatus::Deleting->value,
             ])
             ->latest('id')
             ->first();
@@ -402,13 +439,13 @@ class LabSessionManager
         return $session->progressCount();
     }
 
-    private function victimName(Course $course, int $octet): string
+    private function victimName(User $user): string
     {
-        return sprintf('victim-%s-%03d', $course->slug === '' ? 'lab' : 'web', $octet);
+        return sprintf('victim-user-%d', $user->getKey());
     }
 
-    private function attackerName(int $octet): string
+    private function attackerName(User $user): string
     {
-        return sprintf('attacker-%03d', $octet);
+        return sprintf('attacker-user-%d', $user->getKey());
     }
 }

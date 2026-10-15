@@ -11,6 +11,7 @@ use App\Models\LabEnvironment;
 use App\Models\LabSession;
 use App\Models\Objective;
 use App\Services\GuidedCtf\LabSessionManager;
+use App\Services\GuidedCtf\ProvisioningTimeline;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
@@ -72,6 +73,12 @@ class GuidedCtf extends Page
      * Shown rather than assumed away, because a lab that failed is something a student
      * needs to be able to see and understand rather than find replaced by a fresh one.
      */
+    public function provisioningEvents(): array
+    {
+        $session = $this->session();
+        return $session ? ProvisioningTimeline::events((int) $session->getKey()) : [];
+    }
+
     public function history(): Collection
     {
         $user = auth()->user();
@@ -106,7 +113,31 @@ class GuidedCtf extends Page
             return;
         }
 
-        $session = app(LabSessionManager::class)->start($user, $course);
+        $manager = app(LabSessionManager::class);
+
+        if ($manager->activeSessionFor($user, $course)) {
+            Notification::make()
+                ->title('Lab sudah tersedia')
+                ->body('Buka lab yang sudah ada melalui My Labs.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $session = $manager->start($user, $course);
+
+        // Another request may have created the session while this one waited
+        // for the per-user lock. Never enqueue its provisioning job twice.
+        if (! $session->wasRecentlyCreated) {
+            Notification::make()
+                ->title('Lab sudah tersedia')
+                ->body('Sesi yang sudah dibuat sedang disiapkan atau siap digunakan.')
+                ->info()
+                ->send();
+
+            return;
+        }
 
         Queue::push(new ProvisionLabSession($session->getKey()));
 

@@ -61,6 +61,9 @@ class StudentPanelProvider extends PanelProvider
                 'gray' => Color::Slate,
             ])
             ->defaultThemeMode(ThemeMode::Light)
+            ->globalSearch(\App\GlobalSearch\ImnehnetGlobalSearchProvider::class)
+            ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
+            ->globalSearchFieldKeyBindingSuffix()
             ->maxContentWidth('full')
             // Named rather than discovered. A new administrative resource must not
             // appear in the student's panel by being added to a directory.
@@ -72,6 +75,7 @@ class StudentPanelProvider extends PanelProvider
                 // The guided lab comes before the terminal: it is where a student goes
                 // to start work, and the terminal is reached from there.
                 GuidedCtf::class,
+                \App\Filament\Pages\MyLabs::class,
                 Terminal::class,
             ])
             ->widgets([

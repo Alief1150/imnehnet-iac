@@ -3,63 +3,121 @@
 namespace App\Jobs;
 
 use App\Enums\LabSessionStatus;
+use App\Enums\ObjectiveStatus;
 use App\Models\LabSession;
 use App\Services\GuidedCtf\LabFirewall;
 use App\Services\GuidedCtf\LabScenario;
-use App\Services\OpenTofuService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
-/**
- * Return a lab to its starting state, keeping the progress.
- *
- * The specification settles the MVP decision directly: resetting the environment does not
- * reset progress. A student who damages the victim does not lose the objectives they
- * already earned, and the flag stays the one they already submitted — a flag that changed
- * on reset would silently invalidate work already submitted against it.
- *
- * So what is rebuilt is the scenario, not the course: the service files, the unit and the
- * flag are put back, and nothing touches objective_progress.
- *
- * The pair stays permitted throughout. Withdrawing it and re-adding it would open a window
- * in which the lab exists but does not work, which is the same window a rebuild already
- * opens, and there is nothing to gain from a second one.
- */
 final class ResetLabSession implements ShouldQueue
 {
     use Queueable;
 
     public int $tries = 1;
-
-    /** The web service and its dependencies. No container is created or destroyed. */
     public int $timeout = 1800;
 
     public function __construct(public readonly int $sessionId) {}
 
     public function handle(LabScenario $scenario, LabFirewall $firewall): void
     {
-        $session = LabSession::query()->find($this->sessionId);
+        Cache::lock(
+            'imnehnet:ctf:session-lifecycle:'.$this->sessionId,
+            2100
+        )->block(60, function () use ($scenario, $firewall): void {
+            $session = LabSession::query()->find($this->sessionId);
 
-        if ($session === null) {
-            // Deleted while the job waited. Nothing to reset.
-            return;
-        }
+            // A queued reset must never resurrect a deleted or deleting lab.
+            if (
+                $session === null ||
+                $session->status !== LabSessionStatus::Resetting
+            ) {
+                return;
+            }
 
-        $session->forceFill(['status' => LabSessionStatus::Resetting])->save();
+            try {
+                if (! $firewall->permits($session)) {
+                    throw new \RuntimeException(
+                        'The lab pair is not permitted by the firewall.'
+                    );
+                }
 
-        // Guarded rather than trusted: a lab whose route was never permitted cannot be
-        // repaired by rebuilding the target, and saying so beats a reset that appears to
-        // succeed and leaves the lab unreachable.
-        if (! $firewall->permits($session)) {
-            $session->forceFill(['status' => LabSessionStatus::Failed])->save();
+                // Restore the victim before clearing earned progress.
+                $scenario->apply($session);
 
-            return;
-        }
+                DB::connection(
+                    (string) config('infrastructure.environment_connection')
+                )->transaction(function () use ($session): void {
+                    $session->refresh();
 
-        $scenario->apply($session->refresh());
+                    if ($session->status !== LabSessionStatus::Resetting) {
+                        throw new \RuntimeException(
+                            'Lab status changed during reset.'
+                        );
+                    }
 
-        // Ready rather than Completed: the lab works again, and the course it belongs to
-        // is finished if it was. The results page reads from progress, not from here.
-        $session->forceFill(['status' => LabSessionStatus::Ready])->save();
+                    $progress = $session->progress()
+                        ->orderBy('objective_id')
+                        ->get();
+
+                    // Do not report a successful reset unless every course
+                    // objective has exactly one progress record to reset.
+                    $objectiveIds = $session->course
+                        ?->objectives()
+                        ->orderBy('sequence')
+                        ->pluck('id');
+
+                    if (
+                        $objectiveIds === null
+                        || $objectiveIds->isEmpty()
+                        || $objectiveIds->count() !== $progress->count()
+                        || $objectiveIds->contains(
+                            fn ($objectiveId): bool => ! $progress->contains(
+                                'objective_id',
+                                $objectiveId,
+                            )
+                        )
+                    ) {
+                        throw new \RuntimeException(
+                            'Lab progress records do not match the course objectives.'
+                        );
+                    }
+
+                    // Use the course sequence, not objective IDs.
+                    $firstObjectiveId = $objectiveIds->first();
+
+                    foreach ($progress as $objective) {
+                        $objective->forceFill([
+                            'status' => (int) $objective->objective_id === (int) $firstObjectiveId
+                                ? ObjectiveStatus::Active
+                                : ObjectiveStatus::Locked,
+                            'completed_at' => null,
+                            'evidence' => null,
+                        ])->save();
+                    }
+
+                    $session->forceFill([
+                        'current_objective' => 1,
+                        'completed_at' => null,
+                        'status' => LabSessionStatus::Ready,
+                        'last_error' => null,
+                    ])->save();
+                });
+            } catch (Throwable $exception) {
+                $session->refresh();
+
+                if ($session->status === LabSessionStatus::Resetting) {
+                    $session->forceFill([
+                        'status' => LabSessionStatus::Failed,
+                        'last_error' => 'Lab reset failed. Contact administrator.',
+                    ])->save();
+                }
+
+                report($exception);
+            }
+        });
     }
 }

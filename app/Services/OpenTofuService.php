@@ -247,6 +247,155 @@ class OpenTofuService
         return $protected[0] ?? 'default';
     }
 
+    /**
+     * Remove an existing workspace without creating it.
+     *
+     * The caller must independently verify that its container is absent
+     * before invoking this method. The entire sequence holds one lock.
+     */
+    /**
+     * Destroy resources in an existing workspace without deleting it.
+     *
+     * Never creates a workspace. The caller must independently verify
+     * container absence before cleaning up the workspace itself.
+     */
+    public function destroyWorkspaceResourcesIfPresent(
+        LabEnvironment $environment
+    ): void {
+        $workspace = $this->workspaceFor($environment);
+
+        EnvironmentWorkspace::assertValidContainerName(
+            (string) $environment->container_name
+        );
+
+        EnvironmentWorkspace::assertUsable(
+            $workspace,
+            (string) $environment->container_name
+        );
+
+        $this->withDirectoryLock(function () use ($workspace): void {
+            $inventory = $this->listWorkspaces();
+
+            if (! $inventory->successful()) {
+                throw new RuntimeException(
+                    'Cannot inspect OpenTofu workspaces before destroy.'
+                );
+            }
+
+            if (! in_array(
+                $workspace,
+                $this->parseWorkspaceList($inventory->stdout),
+                true
+            )) {
+                throw new RuntimeException(
+                    'OpenTofu workspace is missing; resource state cannot be verified.'
+                );
+            }
+
+            $selected = $this->run(['workspace', 'select', $workspace]);
+
+            if (! $selected->successful()) {
+                throw new RuntimeException(
+                    'Cannot select OpenTofu workspace for destroy.'
+                );
+            }
+
+            $destroyed = $this->destroy();
+
+            if (! $destroyed->successful()) {
+                throw new RuntimeException(
+                    'OpenTofu resource destroy failed.'
+                );
+            }
+        });
+    }
+
+    public function cleanupWorkspaceIfPresent(LabEnvironment $environment): void
+    {
+        $workspace = $this->workspaceFor($environment);
+
+        EnvironmentWorkspace::assertValidContainerName(
+            (string) $environment->container_name
+        );
+
+        EnvironmentWorkspace::assertUsable(
+            $workspace,
+            (string) $environment->container_name
+        );
+
+        $this->withDirectoryLock(function () use ($workspace): void {
+            $before = $this->listWorkspaces();
+
+            if (! $before->successful()) {
+                throw new RuntimeException(
+                    'Cannot inspect OpenTofu workspaces before cleanup.'
+                );
+            }
+
+            $existing = $this->parseWorkspaceList($before->stdout);
+
+            if (! in_array($workspace, $existing, true)) {
+                return;
+            }
+
+            $deleted = $this->deleteWorkspace($workspace);
+
+            if (! $deleted->successful()) {
+                throw new RuntimeException(
+                    'OpenTofu workspace cleanup failed.'
+                );
+            }
+
+            $after = $this->listWorkspaces();
+
+            if (! $after->successful()) {
+                throw new RuntimeException(
+                    'Cannot verify OpenTofu workspace cleanup.'
+                );
+            }
+
+            if (in_array(
+                $workspace,
+                $this->parseWorkspaceList($after->stdout),
+                true
+            )) {
+                throw new RuntimeException(
+                    'OpenTofu workspace remains after cleanup.'
+                );
+            }
+        });
+    }
+
+    /**
+     * Read-only workspace existence check.
+     *
+     * Never creates a workspace. Inventory failures are not treated
+     * as proof that a workspace is absent.
+     */
+    public function workspaceExists(string $workspace): bool
+    {
+        EnvironmentWorkspace::assertUsable(
+            $workspace,
+            'irrelevant-for-workspace-check'
+        );
+
+        return $this->withDirectoryLock(function () use ($workspace): bool {
+            $result = $this->listWorkspaces();
+
+            if (! $result->successful()) {
+                throw new RuntimeException(
+                    'Cannot verify OpenTofu workspace inventory.'
+                );
+            }
+
+            return in_array(
+                $workspace,
+                $this->parseWorkspaceList($result->stdout),
+                true
+            );
+        });
+    }
+
     public function listWorkspaces(): ProcessResult
     {
         return $this->run(['workspace', 'list']);

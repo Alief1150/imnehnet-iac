@@ -43,6 +43,9 @@ enum LabSessionStatus: string
     /** Being removed. */
     case Deleting = 'DELETING';
 
+    /** Teardown completed; retained for history, not quota. */
+    case Deleted = 'DELETED';
+
     /**
      * States in which a shell may be opened against the attacker container.
      *
@@ -65,7 +68,7 @@ enum LabSessionStatus: string
      */
     public function isListed(): bool
     {
-        return $this !== self::Deleting;
+        return ! in_array($this, [self::Deleting, self::Deleted], true);
     }
 
     /**
@@ -83,7 +86,8 @@ enum LabSessionStatus: string
             self::Provisioning,
             self::Configuring,
             self::Resetting,
-            self::Deleting => false,
+            self::Deleting,
+            self::Deleted => false,
             default => true,
         };
     }

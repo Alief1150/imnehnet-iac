@@ -143,6 +143,38 @@
                         Please wait while we prepare your isolated environment.
                     </p>
 
+                    <div wire:poll.5s class="mt-5 overflow-hidden rounded-xl border border-gray-700 bg-gray-950 text-gray-100">
+                        <div class="flex items-center justify-between border-b border-gray-800 px-4 py-3">
+                            <div class="flex items-center gap-2 text-sm font-semibold">
+                                {!! \App\Support\Lucide::html('terminal') !!}
+                                Provisioning Activity
+                            </div>
+                            <span class="text-xs text-gray-400">Live · 5s</span>
+                        </div>
+
+                        <div class="max-h-64 space-y-2 overflow-y-auto p-4 font-mono text-xs leading-5"
+                             aria-live="polite">
+                            @forelse ($this->provisioningEvents() as $event)
+                                <div class="flex gap-3">
+                                    <span class="shrink-0 text-gray-500">
+                                        [{{ $event['time'] ?? '--:--:--' }}]
+                                    </span>
+                                    <span @class([
+                                        'text-emerald-400' => ($event['level'] ?? '') === 'success',
+                                        'text-rose-400' => ($event['level'] ?? '') === 'error',
+                                        'text-gray-200' => ($event['level'] ?? 'info') === 'info',
+                                    ])>
+                                        {{ $event['message'] ?? '' }}
+                                    </span>
+                                </div>
+                            @empty
+                                <div class="text-gray-400">
+                                    Waiting for provisioning worker...
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+
                     <ol class="mt-4 space-y-2">
                         @foreach ($this->stages($session) as $stage)
                             <li class="flex items-center gap-2.5 text-sm">
