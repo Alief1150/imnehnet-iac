@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\SecurityDashboard;
 use App\Services\SecurityMonitoringService;
 use App\Services\SecurityTelemetryCollector;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -448,4 +449,17 @@ test('an empty chart carries its reason instead of axes', function () {
 
     expect($chart['empty'])->toBeTrue()
         ->and($chart['coverage'])->toBe('no samples in this window yet');
+});
+
+test('a failed portal sign-in is counted within the day', function () {
+    event(new Failed('web', null, ['email' => 'intruder@imnehnet.test', 'password' => 'wrong']));
+
+    $telemetry = app(SecurityTelemetryCollector::class)->collect(
+        cannedSecurityFs(cannedAlerts(), ''),
+        1_700_000_000,
+        fn (array $command, int $timeout): array => ['successful' => false, 'stdout' => '', 'stderr' => '']
+    );
+
+    expect($telemetry['failed_logins']['portal_24h'])->toBe(1)
+        ->and($telemetry['failed_logins']['total_24h'])->toBe(1);
 });

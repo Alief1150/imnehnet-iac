@@ -10,7 +10,7 @@
         .im-security .im-donut-svg { display:block; width:100%; height:190px; max-height:190px; overflow:hidden; }
         .im-security .im-panel { min-width:0; overflow:hidden; }
         @media(max-width:1279px) { .im-security .im-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-        @media(max-width:1199px) { .im-security .im-chartrow, .im-security .im-halves { grid-template-columns:minmax(0,1fr); } }
+        @media(max-width:1023px) { .im-security .im-chartrow, .im-security .im-halves { grid-template-columns:minmax(0,1fr); } }
         @media(max-width:767px) { .im-security .im-kpis { grid-template-columns:minmax(0,1fr); } }
     </style>
     @php
@@ -91,8 +91,13 @@
                             <span class="flex size-9 shrink-0 items-center justify-center rounded-lg {{ $tint['chip'] }}">{!! \App\Support\Lucide::html($kpi['icon'] ?? 'shield-alert') !!}</span>
                             <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $kpi['label'] }}</h3>
                         </div>
-                        @if ($barCount > 1)
+                        @if ($barCount >= 8)
                             <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="im-spark-svg w-24" role="img" aria-label="{{ $kpi['label'] }} recent trend">{!! $barRects !!}</svg>
+                        @elseif ($barCount > 1)
+                            <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="im-spark-svg w-24" role="img" aria-label="{{ $kpi['label'] }} recent trend">
+                                <polygon points="0,100 {{ $sparkPoints }} 100,100" fill="{{ $tint['hex'] }}" fill-opacity="0.18" />
+                                <polyline points="{{ $sparkPoints }}" fill="none" stroke="{{ $tint['hex'] }}" stroke-width="6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
                         @endif
                     </div>
                     <div class="mt-3 flex items-baseline gap-1.5">
@@ -164,8 +169,8 @@
         </section>
 
         {{-- Trend + severity --}}
-        <div class="im-chartrow grid gap-6 xl:grid-cols-3">
-            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 xl:col-span-2">
+        <div class="im-chartrow grid gap-6 lg:grid-cols-3">
+            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-2">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Trend</h3>
