@@ -22,9 +22,6 @@
         $wazuhDash = $integrations->firstWhere('key', 'wazuh_dashboard');
         $wazuhApi = $integrations->firstWhere('key', 'wazuh_api');
         $recent = $this->recentAlerts();
-        $range = $this->selectedRange();
-        $ranges = collect(\App\Services\SecurityDashboard::RANGES)->mapWithKeys(fn ($seconds, $key) => [$key => strtoupper($key)])->all();
-        $baseUrl = \App\Filament\Pages\Security::getUrl(panel: 'admin');
 
         $integrationCards = [
             ['entry' => $grafana, 'name' => 'Grafana', 'blurb' => 'View dashboards and visualizations'],
@@ -38,12 +35,7 @@
                 <h2 class="text-xl font-bold tracking-tight text-gray-950 dark:text-white">Security</h2>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Security alerts, agent status, and monitoring access. Every figure names what measured it.</p>
             </div>
-            <div class="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-white/10 dark:bg-gray-900" role="group" aria-label="Time range">
-                @foreach ($ranges as $key => $label)
-                    <a href="{{ $baseUrl }}?range={{ $key }}"
-                       class="rounded-lg px-3 py-1.5 text-xs font-semibold {{ $range === $key ? 'bg-gray-950 text-white dark:bg-white dark:text-gray-950' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}">{{ $label }}</a>
-                @endforeach
-            </div>
+
         </div>
 
         @php $fresh = $this->freshness(); @endphp
@@ -169,8 +161,8 @@
         </section>
 
         {{-- Trend + severity --}}
-        <div class="im-chartrow grid gap-6 md:grid-cols-5">
-            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:col-span-3">
+        <div class="im-chartrow grid gap-6 grid-cols-5">
+            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 col-span-3">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Trend</h3>
@@ -250,12 +242,12 @@
                     </div>
                     <dl class="mt-3 space-y-2">
                         @foreach ($donut['slices'] as $slice)
-                            <div class="flex items-center gap-2.5 text-sm">
+                            <button type="button" wire:click="toggleSev('{{ $slice['key'] }}')" title="Show only {{ $slice['label'] }} alerts" class="flex w-full items-center gap-2.5 rounded-lg px-2 py-1 text-left text-sm transition hover:bg-gray-500/5 {{ $this->sev === $slice['key'] ? 'bg-gray-500/10' : '' }}">
                                 <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $slice['color'] }}"></span>
                                 <dt class="flex-1 text-gray-600 dark:text-gray-300">{{ $slice['label'] }}</dt>
                                 <dd class="font-mono font-semibold text-gray-950 dark:text-white">{{ $slice['count'] }}</dd>
                                 <dd class="w-12 text-right font-mono text-xs text-gray-500">{{ number_format($slice['share'], 0) }}%</dd>
-                            </div>
+                            </button>
                         @endforeach
                     </dl>
                 @else

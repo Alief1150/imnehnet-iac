@@ -384,21 +384,31 @@ final class SecurityDashboard
     public function donut(?array $day): array
     {
         $buckets = [
-            'Low' => ['count' => (int) ($day['low'] ?? 0), 'color' => '#10b981'],
-            'Medium' => ['count' => (int) ($day['med'] ?? 0), 'color' => '#3b82f6'],
-            'High' => ['count' => (int) ($day['high'] ?? 0), 'color' => '#f59e0b'],
+            'low' => ['label' => 'Low', 'count' => (int) ($day['low'] ?? 0), 'color' => '#10b981'],
+            'medium' => ['label' => 'Medium', 'count' => (int) ($day['med'] ?? 0), 'color' => '#3b82f6'],
+            'high' => ['label' => 'High', 'count' => (int) ($day['high'] ?? 0), 'color' => '#f59e0b'],
         ];
 
         $total = array_sum(array_column($buckets, 'count'));
         $slices = [];
 
-        foreach ($buckets as $label => $bucket) {
+        foreach ($buckets as $key => $bucket) {
             $slices[] = [
-                'label' => $label,
+                'key' => $key,
+                'label' => $bucket['label'],
                 'count' => $bucket['count'],
                 'share' => $total > 0 ? round(100 * $bucket['count'] / $total, 1) : 0.0,
                 'color' => $bucket['color'],
             ];
+        }
+
+        if ($total > 0) {
+            $drift = round(100 - array_sum(array_column($slices, 'share')), 1);
+
+            if ($drift !== 0.0) {
+                $biggest = array_search(max(array_column($slices, 'count')), array_column($slices, 'count'), true);
+                $slices[$biggest]['share'] = round($slices[$biggest]['share'] + $drift, 1);
+            }
         }
 
         return ['total' => $total, 'slices' => $slices];

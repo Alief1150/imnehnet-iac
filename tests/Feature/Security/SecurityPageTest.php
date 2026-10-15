@@ -218,7 +218,7 @@ test('the donut shares severity the way the file does', function () {
     $donut = securityDashboard()->donut(['low' => 64, 'med' => 45, 'high' => 0]);
 
     expect($donut['total'])->toBe(109)
-        ->and($donut['slices'][0])->toBe(['label' => 'Low', 'count' => 64, 'share' => 58.7, 'color' => '#10b981'])
+        ->and($donut['slices'][0])->toBe(['key' => 'low', 'label' => 'Low', 'count' => 64, 'share' => 58.7, 'color' => '#10b981'])
         ->and($donut['slices'][2]['share'])->toBe(0.0);
 });
 
@@ -501,6 +501,25 @@ test('an unknown severity filter is refused', function () {
     $page = Livewire::actingAs(aSecurityAdmin())->test(Security::class);
 
     $page->call('setSev', 'critical');
+
+    expect($page->instance()->sev)->toBe('all');
+});
+
+test('donut shares always add up to exactly one hundred', function () {
+    $donut = securityDashboard()->donut(['low' => 1, 'med' => 1, 'high' => 1]);
+
+    expect(round(array_sum(array_column($donut['slices'], 'share')), 1))->toEqual(100.0)
+        ->and($donut['slices'][0]['share'])->toEqual(33.4);
+});
+
+test('tapping a legend row toggles that severity filter', function () {
+    $page = Livewire::actingAs(aSecurityAdmin())->test(Security::class);
+
+    $page->call('toggleSev', 'high');
+
+    expect($page->instance()->sev)->toBe('high');
+
+    $page->call('toggleSev', 'high');
 
     expect($page->instance()->sev)->toBe('all');
 });

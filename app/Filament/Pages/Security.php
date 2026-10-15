@@ -92,6 +92,15 @@ final class Security extends Page
         $this->sev = $sev;
     }
 
+    public function toggleSev(string $sev): void
+    {
+        if (! in_array($sev, ['low', 'medium', 'high'], true)) {
+            return;
+        }
+
+        $this->sev = $this->sev === $sev ? 'all' : $sev;
+    }
+
     /**
      * @return list<array<string, mixed>>
      */
