@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\LabSession;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 /**
  * What the SIEM and the packet filter report, read by the host account.
@@ -56,7 +57,7 @@ final class SecurityTelemetryCollector
      * @param  callable|null  $exec  function(array $command, int $timeout): array{successful: bool, stdout: string, stderr: string}
      * @return array<string, array<string, mixed>>
      */
-    public function collect(?callable $fs = null, ?int $now = null, ?callable $exec = null): array
+    public function collect(?callable $fs = null, ?int $now = null, ?callable $exec = null, ?callable $web = null): array
     {
         $read = $fs ?? fn (string $path): ?string => ($content = @file_get_contents($path)) === false ? null : $content;
         $run = $exec ?? fn (array $command, int $timeout): array => $this->commands->run($command, $timeout);
@@ -101,6 +102,14 @@ final class SecurityTelemetryCollector
             $telemetry['visibility'] = $visibility;
         } else {
             $telemetry['visibility'] = $this->staled($telemetry['visibility'] ?? null, 'Container reporting could not be evaluated.');
+        }
+
+        $trend = $this->collectTrend($web, $now, $alerts['hourly'] ?? null);
+
+        if ($trend !== null) {
+            $telemetry['trend'] = $trend;
+        } else {
+            $telemetry['trend'] = $this->staled($telemetry['trend'] ?? null, 'The thirty-day curve could not be built.');
         }
 
         $telemetry['collected_at'] = $now;
@@ -289,6 +298,136 @@ final class SecurityTelemetryCollector
             'by_agent' => $byAgent,
             'hourly' => $hourly,
             'recent' => $recent,
+        ];
+    }
+
+    /**
+     * Thirty-day curve for the trend panel: the indexer aggregates a month
+     * of alerts in one query; the alert log covers the days it cannot.
+     *
+     * @param  list<array{0: int, array<string, mixed>}>|null  $hourly
+     */
+    private function collectTrend(?callable $web, int $now, ?array $hourly): ?array
+    {
+        $indexed = $this->collectTrendFromIndexer($web);
+
+        if ($indexed !== null) {
+            $indexed['collected_at'] = $now;
+
+            return $indexed;
+        }
+
+        if (! is_array($hourly) || $hourly === []) {
+            return null;
+        }
+
+        $days = [];
+
+        foreach ($hourly as $entry) {
+            if (! is_array($entry) || count($entry) < 2 || ! is_array($entry[1])) {
+                continue;
+            }
+
+            [$ts, $bucket] = $entry;
+            $day = date('Y-m-d', (int) $ts);
+            $days[$day] ??= ['ts' => (int) $ts, 'total' => 0.0, 'low' => 0.0, 'med' => 0.0, 'high' => 0.0];
+            $days[$day]['ts'] = min($days[$day]['ts'], (int) $ts);
+            $days[$day]['total'] += (float) ($bucket['total'] ?? 0);
+            $days[$day]['low'] += (float) ($bucket['low'] ?? 0);
+            $days[$day]['med'] += (float) ($bucket['med'] ?? 0);
+            $days[$day]['high'] += (float) ($bucket['high'] ?? 0);
+        }
+
+        if ($days === []) {
+            return null;
+        }
+
+        ksort($days);
+
+        return [
+            'ok' => true,
+            'stale' => false,
+            'error' => null,
+            'collected_at' => $now,
+            'source' => 'file',
+            'daily' => array_map(
+                fn (array $d): array => [$d['ts'], $d['total'], $d['low'], $d['med'], $d['high']],
+                array_values($days),
+            ),
+            'coverage' => sprintf('%d daily buckets from the alert log', count($days)),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function collectTrendFromIndexer(?callable $web): ?array
+    {
+        $url = rtrim((string) config('infrastructure.wazuh_indexer_url', ''), '/');
+        $username = (string) config('infrastructure.wazuh_indexer_username', '');
+        $password = (string) config('infrastructure.wazuh_indexer_password', '');
+
+        if ($url === '' || $username === '' || $password === '') {
+            return null;
+        }
+
+        $fetch = $web ?? fn (string $endpoint, string $user, string $pass, array $body): array => (
+            Http::timeout(15)->withOptions(['verify' => false])->withBasicAuth($user, $pass)->post($endpoint, $body)->json() ?? []
+        );
+
+        try {
+            $json = $fetch($url.'/wazuh-alerts-*/_search', $username, $password, [
+                'size' => 0,
+                'query' => ['range' => ['timestamp' => ['gte' => 'now-30d', 'lt' => 'now']]],
+                'aggs' => ['per_day' => ['date_histogram' => [
+                    'field' => 'timestamp',
+                    'calendar_interval' => '1d',
+                    'min_doc_count' => 0,
+                    'extended_bounds' => ['min' => 'now-30d', 'max' => 'now'],
+                ], 'aggs' => [
+                    'low' => ['range' => ['field' => 'rule.level', 'ranges' => [['to' => 7]]]],
+                    'med' => ['range' => ['field' => 'rule.level', 'ranges' => [['from' => 7, 'to' => 12]]]],
+                    'high' => ['range' => ['field' => 'rule.level', 'ranges' => [['from' => 12]]]],
+                ]]],
+            ]);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $buckets = is_array($json) ? ($json['aggregations']['per_day']['buckets'] ?? null) : null;
+
+        if (! is_array($buckets) || $buckets === []) {
+            return null;
+        }
+
+        $one = fn (array $bucket, string $key): float => (float) ($bucket[$key]['buckets'][0]['doc_count'] ?? 0);
+        $daily = [];
+
+        foreach ($buckets as $bucket) {
+            if (! is_array($bucket)) {
+                continue;
+            }
+
+            $daily[] = [
+                (int) floor(($bucket['key'] ?? 0) / 1000),
+                (float) ($bucket['doc_count'] ?? 0),
+                $one($bucket, 'low'),
+                $one($bucket, 'med'),
+                $one($bucket, 'high'),
+            ];
+        }
+
+        if ($daily === []) {
+            return null;
+        }
+
+        return [
+            'ok' => true,
+            'stale' => false,
+            'error' => null,
+            'source' => 'indexer',
+            'daily' => $daily,
+            'coverage' => sprintf('%d daily buckets from the indexer', count($daily)),
         ];
     }
 

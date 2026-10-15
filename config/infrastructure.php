@@ -282,6 +282,9 @@ return [
     'wazuh_api_url' => env('WAZUH_API_URL', 'https://127.0.0.1:55000'),
     'wazuh_api_username' => env('WAZUH_API_USERNAME'),
     'wazuh_api_password' => env('WAZUH_API_PASSWORD'),
+    'wazuh_indexer_url' => env('WAZUH_INDEXER_URL', 'https://127.0.0.1:9200'),
+    'wazuh_indexer_username' => env('WAZUH_INDEXER_USERNAME'),
+    'wazuh_indexer_password' => env('WAZUH_INDEXER_PASSWORD'),
     'wazuh_api_configured' => (bool) env('WAZUH_API_URL')
         && (bool) env('WAZUH_API_USERNAME')
         && (bool) env('WAZUH_API_PASSWORD'),

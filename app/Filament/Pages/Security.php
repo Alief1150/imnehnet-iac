@@ -220,6 +220,12 @@ final class Security extends Page
      */
     public function chart(): array
     {
+        $daily = $this->memoTelemetry()['trend']['daily'] ?? null;
+
+        if (is_array($daily) && $daily !== []) {
+            return app(SecurityDashboard::class)->chartDaily($daily);
+        }
+
         return app(SecurityDashboard::class)->chart(
             $this->memoTelemetry()['alerts']['hourly'] ?? [],
             $this->selectedRange(),

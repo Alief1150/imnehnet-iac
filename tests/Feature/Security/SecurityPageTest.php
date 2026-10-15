@@ -550,3 +550,67 @@ test('chart edge ticks anchor outward so labels never clip', function () {
     expect($xticks[0]['anchor'])->toBe('start')
         ->and($xticks[count($xticks) - 1]['anchor'])->toBe('end');
 });
+
+function fakeIndexer(array $days): callable
+{
+    return function (string $endpoint, string $user, string $pass, array $body) use ($days): array {
+        $buckets = [];
+
+        foreach ($days as $ts => $counts) {
+            $buckets[] = [
+                'key' => $ts * 1000,
+                'doc_count' => array_sum($counts),
+                'low' => ['buckets' => [['doc_count' => $counts[0]]]],
+                'med' => ['buckets' => [['doc_count' => $counts[1]]]],
+                'high' => ['buckets' => [['doc_count' => $counts[2]]]],
+            ];
+        }
+
+        return ['aggregations' => ['per_day' => ['buckets' => $buckets]]];
+    };
+}
+
+test('the trend prefers the indexer curve over the file', function () {
+    config()->set('infrastructure.wazuh_indexer_url', 'https://127.0.0.1:9200');
+    config()->set('infrastructure.wazuh_indexer_username', 'tester');
+    config()->set('infrastructure.wazuh_indexer_password', 'secret');
+
+    $now = 1_700_000_000;
+    $telemetry = app(SecurityTelemetryCollector::class)->collect(
+        cannedSecurityFs(cannedAlerts(), ''),
+        $now,
+        fn (array $command, int $timeout): array => ['successful' => false, 'stdout' => '', 'stderr' => ''],
+        fakeIndexer([$now - 86400 => [10, 2, 1], $now => [20, 3, 0]])
+    );
+
+    expect($telemetry['trend']['source'] ?? null)->toBe('indexer')
+        ->and($telemetry['trend']['daily'][1] ?? null)->toBe([$now, 23.0, 20.0, 3.0, 0.0]);
+});
+
+test('the trend falls back to the file when the indexer is silent', function () {
+    $now = 1_700_000_000;
+    $telemetry = app(SecurityTelemetryCollector::class)->collect(
+        cannedSecurityFs(cannedAlerts(), ''),
+        $now,
+        fn (array $command, int $timeout): array => ['successful' => false, 'stdout' => '', 'stderr' => ''],
+        fn (string $endpoint, string $user, string $pass, array $body): array => throw new RuntimeException('indexer down')
+    );
+
+    expect($telemetry['trend']['source'] ?? null)->toBe('file')
+        ->and($telemetry['trend']['daily'] ?? [])->not->toBeEmpty();
+});
+
+test('the daily curve labels whole days and stays smooth', function () {
+    $daily = [];
+
+    for ($i = 29; $i >= 0; $i--) {
+        $daily[] = [time() - $i * 86400, (float) ($i * 10), 0.0, 0.0, 0.0];
+    }
+
+    $chart = securityDashboard()->chartDaily($daily);
+
+    expect($chart['empty'])->toBeFalse()
+        ->and(count($chart['xticks']))->toBe(6)
+        ->and($chart['from_label'])->toMatch('/^\d{2} [A-Z][a-z]{2}$/')
+        ->and($chart['line'])->toStartWith('M');
+});

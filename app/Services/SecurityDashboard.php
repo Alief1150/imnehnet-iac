@@ -317,6 +317,97 @@ final class SecurityDashboard
         return ['ok' => $ok, 'rows' => $rows];
     }
 
+    /**
+     * @param  list<array{0: int, 1: float, 2?: float, 3?: float, 4?: float}>  $daily  Day timestamp, total, low, med, high.
+     * @return array<string, mixed>
+     */
+    public function chartDaily(array $daily): array
+    {
+        $points = [];
+
+        foreach ($daily as $entry) {
+            if (! is_array($entry) || count($entry) < 2) {
+                continue;
+            }
+
+            $points[] = ['ts' => (int) $entry[0], 'v' => (float) $entry[1]];
+        }
+
+        if ($points === []) {
+            return ['empty' => true, 'coverage' => 'no samples in this window yet'];
+        }
+
+        $stride = (int) max(1, floor(count($points) / 90));
+        $sampled = [];
+
+        foreach ($points as $index => $point) {
+            if ($index % $stride === 0 || $index === count($points) - 1) {
+                $sampled[] = $point;
+            }
+        }
+
+        $count = count($sampled);
+        $peak = max(array_map(fn (array $point): float => $point['v'], $sampled));
+        $ymax = $this->niceCeil($peak);
+
+        $plot = [];
+
+        foreach ($sampled as $index => $point) {
+            $plot[] = [
+                $count > 1 ? $index * 100 / ($count - 1) : 50.0,
+                $peak > 0 ? 100 - min(100, max(0, $point['v'] / $ymax * 100)) : 100,
+                $point['v'],
+                $point['ts'],
+            ];
+        }
+
+        $coords = array_map(fn (array $point): array => [$point[0], $point[1]], $plot);
+        $line = $this->smoothPath($coords);
+        $area = sprintf('M%.2f,100 %s L%.2f,100 Z', $plot[0][0], $line, $plot[$count - 1][0]);
+
+        $yticks = [];
+
+        foreach ([0, 0.25, 0.5, 0.75, 1] as $fraction) {
+            $yticks[] = ['y' => 100 - $fraction * 100, 'label' => $this->compactCount($ymax * $fraction)];
+        }
+
+        $tickCount = min($count, 6);
+        $xticks = [];
+
+        for ($i = 0; $i < $tickCount; $i++) {
+            $point = $plot[(int) round($i * ($count - 1) / max(1, $tickCount - 1))];
+            $xticks[] = [
+                'x' => $point[0],
+                'label' => Carbon::createFromTimestamp((int) $point[3])->format('d M'),
+                'anchor' => $tickCount === 1 ? 'middle' : ($i === 0 ? 'start' : ($i === $tickCount - 1 ? 'end' : 'middle')),
+            ];
+        }
+
+        $last = end($plot);
+
+        return [
+            'empty' => false,
+            'line' => $line,
+            'area' => $area,
+            'yticks' => $yticks,
+            'xticks' => $xticks,
+            'ymax' => $ymax,
+            'peak' => $peak,
+            'dots' => array_map(
+                fn (array $point): array => [
+                    'x' => $point[0],
+                    'y' => $point[1],
+                    'label' => sprintf('%s alerts on %s', number_format($point[2]), Carbon::createFromTimestamp((int) $point[3])->format('d M')),
+                ],
+                $plot
+            ),
+            'last' => ['v' => $last[2], 'label' => Carbon::createFromTimestamp((int) $last[3])->format('d M')],
+            'from_label' => Carbon::createFromTimestamp($plot[0][3])->format('d M'),
+            'to_label' => Carbon::createFromTimestamp((int) $last[3])->format('d M'),
+            'coverage' => sprintf('%d daily buckets', $count),
+        ];
+    }
+
     private function niceCeil(float $value): float
     {
         if ($value <= 0) {
