@@ -14,6 +14,9 @@
         $kpis = $this->kpis();
         $chart = $this->alertTrend();
         $donut = $this->severityDonut();
+            $ranges = ["7d" => "7D", "30d" => "30D", "90d" => "90D", "1y" => "1Y"];
+            $range = request("range", "30d");
+            $baseUrl = url()->current();
         $integrations = collect($this->integrations());
         $grafana = $integrations->firstWhere('key', 'grafana');
         $wazuhDash = $integrations->firstWhere('key', 'wazuh_dashboard');
@@ -170,53 +173,40 @@
         </section>
 
         {{-- Trend + severity --}}
-        <div class="im-chartrow grid gap-6 grid-cols-1 lg:grid-cols-12">
-            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="grid gap-6 grid-cols-1 lg:grid-cols-12">
+            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-8">
+                <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                     <div>
                         <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Trend</h3>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Total security alerts over time ·
-                            @if (! ($chart['empty'] ?? true))
-                                {{ $chart['from_label'] }} → {{ $chart['to_label'] }}
-                            @else
-                                {{ $chart['coverage'] }}
-                            @endif
-                        </p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total security alerts over time</p>
+                    </div>
+                    <div class="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-white/10 dark:bg-gray-900" role="group" aria-label="Time range">
+                        @foreach ($ranges as $key => $label)
+                            <a href="{{ $baseUrl }}?range={{ $key }}"
+                               class="rounded-lg px-3 py-1.5 text-xs font-semibold {{ $range === $key ? 'bg-gray-950 text-white dark:bg-white dark:text-gray-950' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}">{{ $label }}</a>
+                        @endforeach
                     </div>
                 </div>
-                <div class="mt-4">
+                <div class="relative w-full h-64">
                     @if (! ($chart['empty'] ?? true))
-                        <div class="mb-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                            <span class="relative flex size-2">
-                                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-60"></span>
-                                <span class="relative inline-flex size-2 rounded-full bg-teal-500"></span>
-                            </span>
-                            <span>Latest hour: <span class="font-mono font-semibold text-gray-900 dark:text-white">{{ number_format((float) $chart['last']['v']) }}</span> alerts at {{ $chart['last']['label'] }} · peak {{ $chart['peak'] >= 1000 ? number_format($chart['peak'] / 1000, 1).'k' : (int) $chart['peak'] }} · {{ $chart['from_label'] }} → {{ $chart['to_label'] }}</span>
-                        </div>
-                        <svg viewBox="0 0 200 100" class="aspect-[2/1] w-full" role="img" aria-label="Alert counts over time">
+                        <svg viewBox="0 0 200 100" class="w-full h-full" role="img" aria-label="Alert counts over time">
                             @foreach ($chart['yticks'] as $tick)
-                                <line x1="26" y1="{{ 6 + $tick['y'] * 0.82 }}" x2="196" y2="{{ 6 + $tick['y'] * 0.82 }}" stroke="currentColor" stroke-opacity=".12" stroke-width=".5" />
-                                <text x="23" y="{{ 8 + $tick['y'] * 0.82 }}" text-anchor="end" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
+                                <line x1="24" y1="{{ $tick['y'] }}" x2="196" y2="{{ $tick['y'] }}" stroke="currentColor" stroke-opacity=".12" stroke-width=".5" />
+                                <text x="21" y="{{ $tick['y'] + 3 }}" text-anchor="end" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
                             @endforeach
                             @foreach ($chart['xticks'] as $tick)
-                                <text x="{{ 24 + $tick['x'] * 1.72 }}" y="97" text-anchor="{{ $tick['anchor'] ?? 'middle' }}" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
+                                <text x="{{ $tick['x'] }}" y="94" text-anchor="{{ $tick['anchor'] ?? 'middle' }}" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
                             @endforeach
-                            <g transform="translate(24,6) scale(1.72,0.82)">
-                                <path d="{{ $chart['area'] }}" fill="#2dd4bf" fill-opacity="0.15" stroke="none" />
-                                <path d="{{ $chart['line'] }}" fill="none" stroke="#2dd4bf" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
-                                @foreach ($chart['dots'] as $dot)
-                                    <circle class="im-dot" cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="3.2" fill="transparent">
-                                        <title>{{ $dot['label'] }}</title>
-                                    </circle>
-                                    @if (count($chart['dots']) <= 96)
-                                        <circle cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="1.5" fill="#2dd4bf" vector-effect="non-scaling-stroke" />
-                                    @endif
-                                @endforeach
-                            </g>
+                            <path d="{{ $chart['area'] }}" fill="#2dd4bf" fill-opacity="0.15" stroke="none" />
+                            <path d="{{ $chart['line'] }}" fill="none" stroke="#2dd4bf" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+                            @foreach ($chart['dots'] as $dot)
+                                <circle cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="3" fill="#2dd4bf" stroke="#ffffff" stroke-width="1.5" vector-effect="non-scaling-stroke">
+                                    <title>{{ $dot['label'] }}</title>
+                                </circle>
+                            @endforeach
                         </svg>
                     @else
-                        <div class="flex h-44 items-center justify-center rounded-lg border border-dashed border-gray-200 text-center text-sm text-gray-400 dark:border-gray-800">
+                        <div class="flex h-full items-center justify-center rounded-lg border border-dashed border-gray-200 text-center text-sm text-gray-400 dark:border-gray-800">
                             <p>No samples in this window yet.<br><span class="text-xs">The collector reads the SIEM log every minute.</span></p>
                         </div>
                     @endif
@@ -225,7 +215,7 @@
 
             <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-4">
                 <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Severity</h3>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Distribution of security alerts, last 24h — from the Wazuh indexer.</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Distribution of security alerts, last 24h — from the Wazuh indexer. Click a row to filter the table.</p>
             @if ($donut['total'] > 0)
                 @php $offset = 25; @endphp
                 <div class="relative mx-auto mt-2 w-52 max-w-full">
