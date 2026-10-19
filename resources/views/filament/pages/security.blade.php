@@ -4,7 +4,7 @@
         .im-security .im-kpis { display:grid; gap:1rem; }
         .im-security .im-chartrow { display:grid; gap:1.5rem; }
         .im-security .im-kpis > *, .im-security .im-chartrow > * { min-width:0; }
-        .im-security .im-security .im-dot { transition: r .15s ease, fill .15s ease; cursor:crosshair; fill:transparent; } .im-security .im-dot:hover { r:4.5; fill:#2dd4bf; }
+        .im-security .im-dot { transition: r .15s ease, fill .15s ease; cursor:crosshair; fill:transparent; } .im-security .im-dot:hover { r:4.5; fill:#2dd4bf; }
         .im-security .im-spark-svg { display:block; width:100%; height:44px; max-height:44px; overflow:hidden; }
         .im-security .im-donut-svg { display:block; width:100%; height:190px; max-height:190px; overflow:hidden; }
         .im-security .im-panel { min-width:0; overflow:hidden; }
@@ -12,7 +12,7 @@
     </style>
     @php
         $kpis = $this->kpis();
-        $chart = $this->chart();
+        $chart = $this->alertTrend();
         $donut = $this->severityDonut();
         $integrations = collect($this->integrations());
         $grafana = $integrations->firstWhere('key', 'grafana');
@@ -170,8 +170,8 @@
         </section>
 
         {{-- Trend + severity --}}
-        <div class="im-chartrow grid gap-6">
-            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <div class="im-chartrow grid gap-6 grid-cols-1 lg:grid-cols-12">
+            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-8">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Trend</h3>
@@ -223,7 +223,7 @@
                 </div>
             </section>
 
-            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-4">
                 <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Severity</h3>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Distribution of security alerts, last 24h — from the Wazuh indexer.</p>
             @if ($donut['total'] > 0)
