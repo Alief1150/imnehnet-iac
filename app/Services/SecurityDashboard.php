@@ -337,7 +337,7 @@ final class SecurityDashboard
             return ['empty' => true, 'coverage' => 'no samples in this window yet'];
         }
 
-        $stride = (int) max(1, floor(count($points) / 90));
+        $stride = (int) max(1, floor(count($points) / 32));
         $sampled = [];
 
         foreach ($points as $index => $point) {

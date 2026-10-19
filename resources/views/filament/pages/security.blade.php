@@ -4,7 +4,7 @@
         .im-security .im-kpis { display:grid; gap:1rem; }
         .im-security .im-chartrow { display:grid; gap:1.5rem; }
         .im-security .im-kpis > *, .im-security .im-chartrow > * { min-width:0; }
-        .im-security .im-security .im-dot { transition: r .15s ease; cursor:crosshair; } .im-security .im-dot:hover { r:5; }
+        .im-security .im-security .im-dot { transition: r .15s ease, fill .15s ease; cursor:crosshair; fill:transparent; } .im-security .im-dot:hover { r:4.5; fill:#2dd4bf; }
         .im-security .im-spark-svg { display:block; width:100%; height:44px; max-height:44px; overflow:hidden; }
         .im-security .im-donut-svg { display:block; width:100%; height:190px; max-height:190px; overflow:hidden; }
         .im-security .im-panel { min-width:0; overflow:hidden; }
@@ -197,7 +197,7 @@
                                     <circle class="im-dot" cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="3.2" fill="transparent">
                                         <title>{{ $dot['label'] }}</title>
                                     </circle>
-                                    @if (count($chart['dots']) <= 24)
+                                    @if (count($chart['dots']) <= 96)
                                         <circle cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="1.5" fill="#2dd4bf" vector-effect="non-scaling-stroke" />
                                     @endif
                                 @endforeach

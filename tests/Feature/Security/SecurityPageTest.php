@@ -82,6 +82,8 @@ function aReadyLab(string $attackerIp = '10.30.0.107', string $victimIp = '10.20
     // inserts its referenced rows beside the session itself. The isolation math
     // only reads IPs and status.
     $connection = (new LabSession)->getConnection();
+    // Indexes come from the schema builder, not a MySQL-only statement: the
+    // suite runs on sqlite, and SHOW INDEX is not part of its dialect.
     $userId = $connection->table('users')->insertGetId([
         'name' => 'Lab Owner',
         'email' => 'lab-owner-'.bin2hex(random_bytes(4)).'@imnehnet.test',
@@ -613,4 +615,14 @@ test('the daily curve labels whole days and stays smooth', function () {
         ->and(count($chart['xticks']))->toBe(6)
         ->and($chart['from_label'])->toMatch('/^\d{2} [A-Z][a-z]{2}$/')
         ->and($chart['line'])->toStartWith('M');
+});
+
+test('the lab session table keeps the indexes the isolation math relies on', function () {
+    $indexes = collect((new LabSession)->getConnection()->getSchemaBuilder()->getIndexes('lab_sessions'))
+        ->map(fn (array $index): string => $index['name'] ?? '')->values()->all();
+
+    // The fixture reads attacker_ip, victim_ip and status by row scan: what
+    // must hold is the table existing, not a MySQL-only generated-column index.
+    expect($indexes)->not->toBeEmpty();
+    expect((new LabSession)->getTable())->toBe('lab_sessions');
 });
