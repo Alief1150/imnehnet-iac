@@ -79,8 +79,12 @@ test('security page reports an unconnected siem as unconnected', function () {
     config()->set('infrastructure.wazuh_api_url', '');
     Http::fake(['*' => Http::response('', 503)]);
 
+    // The page no longer renders the old summary cards; the same honesty lives
+    // on in the new layout: empty telemetry renders as collecting with empty
+    // states, and unreachable backends render as Unreachable.
     $this->actingAs($admin)
         ->get(Security::getUrl(panel: 'admin'))
         ->assertOk()
-        ->assertSee('not_configured');
+        ->assertSee('No alerts recorded yet', false)
+        ->assertSee('Unreachable');
 });

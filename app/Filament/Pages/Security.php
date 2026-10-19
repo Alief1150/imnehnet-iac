@@ -195,6 +195,14 @@ final class Security extends Page
     }
 
     /**
+     * How many live paired labs exist right now.
+     */
+    public function liveLabs(): int
+    {
+        return app(SecurityTelemetryCollector::class)->liveLabs();
+    }
+
+    /**
      * @return array{expected: int|null, reporting: int|null, missing: list<string>, state: string}
      */
     public function visibility(): array

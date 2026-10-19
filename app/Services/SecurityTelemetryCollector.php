@@ -432,6 +432,18 @@ final class SecurityTelemetryCollector
     }
 
     /**
+     * How many live paired labs exist right now.
+     */
+    public function liveLabs(): int
+    {
+        return LabSession::query()
+            ->where('status', 'READY')
+            ->whereNotNull('attacker_ip')
+            ->whereNotNull('victim_ip')
+            ->count();
+    }
+
+    /**
      * Which paired containers the SIEM actually heard from.
      *
      * Live labs name their attacker and victim IPs; the alert log names the

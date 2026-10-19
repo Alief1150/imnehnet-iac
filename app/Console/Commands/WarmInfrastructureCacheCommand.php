@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\InfrastructureStatusService;
 use App\Services\InfrastructureTopologyService;
+use App\Services\SecurityTelemetryCollector;
 use Illuminate\Console\Command;
 
 /**
@@ -30,6 +31,7 @@ class WarmInfrastructureCacheCommand extends Command
     public function handle(
         InfrastructureStatusService $status,
         InfrastructureTopologyService $topology,
+        SecurityTelemetryCollector $security,
     ): int {
         $status->summary();
         $hosts = $topology->topology()['hosts'] ?? [];
@@ -41,6 +43,14 @@ class WarmInfrastructureCacheCommand extends Command
                 fn (array $host): string => ($host['name'] ?? '?').'='.($host['health'] ?? '?'),
                 $hosts,
             )),
+        ));
+
+        $telemetry = $security->collect();
+
+        $this->line(sprintf(
+            'siem %s, isolation %s',
+            ($telemetry['alerts']['ok'] ?? false) ? ($telemetry['alerts']['day']['total'] ?? 0).' alert(s)/24h' : 'unreadable',
+            ($telemetry['isolation']['ok'] ?? false) ? ($telemetry['isolation']['percent'] ?? '?').'% pairs' : 'unreadable',
         ));
 
         return self::SUCCESS;

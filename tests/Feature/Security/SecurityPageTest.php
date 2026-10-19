@@ -626,3 +626,10 @@ test('the lab session table keeps the indexes the isolation math relies on', fun
     expect($indexes)->not->toBeEmpty();
     expect((new LabSession)->getTable())->toBe('lab_sessions');
 });
+test('live lab count is exposed for the security strip', function () {
+    aReadyLab('10.30.0.121', '10.20.0.121');
+    aReadyLab('10.30.0.122', '10.20.0.122');
+
+    expect(app(SecurityTelemetryCollector::class)->liveLabs())->toBe(2);
+    expect(Livewire::actingAs(aSecurityAdmin())->test(Security::class)->instance()->liveLabs())->toBe(2);
+});

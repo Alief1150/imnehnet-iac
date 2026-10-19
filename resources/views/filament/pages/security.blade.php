@@ -41,6 +41,18 @@
                 — <span class="font-semibold text-amber-600 dark:text-amber-400">stale{{ $fresh['errors'] !== [] ? ': '.implode('; ', $fresh['errors']) : ': the collector has not reported yet' }}</span>
             @endif
         </p>
+        <details class="group text-xs text-gray-500 dark:text-gray-400">
+            <summary class="cursor-pointer select-none font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">What every figure is, and where it comes from ▾</summary>
+            <dl class="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+                <div><dt class="inline font-semibold">Active Alerts / Trend / Severity:</dt><dd class="inline"> Wazuh indexer, daily aggregation of the last 30 days.</dd></div>
+                <div><dt class="inline font-semibold">Wazuh Agents:</dt><dd class="inline"> manager API — enrolled vs reporting agents.</dd></div>
+                <div><dt class="inline font-semibold">Failed Logins:</dt><dd class="inline"> portal activity log plus <code class="font-mono">/var/log/auth.log</code> on IAAS-MGMT.</dd></div>
+                <div><dt class="inline font-semibold">Isolation Policy:</dt><dd class="inline"> live <code class="font-mono">nft list table inet laa-ctf</code> on LAB-ATK against live lab sessions.</dd></div>
+                <div><dt class="inline font-semibold">Environment coverage:</dt><dd class="inline"> alerts per plane in the last 24h from the SIEM log.</dd></div>
+                <div><dt class="inline font-semibold">Container visibility:</dt><dd class="inline"> paired container IPs vs agents the SIEM heard from.</dd></div>
+                <div><dt class="inline font-semibold">Integrations:</dt><dd class="inline"> live probe of the Grafana and Wazuh consoles.</dd></div>
+            </dl>
+        </details>
 
         {{-- KPI cards --}}
         <section class="im-kpis grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Security overview">
@@ -108,12 +120,12 @@
             @endforeach
         </section>
 
-        @php $vis = $this->visibility(); @endphp
-        <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900" aria-label="Container visibility">
+        @php $vis = $this->visibility(); $liveLabs = $this->liveLabs(); @endphp
+        <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900" aria-label="Live lab security">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h3 class="text-base font-semibold text-gray-950 dark:text-white">Container visibility</h3>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Paired lab containers the SIEM heard from in 24h. A container without an enrolled agent renders as missing, never as covered.</p>
+                    <h3 class="text-base font-semibold text-gray-950 dark:text-white">Live lab security</h3>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $liveLabs }} paired lab session(s) running. Containers are watched once their Wazuh agent reports: 10.30/10.20 attacker and victim planes.</p>
                 </div>
                 <span class="font-mono text-2xl font-bold tabular-nums text-gray-950 dark:text-white">{{ $vis['expected'] !== null ? $vis['reporting'].' of '.$vis['expected'] : 'n/a' }}</span>
             </div>
@@ -158,8 +170,8 @@
         </section>
 
         {{-- Trend + severity --}}
-        <div class="im-chartrow grid gap-6 grid-cols-1 md:grid-cols-5">
-            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 col-span-1 md:col-span-3">
+        <div class="im-chartrow grid gap-6">
+            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Trend</h3>
@@ -213,24 +225,24 @@
 
             <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Severity</h3>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Distribution of security alerts, last 24h</p>
-                @if ($donut['total'] > 0)
-                    @php $offset = 25; @endphp
-                    <div class="relative mx-auto mt-2 w-52 max-w-full">
-                        <svg viewBox="0 0 42 42" class="im-donut-svg" role="img" aria-label="Alert severities, {{ $donut['total'] }} total">
-                            <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke-width="6" class="stroke-gray-100 dark:stroke-gray-800" />
-                            @foreach ($donut['slices'] as $slice)
-                                @if ($slice['count'] > 0)
-                                    <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke-width="6"
-                                            pathLength="100"
-                                            stroke="{{ $slice['color'] }}"
-                                            stroke-dasharray="{{ number_format($slice['share'], 1) }} {{ number_format(100 - $slice['share'], 1) }}"
-                                            stroke-dashoffset="{{ number_format($offset, 1) }}">
-                                        <title>{{ $slice['label'] }}: {{ $slice['count'] }} ({{ number_format($slice['share'], 1) }}%)</title>
-                                    </circle>
-                                    @php $offset -= $slice['share']; @endphp
-                                @endif
-                            @endforeach
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Distribution of security alerts, last 24h — from the Wazuh indexer.</p>
+            @if ($donut['total'] > 0)
+                @php $offset = 25; @endphp
+                <div class="relative mx-auto mt-2 w-52 max-w-full">
+                    <svg viewBox="0 0 42 42" class="im-donut-svg" role="img" aria-label="Alert severities, {{ $donut['total'] }} total">
+                        <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke-width="6" class="stroke-gray-100 dark:stroke-gray-800" />
+                        @foreach ($donut['slices'] as $slice)
+                            @if ($slice['count'] > 0)
+                                <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke-width="6"
+                                        pathLength="100"
+                                        stroke="{{ $slice['color'] }}"
+                                        stroke-dasharray="{{ number_format($slice['share'], 1) }} {{ number_format(100 - $slice['share'], 1) }}"
+                                        stroke-dashoffset="{{ number_format($offset, 1) }}">
+                                    <title>{{ $slice['label'] }}: {{ $slice['count'] }} ({{ number_format($slice['share'], 1) }}%)</title>
+                                </circle>
+                                @php $offset -= $slice['share']; @endphp
+                            @endif
+                        @endforeach
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
                             <span class="font-mono text-2xl font-bold text-gray-950 dark:text-white">{{ $donut['total'] }}</span>
@@ -256,8 +268,7 @@
                         <p class="mt-2 max-w-sm text-xs leading-relaxed text-gray-500 dark:text-gray-400">A quiet day renders as an empty ring, not as zeros with a story.</p>
                     </div>
                 @endif
-            </section>
-        </div>
+        </section>
 
         {{-- Integrations --}}
         <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
