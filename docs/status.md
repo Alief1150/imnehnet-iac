@@ -1,6 +1,6 @@
 # Current Verified Status
 
-Last update: 2026-10-14
+Last update: 2026-10-20
 
 This file records only facts that have been observed or explicitly confirmed. Planned architecture belongs in `architecture.md` or `networking.md`.
 
@@ -33,6 +33,30 @@ Verified on 2026-10-11:
 - Initial password setup remains pending: `/api/auth/check` reported `setup_required=true`, and an unauthenticated connection-list request returned HTTP `401`. No MySQL credential or connection profile has been entered.
 - Tailscale Serve has no active configuration, and no firewall, routing, Funnel, student-network policy, or MySQL listener was changed for this installation.
 - The service data directory is `/home/iaas/.local/share/dbx` with owner-only permissions. The user systemd manager reports `Linger=no`, so automatic startup immediately after a VM reboot is not yet guaranteed until the `iaas` user logs in or lingering is explicitly approved and enabled.
+
+## Guided CTF end-to-end smoke test
+
+Operator-supplied portal evidence recorded on 2026-10-20 shows that the
+`IMNEHNET Web Server Breach` Guided CTF completed successfully on Monday,
+2026-10-19:
+
+- The running view showed `LAB READY`, an embedded CTF terminal, and progress
+  at `2/6` objectives.
+- The completion view showed `6/6`, `COURSE COMPLETED`, and status
+  `COMPLETED`.
+- The portal displayed a start time of 2026-10-18 22:38, completion time of
+  2026-10-19 14:03, and duration `15:25:03`.
+- The six displayed objectives covered host discovery, port and service
+  reconnaissance, web reconnaissance, hidden-directory discovery,
+  vulnerability discovery, and exploit/capture flag.
+- Sanitized screenshot evidence and the bounded milestone record are stored in
+  `documents/evidence/guided-ctf/` and
+  `docs/history/2026-10-19-guided-ctf-end-to-end-smoke-test.md`.
+- This evidence verifies the documented Guided CTF flow only. It does not by
+  itself verify every portal lifecycle action, micro-segmentation policy,
+  Wazuh integration, multi-user behavior, performance, or scalability.
+- A separate chat screenshot containing plaintext test credentials was
+  intentionally excluded from the repository.
 
 ## Remote desktop
 

@@ -10,6 +10,7 @@ dan direplikasi melalui repository GitHub privat.
 - `audit/` menyimpan dokumentasi setup/troubleshooting audit yang sudah disanitasi; raw audit log dan mapping identitas aktual tidak boleh disimpan di repository.
 - `handoffs/` menyimpan breakpoint implementasi dan context note yang sudah disanitasi; setiap fakta runtime yang dapat berubah tetap harus diverifikasi terhadap `docs/status.md` dan sistem live.
 - `administrative/` menyimpan rekaman administratif bertanda tangan dan logbook kegiatan. Dokumen di direktori ini dapat memuat data identitas atau metadata audit penandatanganan; repository wajib tetap privat dan dokumen tidak boleh dipublikasikan ulang tanpa peninjauan privasi.
+- `evidence/` menyimpan bukti milestone yang telah ditinjau dan disanitasi. Bukti yang memuat password, token, private key, atau kredensial lain tidak boleh dimasukkan.
 - Arsip ZIP disimpan utuh; daftar isi dan hasil pemeriksaan keselamatannya dicatat di `index.json`.
 - Dokumen berstatus `reference` tidak otomatis menjadi fakta deployment.
 - Status runtime tetap hanya dicatat di `docs/status.md`.

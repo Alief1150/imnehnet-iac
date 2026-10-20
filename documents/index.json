@@ -227,6 +227,46 @@
       "received_at": "2026-10-12T17:29:30+07:00",
       "source": "telegram-upload",
       "notes": "Dokumen bertanda tangan digital disimpan utuh sebagai rekaman administratif dan logbook kegiatan. Dokumen memuat metadata audit penandatanganan sehingga repository harus tetap privat; isinya tidak menggantikan docs/status.md sebagai sumber fakta runtime."
+    },
+    {
+      "id": "imnehnet-guided-ctf-e2e-progress-2026-10-19",
+      "title": "Guided CTF IMNEHNET Web Server Breach — Progress 2/6",
+      "document_type": "test-evidence-screenshot",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "runtime-evidence",
+      "authority": "operator-supplied-screenshot-evidence",
+      "path": "documents/evidence/guided-ctf/2026-10-19-guided-ctf-progress-2-of-6.jpg",
+      "original_filename": "img_e4c72d692ea6.jpg",
+      "media_type": "image/jpeg",
+      "dimensions": "1280x630",
+      "size_bytes": 67199,
+      "sha256": "9a27163e9425ae34491871b60d11a042063ea271c3c52f2eaa21ec47f282bd3b",
+      "received_at": "2026-10-20T07:27:46+07:00",
+      "source": "telegram-upload",
+      "notes": "Bukti progress Guided CTF pada 2/6 dengan status LAB READY dan terminal CTF. Tidak memuat password; bukti percakapan terpisah yang memuat kredensial tidak diarsipkan."
+    },
+    {
+      "id": "imnehnet-guided-ctf-e2e-completed-2026-10-19",
+      "title": "Guided CTF IMNEHNET Web Server Breach — Course Completed 6/6",
+      "document_type": "test-evidence-screenshot",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "runtime-evidence",
+      "authority": "operator-supplied-screenshot-evidence",
+      "path": "documents/evidence/guided-ctf/2026-10-19-guided-ctf-course-completed.jpg",
+      "original_filename": "img_1f3ba0487964.jpg",
+      "media_type": "image/jpeg",
+      "dimensions": "1280x630",
+      "size_bytes": 68177,
+      "sha256": "ce32ab034aca95b732b2010f148de045b62b49b7685c4257537db58462780241",
+      "received_at": "2026-10-20T07:27:46+07:00",
+      "source": "telegram-upload",
+      "notes": "Bukti Guided CTF mencapai 6/6 dan COURSE COMPLETED pada 19 Oktober 2026. Klaim dibatasi pada alur Guided CTF yang terlihat dan tidak digeneralisasi ke seluruh fungsi platform."
     }
   ]
 }
