@@ -620,3 +620,14 @@ test('live lab count is exposed for the security strip', function () {
     expect(app(SecurityTelemetryCollector::class)->liveLabs())->toBe(2);
     expect(Livewire::actingAs(aSecurityAdmin())->test(Security::class)->instance()->liveLabs())->toBe(2);
 });
+
+test('the security page renders Flyon UI icons rather than Lucide', function () {
+    $html = (string) Livewire::actingAs(aSecurityAdmin())->test(Security::class)->html();
+
+    // Every icon the page draws, so a swap back to another set is caught.
+    foreach (['shield-alert', 'activity', 'users', 'shield-check', 'chart-line', 'chart-bar', 'eye', 'server', 'external-link', 'clock'] as $icon) {
+        expect($html)->toContain('data-fi="'.$icon.'"');
+    }
+
+    expect($html)->not->toContain('Support\Lucide');
+});
