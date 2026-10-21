@@ -90,6 +90,26 @@
       "notes": "Presentasi editable berbasis visual Dashi theme03. Status prototype pada slide progress didasarkan pada verifikasi read-only 2026-09-22; item tahap berikutnya tidak dinyatakan sebagai deployment selesai."
     },
     {
+      "id": "imnehnet-guided-ctf-testing-plan-presentation-2026-10-20-theme05",
+      "title": "IMNEHNET — Guided CTF dan Rencana Pengujian (Dashi Theme 05)",
+      "document_type": "presentation",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "current-deliverable",
+      "authority": "presentation-planning-and-bounded-milestone-summary",
+      "path": "documents/presentations/2026-10-20-imnehnet-guided-ctf-rencana-pengujian-dashi-theme05.pptx",
+      "original_filename": "IMNEHNET_Guided_CTF_Rencana_Pengujian_Dashi_Theme05.pptx",
+      "media_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "slide_count": 6,
+      "size_bytes": 63492,
+      "sha256": "a4f979aa9febdec0f64517e2409abd982187ad78ea9cc786ec94df91bf317eb5",
+      "received_at": "2026-10-21T12:55:39+07:00",
+      "source": "locally-generated",
+      "notes": "Presentasi editable PowerPoint/Canva dengan 431 objek native dan speaker notes pada seluruh slide. Visual mengadaptasi Dashi PPT Skill Theme 05 dari commit 21dc7e5fc8c3a0d7f6a94948153dd1ee954f4e64. Milestone dibatasi pada uji end-to-end awal Guided CTF yang dilaporkan berhasil; tujuh aspek pengujian formal dan jadwal PIC tetap dinyatakan sebagai rencana/usulan. Angka 65% merupakan estimasi progres proyek total, bukan tingkat kelulusan pengujian."
+    },
+    {
       "id": "imnehnet-proposal-kelompok-5-2026-final-v2",
       "title": "Rancang Bangun Model IaaS Berbasis Micro-Segmentation untuk Meningkatkan Keamanan dan Skalabilitas Praktikum Keamanan Siber",
       "document_type": "proposal",
