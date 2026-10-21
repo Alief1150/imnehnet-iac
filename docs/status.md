@@ -133,6 +133,14 @@ Verified again on 2026-10-01 after an `IAAS-MGMT` reboot:
 - The unprivileged `php artisan serve --host=0.0.0.0 --port=8000` process was restored from the canonical `/home/iaas/projects/webportal-iaas` tree. `/` and `/up` returned HTTP 200 through both `192.168.100.10:8000` and the VM's Tailscale address `100.77.79.18:8000`.
 - The development listener remains nonpersistent. Apache port 80 still serves the Ubuntu default page; no Apache, firewall, routing, or Tailscale configuration was changed.
 
+Verified again on 2026-10-21 during a full host and guest health check:
+
+- All four libvirt guests (`IAAS-MGMT`, `LAB-ENV`, `LAB-ATK`, and `PBL-KELOMPOK3`) were running. Their expected LAN addresses responded to ICMP and TCP/22, all three libvirt networks were active with autostart enabled, and `virsh domblkerror` reported no block errors for every guest.
+- Host SSH, Tailscale, WARP, and libvirt were active. Internet connectivity returned HTTP 204. The root filesystem had 178 GiB available, but host swap was effectively full and current I/O PSI was elevated. The current boot log records six QEMU OOM kills between 2026-10-15 and 2026-10-18, so the host remains capacity-constrained even though all guests were operational at verification time.
+- `LAB-ENV` was healthy through the approved Ansible path with no failed systemd units. All 12 listed Incus containers were `RUNNING`; a harmless `incus exec` succeeded in every container and confirmed its expected `eth0` IPv4 address.
+- `PBL-KELOMPOK3` was reachable with its pinned host key and expected `pbl3` identity, had no failed systemd units, and retained approximately 5.5 GiB free on `/`. `LAB-ATK` was reachable on its LAN address and online in Tailscale, but guest-internal health remained unverified because no documented SSH account/key tuple was available from the physical host.
+- The nonpersistent Laravel development listener on `IAAS-MGMT` had not returned after the VM reboot. It was restored as the unprivileged `iaas` user. A separate HTTP 500 on `/up` was traced to `storage/framework/views` being owned by `www-data:www-data` with mode `0755`; the directory was preserved as `storage/framework/views.pre-repair-20261021-115906` and recreated as `iaas:www-data` mode `2775` (setgid inherited from its parent). Fresh checks returned HTTP 200 for `/`, `/up`, and `/admin/login`; Grafana, Prometheus, and Blackbox health endpoints also returned HTTP 200. No firewall, routing, Tailscale, Apache, VM definition, or database change was made.
+
 This remains a single-environment proof of concept. Multi-user OpenTofu state strategy, Wazuh integration, web terminal, persistent production web/queue serving, live lifecycle mutation, and end-to-end micro-segmentation enforcement remain pending.
 
 ## Distributed infrastructure audit
