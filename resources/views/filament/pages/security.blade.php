@@ -25,6 +25,15 @@
             min-width: 0;
             overflow: hidden;
         }
+        .im-security .fi-fi {
+            width: 1.15em;
+            height: 1.15em;
+            flex-shrink: 0;
+        }
+        .im-security h3 .fi-fi {
+            width: 1.1em;
+            height: 1.1em;
+        }
         .im-security .im-dot {
             transition: r 0.15s ease, fill 0.15s ease;
             cursor: crosshair;
@@ -127,7 +136,7 @@
                 <article class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2.5">
-                            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">{!! \App\Support\Lucide::html($kpi['icon'] ?? 'shield-alert') !!}</span>
+                            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400">{!! \App\Support\Flyon::html($kpi['icon'] ?? 'shield-alert') !!}</span>
                             <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $kpi['label'] }}</h3>
                         </div>
                         @if (count($spark) > 1)
@@ -160,7 +169,10 @@
             <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-8">
                 <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                     <div>
-                        <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Trend</h3>
+                        <h3 class="flex items-center gap-2 text-base font-semibold text-gray-950 dark:text-white">
+                            <span class="text-teal-600 dark:text-teal-400">{!! \App\Support\Flyon::html('chart-line') !!}</span>
+                            Alert Trend
+                        </h3>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Total security alerts over time</p>
                     </div>
                     <div class="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-white/10 dark:bg-gray-900" role="group" aria-label="Time range">
@@ -204,7 +216,10 @@
             </section>
 
             <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-4">
-                <h3 class="text-base font-semibold text-gray-950 dark:text-white">Alert Severity</h3>
+                <h3 class="flex items-center gap-2 text-base font-semibold text-gray-950 dark:text-white">
+                    <span class="text-blue-600 dark:text-blue-400">{!! \App\Support\Flyon::html('chart-bar') !!}</span>
+                    Alert Severity
+                </h3>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Distribution of security alerts, last 24h — from the Wazuh indexer. Click a row to filter the table.</p>
                 @if ($donut['total'] > 0)
                     @php $offset = 25; @endphp
@@ -255,7 +270,10 @@
         <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900" aria-label="Container visibility">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <h3 class="text-base font-semibold text-gray-950 dark:text-white">Container visibility</h3>
+                    <h3 class="flex items-center gap-2 text-base font-semibold text-gray-950 dark:text-white">
+                        <span class="text-emerald-600 dark:text-emerald-400">{!! \App\Support\Flyon::html('eye') !!}</span>
+                        Container visibility
+                    </h3>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Paired lab containers the SIEM heard from in 24h. A container without an enrolled agent renders as missing, never as covered.</p>
                 </div>
                 <span class="font-mono text-2xl font-bold tabular-nums text-gray-950 dark:text-white">{{ $visibility['expected'] !== null ? $visibility['reporting'].' of '.$visibility['expected'] : 'n/a' }}</span>
@@ -272,7 +290,10 @@
         <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900" aria-label="Environment coverage">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <h3 class="text-base font-semibold text-gray-950 dark:text-white">Environment coverage</h3>
+                    <h3 class="flex items-center gap-2 text-base font-semibold text-gray-950 dark:text-white">
+                        <span class="text-violet-600 dark:text-violet-400">{!! \App\Support\Flyon::html('server') !!}</span>
+                        Environment coverage
+                    </h3>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Alerts per plane in 24h, straight from the SIEM log. A quiet plane renders as quiet — the portal never fills a gap with a guess.</p>
                 </div>
                 @if (! $coverage['ok'])
@@ -304,7 +325,10 @@
         <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900" aria-label="Security Integrations">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <h3 class="text-base font-semibold text-gray-950 dark:text-white">Security Integrations</h3>
+                    <h3 class="flex items-center gap-2 text-base font-semibold text-gray-950 dark:text-white">
+                        <span class="text-teal-600 dark:text-teal-400">{!! \App\Support\Flyon::html('external-link') !!}</span>
+                        Security Integrations
+                    </h3>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Access external security tools for deeper analysis and monitoring.</p>
                 </div>
             </div>
@@ -313,7 +337,7 @@
                     @php $entry = $card['entry'] ?? null; $ok = ($entry['status'] ?? '') === 'healthy'; @endphp
                     <div class="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-4 py-3.5 dark:border-gray-800">
                         <div class="flex min-w-0 items-center gap-3">
-                            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg {{ $ok ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400' : 'bg-gray-500/10 text-gray-500' }}">{!! \App\Support\Lucide::html($card['icon']) !!}</span>
+                            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg {{ $ok ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400' : 'bg-gray-500/10 text-gray-500' }}">{!! \App\Support\Flyon::html($card['icon']) !!}</span>
                             <div class="min-w-0">
                                 <p class="text-sm font-semibold text-gray-900 dark:text-white">Open {{ $card['name'] }}</p>
                                 <p class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{{ $card['blurb'] }}</p>
@@ -351,7 +375,10 @@
         <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900" aria-label="Recent Security Alerts">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <h3 class="text-base font-semibold text-gray-950 dark:text-white">Recent Security Alerts</h3>
+                    <h3 class="flex items-center gap-2 text-base font-semibold text-gray-950 dark:text-white">
+                        <span class="text-amber-600 dark:text-amber-400">{!! \App\Support\Flyon::html('clock') !!}</span>
+                        Recent Security Alerts
+                    </h3>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Latest event per reporter, newest first.</p>
                 </div>
                 @if ($wazuhDash !== null && ! empty($wazuhDash['url']))
