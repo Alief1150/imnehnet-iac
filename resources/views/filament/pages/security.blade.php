@@ -53,9 +53,14 @@
         .im-security .im-donut-svg {
             display: block;
             width: 100%;
-            height: 190px;
-            max-height: 190px;
+            height: auto;
+            aspect-ratio: 1 / 1;
             overflow: hidden;
+        }
+        .im-security .im-chart-box {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 320 / 140;
         }
         @media (max-width: 1279px) {
             .im-security .im-kpis {
@@ -165,8 +170,8 @@
         </section>
 
         {{-- Trend + severity --}}
-        <div class="im-chartrow grid gap-6 lg:grid-cols-12">
-            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-8">
+        <div class="im-chartrow grid gap-6 grid-cols-1 md:grid-cols-12">
+            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:col-span-8">
                 <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                     <div>
                         <h3 class="flex items-center gap-2 text-base font-semibold text-gray-950 dark:text-white">
@@ -189,20 +194,20 @@
                         {{ $chart['coverage'] }}
                     @endif
                 </p>
-                <div class="relative w-full h-64">
+                <div class="im-chart-box">
                     @if (! ($chart['empty'] ?? true))
-                        <svg viewBox="0 0 200 100" class="w-full h-full" role="img" aria-label="Alert counts over time">
+                        <svg viewBox="0 0 320 140" class="h-full w-full" role="img" aria-label="Alert counts over time">
                             @foreach ($chart['yticks'] as $tick)
-                                <line x1="24" y1="{{ $tick['y'] }}" x2="196" y2="{{ $tick['y'] }}" stroke="currentColor" stroke-opacity=".12" stroke-width=".5" />
-                                <text x="21" y="{{ $tick['y'] + 3 }}" text-anchor="end" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
+                                <line x1="{{ $chart['left'] }}" y1="{{ $tick['y'] }}" x2="{{ $chart['right'] }}" y2="{{ $tick['y'] }}" stroke="currentColor" stroke-opacity=".12" stroke-width=".5" />
+                                <text x="{{ $chart['left'] - 4 }}" y="{{ $tick['y'] + 3 }}" text-anchor="end" font-size="7" class="fill-gray-400">{{ $tick['label'] }}</text>
                             @endforeach
                             @foreach ($chart['xticks'] as $tick)
-                                <text x="{{ $tick['x'] }}" y="94" text-anchor="{{ $tick['anchor'] ?? 'middle' }}" font-size="6" class="fill-gray-400">{{ $tick['label'] }}</text>
+                                <text x="{{ $tick['x'] }}" y="132" text-anchor="{{ $tick['anchor'] ?? 'middle' }}" font-size="7" class="fill-gray-400">{{ $tick['label'] }}</text>
                             @endforeach
                             <path d="{{ $chart['area'] }}" fill="#2dd4bf" fill-opacity="0.15" stroke="none" />
-                            <path d="{{ $chart['line'] }}" fill="none" stroke="#2dd4bf" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="{{ $chart['line'] }}" fill="none" stroke="#2dd4bf" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
                             @foreach ($chart['dots'] as $dot)
-                                <circle cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="3" fill="#2dd4bf" stroke="#ffffff" stroke-width="1.5" vector-effect="non-scaling-stroke">
+                                <circle class="im-dot" cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="2.6" fill="#2dd4bf" stroke="#ffffff" stroke-width="1" vector-effect="non-scaling-stroke">
                                     <title>{{ $dot['label'] }}</title>
                                 </circle>
                             @endforeach
@@ -215,7 +220,7 @@
                 </div>
             </section>
 
-            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-4">
+            <section class="card im-panel rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:col-span-4">
                 <h3 class="flex items-center gap-2 text-base font-semibold text-gray-950 dark:text-white">
                     <span class="text-blue-600 dark:text-blue-400">{!! \App\Support\Flyon::html('chart-bar') !!}</span>
                     Alert Severity
@@ -223,7 +228,8 @@
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Distribution of security alerts, last 24h — from the Wazuh indexer. Click a row to filter the table.</p>
                 @if ($donut['total'] > 0)
                     @php $offset = 25; @endphp
-                    <div class="relative mx-auto mt-2 w-52 max-w-full">
+                    <div class="mt-3 flex flex-wrap items-center justify-center gap-6">
+                    <div class="relative w-44 max-w-full shrink-0">
                         <svg viewBox="0 0 42 42" class="im-donut-svg" role="img" aria-label="Alert severities, {{ $donut['total'] }} total">
                             <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke-width="6" class="stroke-gray-100 dark:stroke-gray-800" />
                             @foreach ($donut['slices'] as $slice)
@@ -244,7 +250,7 @@
                             <span class="text-[11px] text-gray-500 dark:text-gray-400">Total Alerts</span>
                         </div>
                     </div>
-                    <dl class="mt-3 space-y-2">
+                    <dl class="min-w-[190px] flex-1 space-y-1.5">
                         @foreach ($donut['slices'] as $slice)
                             <button type="button" wire:click="toggleSev('{{ $slice['key'] }}')" title="Show only {{ $slice['label'] }} alerts" class="flex w-full items-center gap-2.5 rounded-lg px-2 py-1 text-left text-sm transition hover:bg-gray-500/5 {{ $this->sev === $slice['key'] ? 'bg-gray-500/10' : '' }}">
                                 <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {{ $slice['color'] }}"></span>
@@ -254,6 +260,7 @@
                             </button>
                         @endforeach
                     </dl>
+                    </div>
                     @if (($donut['slices'][0]['share'] ?? 0) >= 90)
                         <p class="mt-3 rounded-lg bg-gray-500/5 px-3 py-2 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">Routine low-level agent noise dominates this volume — triage starts at Medium and High. Click a row to filter the table.</p>
                     @endif

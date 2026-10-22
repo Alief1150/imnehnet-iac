@@ -443,7 +443,9 @@ test('the chart scales axes to a nice ceiling with date ticks', function () {
         ->and(count($chart['xticks']))->toBe(5)
         ->and(count($chart['yticks']))->toBe(5)
         ->and($chart['line'])->toStartWith('M')
-        ->and($chart['area'])->toContain('L100.00,100 Z');
+        ->and($chart['area'])->toStartWith('M')
+        ->and($chart['area'])->toEndWith('Z')
+        ->and($chart['line'])->toStartWith('M');
 });
 
 test('an empty chart carries its reason instead of axes', function () {
