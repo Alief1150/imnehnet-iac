@@ -179,6 +179,18 @@
         .im-security .im-axis-label { font-size: 5px; }
         .im-security .im-trend-line { transition: d .7s ease; }
         .im-security .im-chart-box .im-trend-svg { overflow: visible; }
+        .im-security .im-chart-caption {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            margin: 0;
+            font-size: 10px;
+            line-height: 1.4;
+            color: #6b7280;
+            background: rgba(15, 23, 42, 0.45);
+            padding: 1px 7px;
+            border-radius: 6px;
+        }
     </style>
     @php
         $kpis = $this->kpis();
@@ -306,13 +318,6 @@
                         @endforeach
                     </div>
                 </div>
-                <p class="im-chart-window">
-                    @if (! ($chart['empty'] ?? true))
-                        {{ $chart['from_label'] }} → {{ $chart['to_label'] }}
-                    @else
-                        {{ $chart['coverage'] }}
-                    @endif
-                </p>
                 <div class="im-chart-box" style="--im-chart-ratio: {{ $chart['width'] ?? 320 }} / {{ $chart['height'] ?? 90 }};">
                     @if (! ($chart['empty'] ?? true))
                         <svg viewBox="0 0 {{ $chart['width'] }} {{ $chart['height'] }}" class="im-trend-svg" role="img" aria-label="Alert counts over time">
@@ -331,6 +336,7 @@
                                 </circle>
                             @endforeach
                         </svg>
+                        <p class="im-chart-caption">{{ $chart['window'] ?? '' }}</p>
                     @else
                         <div class="im-chart-empty">
                             <p>No samples in this window yet.<br><span class="text-xs">The collector reads the SIEM log every minute.</span></p>

@@ -437,6 +437,8 @@ final class SecurityDashboard
             ],
             'from_label' => Carbon::createFromTimestamp($first['ts'])->format($format),
             'to_label' => Carbon::createFromTimestamp($last['ts'])->format($format),
+            'window' => Carbon::createFromTimestamp($first['ts'])->format($format === 'H:i' ? 'd M H:i' : 'd M')
+                .' → '.Carbon::createFromTimestamp($last['ts'])->format($format === 'H:i' ? 'd M H:i' : 'd M'),
             'coverage' => sprintf('%d buckets', $count),
         ];
     }
