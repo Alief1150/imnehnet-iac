@@ -379,16 +379,148 @@ final class SecurityTelemetryCollector
             $json = $fetch($url.'/wazuh-alerts-*/_search', $username, $password, [
                 'size' => 0,
                 'query' => ['range' => ['timestamp' => ['gte' => 'now-30d', 'lt' => 'now']]],
-                'aggs' => ['per_day' => ['date_histogram' => [
+                'aggs' => [
+                    'per_day' => ['date_histogram' => [
+                        'field' => 'timestamp',
+                        'calendar_interval' => '1d',
+                        'min_doc_count' => 0,
+                        'extended_bounds' => ['min' => 'now-30d', 'max' => 'now'],
+                    ], 'aggs' => [
+                        'low' => ['range' => ['field' => 'rule.level', 'ranges' => [['to' => 7]]]],
+                        'med' => ['range' => ['field' => 'rule.level', 'ranges' => [['from' => 7, 'to' => 12]]]],
+                        'high' => ['range' => ['field' => 'rule.level', 'ranges' => [['from' => 12]]]],
+                    ]],
+                    'per_hour' =>                     array (
+                    'filter' => 
+                    array (
+                    'range' => 
+                    array (
+                    'timestamp' => 
+                    array (
+                    'gte' => 'now-24h',
+                    'lt' => 'now',
+                    ),
+                    ),
+                    ),
+                    'aggs' => 
+                    array (
+                    'hours' => 
+                    array (
+                    'date_histogram' => 
+                    array (
                     'field' => 'timestamp',
-                    'calendar_interval' => '1d',
+                    'calendar_interval' => '1h',
                     'min_doc_count' => 0,
-                    'extended_bounds' => ['min' => 'now-30d', 'max' => 'now'],
-                ], 'aggs' => [
-                    'low' => ['range' => ['field' => 'rule.level', 'ranges' => [['to' => 7]]]],
-                    'med' => ['range' => ['field' => 'rule.level', 'ranges' => [['from' => 7, 'to' => 12]]]],
-                    'high' => ['range' => ['field' => 'rule.level', 'ranges' => [['from' => 12]]]],
-                ]]],
+                    'extended_bounds' => 
+                    array (
+                    'min' => 'now-24h',
+                    'max' => 'now',
+                    ),
+                    ),
+                    'aggs' => 
+                    array (
+                    'low' => 
+                    array (
+                    'range' => 
+                    array (
+                    'field' => 'rule.level',
+                    'ranges' => 
+                    array (
+                    0 => 
+                    array (
+                    'to' => 7,
+                    ),
+                    ),
+                    ),
+                    ),
+                    'med' => 
+                    array (
+                    'range' => 
+                    array (
+                    'field' => 'rule.level',
+                    'ranges' => 
+                    array (
+                    0 => 
+                    array (
+                    'from' => 7,
+                    'to' => 12,
+                    ),
+                    ),
+                    ),
+                    ),
+                    'high' => 
+                    array (
+                    'range' => 
+                    array (
+                    'field' => 'rule.level',
+                    'ranges' => 
+                    array (
+                    0 => 
+                    array (
+                    'from' => 12,
+                    ),
+                    ),
+                    ),
+                    ),
+                    'agents' => 
+                    array (
+                    'terms' => 
+                    array (
+                    'field' => 'agent.name',
+                    'size' => 100,
+                    ),
+                    'aggs' => 
+                    array (
+                    'low' => 
+                    array (
+                    'range' => 
+                    array (
+                    'field' => 'rule.level',
+                    'ranges' => 
+                    array (
+                    0 => 
+                    array (
+                    'to' => 7,
+                    ),
+                    ),
+                    ),
+                    ),
+                    'med' => 
+                    array (
+                    'range' => 
+                    array (
+                    'field' => 'rule.level',
+                    'ranges' => 
+                    array (
+                    0 => 
+                    array (
+                    'from' => 7,
+                    'to' => 12,
+                    ),
+                    ),
+                    ),
+                    ),
+                    'high' => 
+                    array (
+                    'range' => 
+                    array (
+                    'field' => 'rule.level',
+                    'ranges' => 
+                    array (
+                    0 => 
+                    array (
+                    'from' => 12,
+                    ),
+                    ),
+                    ),
+                    ),
+                    ),
+                    ),
+                    ),
+                    ),
+                    ),
+                    ),
+                ],
             ]);
         } catch (\Throwable) {
             return null;
@@ -421,12 +553,67 @@ final class SecurityTelemetryCollector
             return null;
         }
 
+        $hourBuckets = is_array($json) ? ($json['aggregations']['per_hour']['hours']['buckets'] ?? null) : null;
+        $hourly = [];
+        $agents = [];
+        $byAgent = [];
+        $day = ['total' => 0.0, 'low' => 0.0, 'med' => 0.0, 'high' => 0.0];
+
+        foreach (is_array($hourBuckets) ? $hourBuckets : [] as $bucket) {
+            if (! is_array($bucket)) {
+                continue;
+            }
+
+            $total = (float) ($bucket['doc_count'] ?? 0);
+            $low = $one($bucket, 'low');
+            $med = $one($bucket, 'med');
+            $high = $one($bucket, 'high');
+            $hour = (int) floor(($bucket['key'] ?? 0) / 1000);
+            $reported = 0;
+
+            foreach (is_array($bucket['agents']['buckets'] ?? null) ? $bucket['agents']['buckets'] : [] as $agentBucket) {
+                if (! is_array($agentBucket)) {
+                    continue;
+                }
+
+                $name = (string) ($agentBucket['key'] ?? '');
+
+                if ($name === '') {
+                    continue;
+                }
+
+                $agents[$name] = true;
+                $reported++;
+                $byAgent[$name] ??= ['total' => 0.0, 'low' => 0.0, 'med' => 0.0, 'high' => 0.0, 'last' => 0];
+                $byAgent[$name]['total'] += (float) ($agentBucket['doc_count'] ?? 0);
+                $byAgent[$name]['low'] += $one($agentBucket, 'low');
+                $byAgent[$name]['med'] += $one($agentBucket, 'med');
+                $byAgent[$name]['high'] += $one($agentBucket, 'high');
+                $byAgent[$name]['last'] = max($byAgent[$name]['last'], $hour);
+            }
+
+            $hourly[] = [$hour, $total, (float) $reported];
+
+            $day['total'] += $total;
+            $day['low'] += $low;
+            $day['med'] += $med;
+            $day['high'] += $high;
+        }
+
+        $agentNames = array_keys($agents);
+        sort($agentNames);
+
         return [
             'ok' => true,
             'stale' => false,
             'error' => null,
             'source' => 'indexer',
             'daily' => $daily,
+            'hourly' => $hourly,
+            'day' => $day,
+            'agents_24h' => $agentNames,
+            'by_agent' => $byAgent,
+            'by_agent' => $byAgent,
             'coverage' => sprintf('%d daily buckets from the indexer', count($daily)),
         ];
     }

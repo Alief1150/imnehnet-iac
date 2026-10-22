@@ -48,9 +48,34 @@ final class SecurityDashboard
         $isolation = $telemetry['isolation'] ?? [];
 
         $day = $alerts['day'] ?? null;
+        $indexed = $telemetry['trend'] ?? [];
+        $indexedHourly = is_array($indexed['hourly'] ?? null) ? $indexed['hourly'] : [];
+        $indexedDay = is_array($indexed['day'] ?? null) ? $indexed['day'] : null;
+        $indexedAgents = is_array($indexed['agents_24h'] ?? null) ? $indexed['agents_24h'] : [];
+
+        if ($indexedDay !== null) {
+            $day = $indexedDay;
+        }
+
+        $alertsSpark = $indexedHourly !== []
+            ? $this->indexedTotals($indexedHourly)
+            : $this->hourlyTotals($alerts['hourly'] ?? []);
+
+        $agentsSpark = $indexedHourly !== []
+            ? $this->indexedAgents($indexedHourly)
+            : $this->hourlyAgents($alerts['hourly'] ?? []);
+
+        $agentCount = $indexedAgents !== []
+            ? count($indexedAgents)
+            : (is_array($alerts['agents_24h'] ?? null) ? count($alerts['agents_24h']) : null);
 
         return [
             'alerts' => [
+                'detail' =>                 array (
+                'what' => 'Jumlah alert yang masuk ke SIEM dalam 24 jam terakhir.',
+                'source' => 'Wazuh indexer (OpenSearch), level aturan 0-15: 0-6 informasi, 7-11 peringatan, 12-15 kritis.',
+                'indicator' => 'Naik berarti ada aktivitas atau ancaman baru; turun berarti SIEM sedang tenang.',
+                ),
                 'label' => 'Active Alerts',
                 'tint' => 'rose',
                 'icon' => 'shield-alert',
@@ -58,21 +83,31 @@ final class SecurityDashboard
                 'unit' => null,
                 'subtitle' => 'SIEM alerts in 24h',
                 'delta' => $this->deltaCounts((int) ($alerts['day']['total'] ?? 0), (int) ($alerts['prev_day_total'] ?? 0), $alerts['file_span'] ?? []),
-                'spark' => $this->hourlyTotals($alerts['hourly'] ?? []),
+                'spark' => $alertsSpark,
                 'state' => ($alerts['ok'] ?? false) ? 'ready' : 'unknown',
             ],
             'agents' => [
+                'detail' =>                 array (
+                'what' => 'Jumlah agen berbeda yang melapor ke SIEM dalam 24 jam terakhir.',
+                'source' => 'Nama agen pada log alert Wazuh: physical host, management plane, dan kedua lab plane.',
+                'indicator' => 'Turun berarti ada agen yang diam - cek apakah agennya masih hidup dan terhubung ke manager.',
+                ),
                 'label' => 'Wazuh Agents',
                 'tint' => 'teal',
                 'icon' => 'activity',
-                'value' => isset($alerts['agents_24h']) && is_array($alerts['agents_24h']) ? count($alerts['agents_24h']) : null,
+                'value' => $agentCount,
                 'unit' => null,
                 'subtitle' => 'distinct reporters in 24h',
                 'delta' => ['value' => null, 'label' => 'point-in-time set'],
-                'spark' => $this->hourlyAgents($alerts['hourly'] ?? []),
+                'spark' => $agentsSpark,
                 'state' => ($alerts['ok'] ?? false) ? 'ready' : 'unknown',
             ],
             'failed' => [
+                'detail' =>                 array (
+                'what' => 'Percobaan masuk yang gagal dalam 24 jam terakhir.',
+                'source' => 'Tabel activity_logs portal (gagal login web) ditambah /var/log/auth.log IAAS-MGMT (gagal SSH).',
+                'indicator' => 'Naik berarti ada pihak yang menebak kredensial; nol berarti tidak ada percobaan gagal.',
+                ),
                 'label' => 'Failed Logins',
                 'tint' => 'blue',
                 'icon' => 'users',
@@ -88,6 +123,11 @@ final class SecurityDashboard
                 'state' => ($failed['ok'] ?? false) ? 'ready' : 'unknown',
             ],
             'isolation' => [
+                'detail' =>                 array (
+                'what' => 'Persentase pasangan lab yang boleh saling bicara sesuai aturan firewall.',
+                'source' => 'Aturan nftables di LAB-ATK dibandingkan dengan sesi lab yang sedang hidup.',
+                'indicator' => '100% berarti tiap pasangan punya aturannya sendiri; di bawah 100% berarti ada lab yang belum diberi jalur.',
+                ),
                 'label' => 'Isolation Policy',
                 'tint' => 'emerald',
                 'icon' => 'shield-check',
@@ -372,15 +412,39 @@ final class SecurityDashboard
         $alerts = $telemetry['alerts'] ?? null;
         $ok = is_array($alerts) && ($alerts['ok'] ?? false);
         $byAgent = $ok && isset($alerts['by_agent']) && is_array($alerts['by_agent']) ? $alerts['by_agent'] : [];
+
+        $indexedAgents = $telemetry['trend']['by_agent'] ?? null;
+
+        if (is_array($indexedAgents) && $indexedAgents !== []) {
+            $byAgent = $indexedAgents;
+            $ok = true;
+        }
+
         $rows = [];
 
+        $byLower = [];
+        $names = [];
+
+        foreach ($byAgent as $name => $stats) {
+            $key = strtolower((string) $name);
+            $byLower[$key] = $stats;
+            $names[$key] = (string) $name;
+        }
+
+        $claimed = [];
+
         foreach (self::NODES as $node) {
-            $stats = $byAgent[$node['agent']] ?? null;
+            $key = strtolower($node['agent']);
+            $stats = $byLower[$key] ?? null;
+
+            if ($stats !== null) {
+                $claimed[$key] = true;
+            }
 
             $rows[] = [
                 'node' => $node['node'],
                 'role' => $node['role'],
-                'agent' => $node['agent'],
+                'agent' => $stats === null ? $node['agent'] : $names[$key],
                 'state' => ! $ok ? 'unknown' : ($stats === null ? 'quiet' : 'reporting'),
                 'total' => $stats['total'] ?? null,
                 'low' => $stats['low'] ?? null,
@@ -392,7 +456,7 @@ final class SecurityDashboard
         }
 
         foreach ($byAgent as $name => $stats) {
-            if (collect(self::NODES)->contains(fn (array $node): bool => $node['agent'] === $name)) {
+            if (isset($claimed[strtolower((string) $name)])) {
                 continue;
             }
 
@@ -518,6 +582,36 @@ final class SecurityDashboard
      * @param  list<array{0: int, array<string, mixed>}>  $hourly
      * @return list<array{0: int, 1: float}>
      */
+    /**
+     * @param list<array{0: int, 1: float, 2: float}> $hourly
+     * @return list<array{0: int, 1: float}>
+     */
+    private function indexedTotals(array $hourly): array
+    {
+        $points = [];
+
+        foreach ($hourly as $entry) {
+            $points[] = [(int) $entry[0], (float) $entry[1]];
+        }
+
+        return array_slice($points, -24);
+    }
+
+    /**
+     * @param list<array{0: int, 1: float, 2: float}> $hourly
+     * @return list<array{0: int, 1: float}>
+     */
+    private function indexedAgents(array $hourly): array
+    {
+        $points = [];
+
+        foreach ($hourly as $entry) {
+            $points[] = [(int) $entry[0], (float) $entry[2]];
+        }
+
+        return array_slice($points, -24);
+    }
+
     private function hourlyTotals(array $hourly): array
     {
         $points = [];

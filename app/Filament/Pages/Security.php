@@ -58,12 +58,13 @@ final class Security extends Page
     }
 
     /**
-     * @return array{series: list<array{0: float, 1: float}>, from_label: string|null, to_label: string|null, coverage: string}
+     * @return array<string, mixed>
      */
     public function alertTrend(): array
     {
-        return app(SecurityDashboard::class)->chartDaily(
-            $this->memoTelemetry()['trend']['daily'] ?? []
+        return app(SecurityDashboard::class)->chart(
+            $this->memoTelemetry()['alerts']['hourly'] ?? [],
+            $this->selectedRange(),
         );
     }
 
@@ -80,6 +81,31 @@ final class Security extends Page
     /**
      * @return list<array<string, mixed>>
      */
+    /**
+     * The cards whose explanation is open.
+     *
+     * @var list<string>
+     */
+    public array $openDetails = [];
+
+    public function toggleDetail(string $key): void
+    {
+        if (! in_array($key, ['alerts', 'agents', 'failed', 'isolation'], true)) {
+            return;
+        }
+
+        if (in_array($key, $this->openDetails, true)) {
+            $this->openDetails = array_values(array_filter(
+                $this->openDetails,
+                fn (string $open): bool => $open !== $key,
+            ));
+
+            return;
+        }
+
+        $this->openDetails[] = $key;
+    }
+
     public function setSev(string $sev): void
     {
         if (! in_array($sev, ['all', 'low', 'medium', 'high'], true)) {
