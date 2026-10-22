@@ -437,8 +437,8 @@ final class SecurityDashboard
             ],
             'from_label' => Carbon::createFromTimestamp($first['ts'])->setTimezone('Asia/Jakarta')->format($format),
             'to_label' => Carbon::createFromTimestamp($last['ts'])->setTimezone('Asia/Jakarta')->format($format),
-            'window' => Carbon::createFromTimestamp($first['ts'])->setTimezone('Asia/Jakarta')->format(str_contains($format, 'i') ? 'd M H:i' : 'd M')
-                .' → '.Carbon::createFromTimestamp($last['ts'])->setTimezone('Asia/Jakarta')->format(str_contains($format, 'i') ? 'd M H:i' : 'd M'),
+            'window' => Carbon::createFromTimestamp($first['ts'])->setTimezone('Asia/Jakarta')->format(str_contains($format, 'i') ? 'h:i A d M' : 'd M')
+                .' → '.Carbon::createFromTimestamp($last['ts'])->setTimezone('Asia/Jakarta')->format(str_contains($format, 'i') ? 'h:i A d M' : 'd M'),
             'coverage' => sprintf('%d buckets', $count),
         ];
     }
