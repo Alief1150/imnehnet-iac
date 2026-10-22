@@ -60,7 +60,7 @@
         .im-security .im-chart-box {
             position: relative;
             width: 100%;
-            aspect-ratio: 320 / 140;
+            aspect-ratio: 320 / 90;
         }
         @media (max-width: 1279px) {
             .im-security .im-kpis {
@@ -105,12 +105,6 @@
             <div>
                 <h2 class="text-xl font-bold tracking-tight text-gray-950 dark:text-white">Security</h2>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Security alerts, agent status, and monitoring access. Every figure names what measured it.</p>
-            </div>
-            <div class="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1 dark:border-white/10 dark:bg-gray-900" role="group" aria-label="Time range">
-                @foreach ($ranges as $key => $label)
-                    <a href="{{ $baseUrl }}?range={{ $key }}"
-                       class="rounded-lg px-3 py-1.5 text-xs font-semibold {{ $range === $key ? 'bg-gray-950 text-white dark:bg-white dark:text-gray-950' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}">{{ $label }}</a>
-                @endforeach
             </div>
         </div>
 
@@ -199,15 +193,15 @@
                         <svg viewBox="0 0 320 140" class="h-full w-full" role="img" aria-label="Alert counts over time">
                             @foreach ($chart['yticks'] as $tick)
                                 <line x1="{{ $chart['left'] }}" y1="{{ $tick['y'] }}" x2="{{ $chart['right'] }}" y2="{{ $tick['y'] }}" stroke="currentColor" stroke-opacity=".12" stroke-width=".5" />
-                                <text x="{{ $chart['left'] - 4 }}" y="{{ $tick['y'] + 3 }}" text-anchor="end" font-size="7" class="fill-gray-400">{{ $tick['label'] }}</text>
+                                <text x="{{ $chart['left'] - 4 }}" y="{{ $tick['y'] + 3 }}" text-anchor="end" font-size="5.5" class="fill-gray-400">{{ $tick['label'] }}</text>
                             @endforeach
                             @foreach ($chart['xticks'] as $tick)
-                                <text x="{{ $tick['x'] }}" y="132" text-anchor="{{ $tick['anchor'] ?? 'middle' }}" font-size="7" class="fill-gray-400">{{ $tick['label'] }}</text>
+                                <text x="{{ $tick['x'] }}" y="80" text-anchor="{{ $tick['anchor'] ?? 'middle' }}" font-size="5.5" class="fill-gray-400">{{ $tick['label'] }}</text>
                             @endforeach
                             <path d="{{ $chart['area'] }}" fill="#2dd4bf" fill-opacity="0.15" stroke="none" />
                             <path d="{{ $chart['line'] }}" fill="none" stroke="#2dd4bf" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
                             @foreach ($chart['dots'] as $dot)
-                                <circle class="im-dot" cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="2.6" fill="#2dd4bf" stroke="#ffffff" stroke-width="1" vector-effect="non-scaling-stroke">
+                                <circle class="im-dot" cx="{{ $dot['x'] }}" cy="{{ $dot['y'] }}" r="1.6" fill="#2dd4bf" stroke="#ffffff" stroke-width="1" vector-effect="non-scaling-stroke">
                                     <title>{{ $dot['label'] }}</title>
                                 </circle>
                             @endforeach

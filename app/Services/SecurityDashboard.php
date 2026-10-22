@@ -185,15 +185,15 @@ final class SecurityDashboard
      */
     private const CHART_WIDTH = 320;
 
-    private const CHART_HEIGHT = 140;
+    private const CHART_HEIGHT = 90;
 
     private const PLOT_LEFT = 36;
 
     private const PLOT_RIGHT = 316;
 
-    private const PLOT_TOP = 10;
+    private const PLOT_TOP = 8;
 
-    private const PLOT_BOTTOM = 116;
+    private const PLOT_BOTTOM = 66;
 
     /**
      * Hourly curve, for the panel when no daily curve has been collected.
