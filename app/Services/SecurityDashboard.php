@@ -20,7 +20,7 @@ use Illuminate\Support\Carbon;
  */
 final class SecurityDashboard
 {
-    public const RANGES = ['24h' => 86400, '7d' => 604800];
+    public const RANGES = ['24h' => 86400, '7d' => 604800, '30d' => 2592000, '90d' => 7776000, '1y' => 31536000];
 
     /**
      * Every plane that must appear on the coverage panel, in display order.
@@ -227,9 +227,9 @@ final class SecurityDashboard
 
     private const CHART_HEIGHT = 90;
 
-    private const PLOT_LEFT = 36;
+    private const PLOT_LEFT = 26;
 
-    private const PLOT_RIGHT = 316;
+    private const PLOT_RIGHT = 318;
 
     private const PLOT_TOP = 8;
 
@@ -261,13 +261,53 @@ final class SecurityDashboard
     }
 
     /**
+     * The curve for the windows that are counted in hours.
+     *
+     * The series arrives in two shapes: the indexer's [timestamp, alerts,
+     * reporters] and the log file's [timestamp, ['total' => ...]]. Both are
+     * accepted, and only the samples inside the window are drawn.
+     *
+     * @param list<array<int, mixed>> $hourly
+     * @return array<string, mixed>
+     */
+    public function chartRange(array $hourly, string $range): array
+    {
+        $seconds = self::RANGES[$range] ?? self::RANGES['24h'];
+        $now = time();
+        $points = [];
+
+        foreach ($hourly as $entry) {
+            if (! is_array($entry) || count($entry) < 2) {
+                continue;
+            }
+
+            $ts = (int) $entry[0];
+
+            if ($ts < $now - $seconds) {
+                continue;
+            }
+
+            $value = is_array($entry[1]) ? (float) ($entry[1]['total'] ?? 0) : (float) $entry[1];
+            $points[] = ['ts' => $ts, 'v' => $value];
+        }
+
+        $format = $range === '24h' ? 'H:i' : 'd M';
+
+        return $this->render($points, $range === '24h' ? 'alerts at' : 'alerts on', $format, 6);
+    }
+
+    /**
      * The daily curve, the one the panel shows.
      *
      * @param list<array{0: int, 1: float, 2?: float, 3?: float, 4?: float}> $daily Day timestamp, total, low, med, high.
      * @return array<string, mixed>
      */
-    public function chartDaily(array $daily): array
+    public function chartDaily(array $daily, int $days = 0): array
     {
+        if ($days > 0 && count($daily) > $days) {
+            $daily = array_slice($daily, -$days);
+        }
+
         $points = [];
 
         foreach ($daily as $entry) {

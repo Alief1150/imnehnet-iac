@@ -62,9 +62,22 @@ final class Security extends Page
      */
     public function alertTrend(): array
     {
-        return app(SecurityDashboard::class)->chart(
-            $this->memoTelemetry()['alerts']['hourly'] ?? [],
-            $this->selectedRange(),
+        $trend = $this->memoTelemetry()['trend'] ?? [];
+        $range = $this->selectedRange();
+
+        if ($range === '24h' || $range === '7d') {
+            $hours = $trend['hourly'] ?? $this->memoTelemetry()['alerts']['hourly'] ?? [];
+
+            if (is_array($hours) && $hours !== []) {
+                return app(SecurityDashboard::class)->chartRange($hours, $range);
+            }
+        }
+
+        $days = (int) (SecurityDashboard::RANGES[$range] ?? 2592000) / 86400;
+
+        return app(SecurityDashboard::class)->chartDaily(
+            $trend['daily'] ?? [],
+            (int) $days
         );
     }
 

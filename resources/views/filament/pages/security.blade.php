@@ -176,6 +176,9 @@
             50% { opacity: .55; r: 1.5; }
         }
         .im-security .im-chart-tools { display: flex; align-items: center; gap: 10px; }
+        .im-security .im-axis-label { font-size: 5px; }
+        .im-security .im-trend-line { transition: d .7s ease; }
+        .im-security .im-chart-box .im-trend-svg { overflow: visible; }
     </style>
     @php
         $kpis = $this->kpis();

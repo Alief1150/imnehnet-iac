@@ -378,13 +378,13 @@ final class SecurityTelemetryCollector
         try {
             $json = $fetch($url.'/wazuh-alerts-*/_search', $username, $password, [
                 'size' => 0,
-                'query' => ['range' => ['timestamp' => ['gte' => 'now-30d', 'lt' => 'now']]],
+                'query' => ['range' => ['timestamp' => ['gte' => 'now-1y', 'lt' => 'now']]],
                 'aggs' => [
                     'per_day' => ['date_histogram' => [
                         'field' => 'timestamp',
                         'calendar_interval' => '1d',
                         'min_doc_count' => 0,
-                        'extended_bounds' => ['min' => 'now-30d', 'max' => 'now'],
+                        'extended_bounds' => ['min' => 'now-1y', 'max' => 'now'],
                     ], 'aggs' => [
                         'low' => ['range' => ['field' => 'rule.level', 'ranges' => [['to' => 7]]]],
                         'med' => ['range' => ['field' => 'rule.level', 'ranges' => [['from' => 7, 'to' => 12]]]],
@@ -397,7 +397,7 @@ final class SecurityTelemetryCollector
                     array (
                     'timestamp' => 
                     array (
-                    'gte' => 'now-24h',
+                    'gte' => 'now-7d',
                     'lt' => 'now',
                     ),
                     ),
@@ -413,7 +413,7 @@ final class SecurityTelemetryCollector
                     'min_doc_count' => 0,
                     'extended_bounds' => 
                     array (
-                    'min' => 'now-24h',
+                    'min' => 'now-7d',
                     'max' => 'now',
                     ),
                     ),
