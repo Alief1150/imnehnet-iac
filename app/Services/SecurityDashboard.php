@@ -183,8 +183,8 @@ final class SecurityDashboard
 
         return [
             'series' => $series,
-            'from_label' => Carbon::createFromTimestamp($points[0][0])->format('d M H:i'),
-            'to_label' => Carbon::createFromTimestamp(end($points)[0])->format('d M H:i'),
+            'from_label' => Carbon::createFromTimestamp($points[0][0])->setTimezone('Asia/Jakarta')->format('d M h:i A'),
+            'to_label' => Carbon::createFromTimestamp(end($points)[0])->setTimezone('Asia/Jakarta')->format('d M h:i A'),
             'coverage' => sprintf('%d hourly buckets', $count),
         ];
     }
@@ -399,7 +399,7 @@ final class SecurityDashboard
             $point = $plot[(int) round($i * ($count - 1) / max(1, $tickCount - 1))];
             $xticks[] = [
                 'x' => $point['x'],
-                'label' => Carbon::createFromTimestamp($point['ts'])->format($format),
+                'label' => Carbon::createFromTimestamp($point['ts'])->setTimezone('Asia/Jakarta')->format($format),
                 'anchor' => $tickCount === 1 ? 'middle' : ($i === 0 ? 'start' : ($i === $tickCount - 1 ? 'end' : 'middle')),
             ];
         }
@@ -426,19 +426,19 @@ final class SecurityDashboard
                         '%s %s %s',
                         number_format($point['v']),
                         $noun,
-                        Carbon::createFromTimestamp($point['ts'])->format($format),
+                        Carbon::createFromTimestamp($point['ts'])->setTimezone('Asia/Jakarta')->format($format),
                     ),
                 ],
                 $plot,
             ),
             'last' => [
                 'v' => $last['v'],
-                'label' => Carbon::createFromTimestamp($last['ts'])->format($format),
+                'label' => Carbon::createFromTimestamp($last['ts'])->setTimezone('Asia/Jakarta')->format($format),
             ],
-            'from_label' => Carbon::createFromTimestamp($first['ts'])->format($format),
-            'to_label' => Carbon::createFromTimestamp($last['ts'])->format($format),
-            'window' => Carbon::createFromTimestamp($first['ts'])->format($format === 'H:i' ? 'd M H:i' : 'd M')
-                .' → '.Carbon::createFromTimestamp($last['ts'])->format($format === 'H:i' ? 'd M H:i' : 'd M'),
+            'from_label' => Carbon::createFromTimestamp($first['ts'])->setTimezone('Asia/Jakarta')->format($format),
+            'to_label' => Carbon::createFromTimestamp($last['ts'])->setTimezone('Asia/Jakarta')->format($format),
+            'window' => Carbon::createFromTimestamp($first['ts'])->setTimezone('Asia/Jakarta')->format(str_contains($format, 'i') ? 'd M H:i' : 'd M')
+                .' → '.Carbon::createFromTimestamp($last['ts'])->setTimezone('Asia/Jakarta')->format(str_contains($format, 'i') ? 'd M H:i' : 'd M'),
             'coverage' => sprintf('%d buckets', $count),
         ];
     }
@@ -504,7 +504,7 @@ final class SecurityDashboard
 
             $rows[] = [
                 'node' => $name,
-                'role' => 'Unmapped reporter',
+                'role' => $name === 'wazuh.manager' ? 'SIEM manager' : 'Unmapped reporter',
                 'agent' => $name,
                 'state' => 'reporting',
                 'total' => $stats['total'] ?? null,
