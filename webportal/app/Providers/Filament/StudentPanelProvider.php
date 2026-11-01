@@ -3,10 +3,12 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\Pages\Login;
-use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\GuidedCtf;
+use App\Filament\Pages\MyLabs;
+use App\Filament\Pages\StudentDashboard;
 use App\Filament\Pages\Terminal;
 use App\Filament\Resources\Environments\EnvironmentResource;
+use App\GlobalSearch\ImnehnetGlobalSearchProvider;
 use App\Http\Middleware\RedirectToOwnPanel;
 use App\Support\Wordmark;
 use Filament\Enums\ThemeMode;
@@ -53,7 +55,7 @@ class StudentPanelProvider extends PanelProvider
             // The same wordmark on both panels and on the registration form,
             // so the name is written down in exactly one place.
             ->brandLogo(Wordmark::make())
-            ->favicon('favicon.ico')
+            ->favicon(asset('imnehnet-lab-favicon.svg'))
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login(Login::class)
             ->colors([
@@ -61,7 +63,7 @@ class StudentPanelProvider extends PanelProvider
                 'gray' => Color::Slate,
             ])
             ->defaultThemeMode(ThemeMode::Light)
-            ->globalSearch(\App\GlobalSearch\ImnehnetGlobalSearchProvider::class)
+            ->globalSearch(ImnehnetGlobalSearchProvider::class)
             ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
             ->globalSearchFieldKeyBindingSuffix()
             ->maxContentWidth('full')
@@ -71,13 +73,18 @@ class StudentPanelProvider extends PanelProvider
                 EnvironmentResource::class,
             ])
             ->pages([
-                Dashboard::class,
+                StudentDashboard::class,
+                \App\Filament\Student\Pages\StudentProfile::class,
                 // The guided lab comes before the terminal: it is where a student goes
                 // to start work, and the terminal is reached from there.
                 GuidedCtf::class,
-                \App\Filament\Pages\MyLabs::class,
+                MyLabs::class,
                 Terminal::class,
-            ])
+            
+                \App\Filament\Pages\StudentHistory::class,
+                \App\Filament\Pages\StudentDocumentation::class,
+                \App\Filament\Pages\StudentDocumentationTerms::class, // IMNEHNET_STUDENT_HD_V3
+])
             ->widgets([
                 AccountWidget::class,
             ])

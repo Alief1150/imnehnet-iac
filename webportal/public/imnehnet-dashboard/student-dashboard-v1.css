@@ -1,0 +1,132 @@
+.im-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    padding-bottom: 35px;
+}
+
+.im-dashboard-welcome {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 260px;
+    padding: 38px 42px;
+    overflow: hidden;
+    border-radius: 24px;
+    color: white;
+    background:
+        radial-gradient(ellipse at 85% 35%, #368cdb88, transparent 45%),
+        linear-gradient(115deg, #142544, #1b4182 60%, #167bce);
+}
+
+.im-dashboard-welcome-copy {
+    position: relative;
+    z-index: 2;
+}
+
+.im-dashboard-eyebrow,
+.im-dashboard-kicker {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    color: #8bd3ff;
+}
+
+.im-dashboard-welcome h1 {
+    margin-top: 16px;
+    font-size: clamp(26px, 3vw, 38px);
+    font-weight: 800;
+    color: white;
+}
+
+.im-dashboard-welcome p {
+    margin-top: 10px;
+    color: #d2e3ff;
+}
+
+.im-dashboard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 26px;
+}
+
+.im-dashboard-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.im-dashboard-button-primary {
+    background: white;
+    color: #174487;
+}
+
+.im-dashboard-button-secondary {
+    border: 1px solid #ffffff55;
+    background: #ffffff18;
+    color: white;
+}
+
+.im-dashboard-welcome-art {
+    position: relative;
+    width: 240px;
+    height: 200px;
+    display: grid;
+    place-items: center;
+}
+
+.im-dashboard-orbit {
+    position: absolute;
+    border: 1px solid #a6dcff66;
+    border-radius: 50%;
+}
+
+.im-dashboard-orbit-one {
+    width: 230px;
+    height: 110px;
+    transform: rotate(-28deg);
+}
+
+.im-dashboard-orbit-two {
+    width: 180px;
+    height: 180px;
+    border-style: dashed;
+}
+
+.im-dashboard-core {
+    font-size: 110px;
+    color: #b3edff;
+    text-shadow: 0 0 35px #43b6ff;
+}
+
+.im-dashboard-section-heading h2 {
+    margin-top: 7px;
+    font-size: 23px;
+    font-weight: 800;
+}
+
+.im-dashboard-section-heading p {
+    margin-top: 6px;
+    color: #8796af;
+    font-size: 13px;
+}
+
+@media (max-width: 640px) {
+    .im-dashboard-welcome {
+        padding: 28px 22px;
+    }
+
+    .im-dashboard-welcome-art {
+        position: absolute;
+        right: -90px;
+        opacity: .2;
+    }
+}

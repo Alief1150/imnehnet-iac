@@ -2,9 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Enums\ActivityAction;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\User;
+use App\Notifications\NewStudentRegistered;
 use App\Services\ActivityLogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -53,7 +55,7 @@ final class RegisterStudent extends Component
     public string $password_confirmation = '';
 
     /**
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function register(ActivityLogService $activity): void
     {
@@ -113,7 +115,7 @@ final class RegisterStudent extends Component
         // a student who arrived from an administrator who made one.
         $activity->record(
             actor: $user,
-            action: \App\Enums\ActivityAction::Registered,
+            action: ActivityAction::Registered,
             resource: $user,
             status: 'completed',
             description: sprintf('Self-registered as a student from %s.', $this->ip()),
@@ -121,6 +123,11 @@ final class RegisterStudent extends Component
         );
 
         Auth::login($user);
+
+        // Notify all administrators about the new student registration.
+        foreach (User::query()->where('role', UserRole::Admin->value)->where('status', UserStatus::Active->value)->get() as $admin) {
+            $admin->notify(new NewStudentRegistered($user));
+        }
 
         // /student, not /admin. The account created here is a student, and
         // sending it to the administrative panel said otherwise the moment it

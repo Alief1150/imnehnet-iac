@@ -7,6 +7,7 @@ use App\Enums\UserStatus;
 use App\Observers\UserObserver;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -15,17 +16,30 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'role', 'status', 'must_change_password', 'last_login_at'])]
+#[Fillable(['name', 'email', 'avatar_url', 'password', 'role', 'status', 'must_change_password', 'last_login_at'])]
 #[Hidden(['password', 'remember_token'])]
 // Role and status changes are audited by the model itself, so the entry is
 // written whichever surface made the change. Declared here rather than in a
 // service provider because the attribute is applied exactly once.
 #[ObservedBy(UserObserver::class)]
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasAvatar
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * Get the user's avatar URL for Filament panels.
+     */
+    public function getFilamentAvatarUrl(): ?string
+    {
+        if (! empty($this->avatar_url) && Storage::disk('public')->exists($this->avatar_url)) {
+            return asset('storage/'.$this->avatar_url);
+        }
+
+        return null;
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -83,14 +97,14 @@ class User extends Authenticatable implements FilamentUser
 
         return match ($panel->getId()) {
             // Lecturer reaches the admin panel so it can reach the console. Panel access
-                // is not authorisation in itself: every administrative resource checks a
-                // role of its own, and the console checks canOperateInfrastructure()
-                // again at the point a shell is created. Being let through the door is not
-                // being handed every key behind it.
-                'admin' => $this->isAdmin() || $this->isLecturer(),
-                'student' => ! $this->isAdmin() && ! $this->isLecturer(),
-                default => false,
-            };
+            // is not authorisation in itself: every administrative resource checks a
+            // role of its own, and the console checks canOperateInfrastructure()
+            // again at the point a shell is created. Being let through the door is not
+            // being handed every key behind it.
+            'admin' => $this->isAdmin() || $this->isLecturer(),
+            'student' => ! $this->isAdmin() && ! $this->isLecturer(),
+            default => false,
+        };
     }
 
     public function isAdmin(): bool

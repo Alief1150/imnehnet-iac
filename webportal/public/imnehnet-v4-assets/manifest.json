@@ -1,0 +1,17 @@
+{
+  "resources/css/imnehnet-dashboard-v4.css": {
+    "file": "assets/imnehnet-dashboard-v4-DB3fqm2y.css",
+    "name": "imnehnet-dashboard-v4",
+    "names": [
+      "imnehnet-dashboard-v4.css"
+    ],
+    "src": "resources/css/imnehnet-dashboard-v4.css",
+    "isEntry": true
+  },
+  "resources/js/imnehnet-dashboard-v4.js": {
+    "file": "assets/imnehnet-dashboard-v4-DgQKp-cH.js",
+    "name": "imnehnet-dashboard-v4",
+    "src": "resources/js/imnehnet-dashboard-v4.js",
+    "isEntry": true
+  }
+}

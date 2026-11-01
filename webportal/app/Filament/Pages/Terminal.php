@@ -3,10 +3,13 @@
 namespace App\Filament\Pages;
 
 use App\Models\LabEnvironment;
+use App\Models\LabSession;
 use App\Models\TerminalSession;
-use App\Services\TerminalService;
+use App\Services\InfrastructureTopologyService;
 use App\Services\Terminal\AdminTerminalService;
+use App\Services\TerminalService;
 use App\Support\Lucide;
+use App\Support\TerminalSlotAuth;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Support\Htmlable;
@@ -37,9 +40,13 @@ final class Terminal extends Page
 {
     protected string $view = 'filament.pages.terminal';
 
-    protected static ?string $navigationLabel = 'Terminal';
+    protected static ?string $navigationLabel = 'Sandbox';
 
-    protected static ?int $navigationSort = 30;
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected static ?string $title = 'Sandbox';
+
+    protected static ?int $navigationSort = 2;
 
     /**
      * The selected target is server-side state so only one terminal iframe is
@@ -125,7 +132,7 @@ final class Terminal extends Page
                 ->body(sprintf('Connected to %s as %s.', $session->target_node, $session->shell_user))
                 ->success()
                 ->send();
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             Notification::make()
                 ->title('Could not open a shell')
                 ->body($exception->getMessage())
@@ -328,7 +335,7 @@ final class Terminal extends Page
      * Path-limited to /embed/ so it is sent nowhere else. No Secure flag: this
      * deployment serves plain HTTP, and a Secure cookie would never be sent.
      */
-    private function rememberEmbedTicket(AdminTerminalService $service, TerminalSession $session): void
+    private function rememberEmbedTicket(AdminTerminalService|TerminalService $service, TerminalSession $session): void
     {
         if (! config('infrastructure.terminal.browser_access_enabled')) {
             return;
@@ -343,10 +350,10 @@ final class Terminal extends Page
         Cookie::queue(cookie(
             AdminTerminalService::embedCookieName((int) $session->ttyd_port),
             $ticket,
-            AdminTerminalService::SESSION_MINUTES,
+            max(1, (int) ceil(($session->expires_at->getTimestamp() - time()) / 60)),
             '/embed/',
             null,
-            false,
+            request()->isSecure(),
             true,
             false,
             'Lax',
@@ -393,7 +400,7 @@ final class Terminal extends Page
         return $session === null
             ? null
             : [
-                'user' => \App\Support\TerminalSlotAuth::USERNAME,
+                'user' => TerminalSlotAuth::USERNAME,
                 'password' => (string) $session->credential,
             ];
     }
@@ -462,7 +469,7 @@ final class Terminal extends Page
         ]);
 
         try {
-            $hosts = collect(app(\App\Services\InfrastructureTopologyService::class)->topology()['hosts'] ?? []);
+            $hosts = collect(app(InfrastructureTopologyService::class)->topology()['hosts'] ?? []);
 
             return $fallback->map(function (array $target) use ($hosts): array {
                 $host = $hosts->firstWhere('name', $target['name']);
@@ -480,7 +487,7 @@ final class Terminal extends Page
                     'detail' => $host['detail'] ?? null,
                 ];
             })->all();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return $fallback->map(fn (array $target): array => [
                 ...$target,
                 'address' => null,
@@ -507,7 +514,6 @@ final class Terminal extends Page
 
         $this->selectedAdminTarget = $target;
     }
-
 
     public function mount(): void
     {
@@ -566,19 +572,65 @@ final class Terminal extends Page
      */
     public function environments(): Collection
     {
-        return LabEnvironment::query()
-            ->when(
-                ! auth()->user()?->isAdmin(),
-                fn ($query) => $query->where('user_id', auth()->id()),
-            )
-            ->orderBy('container_name')
+        $user = auth()->user();
+        if ($user === null || ! $user->isActive()) {
+            return collect();
+        }
+
+        $pairs = LabSession::query()
+            ->where('user_id', $user->getKey())
+            ->whereIn('status', ['READY', 'RUNNING', 'COMPLETED'])
             ->get();
+
+        $ids = $pairs->flatMap(fn ($lab) => [
+            $lab->attacker_environment_id,
+            $lab->victim_environment_id,
+        ])->filter()->unique()->all();
+
+        return LabEnvironment::query()
+            ->where('user_id', $user->getKey())
+            ->whereIn('id', $ids)
+            ->orderBy('container_name')
+            ->get()
+            ->filter(fn (LabEnvironment $environment) => $pairs->contains(fn ($lab) => (
+                (int) $lab->attacker_environment_id === (int) $environment->id
+                && $lab->attacker_container === $environment->container_name
+                && rtrim((string) $lab->attacker_remote, ':') === rtrim((string) $environment->incus_remote, ':')
+            ) || (
+                (int) $lab->victim_environment_id === (int) $environment->id
+                && $lab->victim_container === $environment->container_name
+                && rtrim((string) $lab->victim_remote, ':') === rtrim((string) $environment->incus_remote, ':')
+            )
+            )
+            )->values();
+    }
+
+    public function isSandboxVictim(LabEnvironment $environment): bool
+    {
+        $user = auth()->user();
+
+        if ($user === null || ! $user->isActive()
+            || (int) $environment->user_id !== (int) $user->getKey()) {
+            return false;
+        }
+
+        return LabSession::query()
+            ->where('user_id', $user->getKey())
+            ->where('victim_environment_id', $environment->getKey())
+            ->whereIn('status', ['READY', 'RUNNING', 'COMPLETED'])
+            ->get()
+            ->contains(fn ($lab) => $lab->victim_container === $environment->container_name
+                && rtrim((string) $lab->victim_remote, ':') === rtrim((string) $environment->incus_remote, ':')
+                && rtrim((string) $environment->incus_remote, ':') === rtrim((string) config('infrastructure.incus_remote', 'lab-env'), ':')
+            );
     }
 
     public function sessionFor(LabEnvironment $environment): ?TerminalSession
     {
         return TerminalSession::query()
             ->where('lab_environment_id', $environment->id)
+            ->where('purpose', 'sandbox')
+            ->where('user_id', auth()->id())
             ->usable()
             ->orderByDesc('created_at')
             ->first();
@@ -587,6 +639,49 @@ final class Terminal extends Page
     /**
      * Open, or reattach to, a terminal on an environment.
      */
+    // IMNEHNET_DUAL_SANDBOX_V1
+    // Bootstrap both independent Sandbox sessions on page initialization.
+    // The service retains ownership, lab lifecycle and purpose checks.
+    public function bootSandboxTerminals(): void
+    {
+        $user = auth()->user();
+
+        if ($user === null || ! $user->isActive()) {
+            return;
+        }
+
+        $environments = $this->environments();
+
+        foreach ($environments as $environment) {
+            if (! $environment->runtime_status?->isRunning()) {
+                continue;
+            }
+
+            if (! $environment->terminal_enabled
+                && ! $this->isSandboxVictim($environment)) {
+                continue;
+            }
+
+            $existing = $this->sessionFor($environment);
+
+            if ($existing !== null
+                && app(TerminalService::class)->isConnected($existing)) {
+                try {
+                    $this->rememberEmbedTicket(
+                        app(TerminalService::class),
+                        $existing
+                    );
+                } catch (Throwable) {
+                    // An explicit Reconnect remains available.
+                }
+
+                continue;
+            }
+
+            $this->openTerminal((int) $environment->getKey());
+        }
+    }
+
     public function openTerminal(int $environmentId): void
     {
         $environment = $this->environments()->firstWhere('id', $environmentId);
@@ -600,7 +695,10 @@ final class Terminal extends Page
         }
 
         try {
-            $session = app(TerminalService::class)->open(auth()->user(), $environment);
+            $service = app(TerminalService::class);
+            $session = $service->open(auth()->user(), $environment);
+            $this->rememberEmbedTicket($service, $session);
+            $this->selectedEnvironmentId = $environment->id;
         } catch (Throwable $exception) {
             Notification::make()
                 ->title('Terminal not available')
@@ -628,9 +726,9 @@ final class Terminal extends Page
         $url === null ? $notification->warning()->send() : $notification->success()->send();
     }
 
-    public function closeSession(int $sessionId): void
+    public function closeSession(string $sessionId): void
     {
-        $session = TerminalSession::query()->whereKey($sessionId)->first();
+        $session = TerminalSession::query()->where('user_id', auth()->id())->where('purpose', 'sandbox')->whereKey($sessionId)->first();
 
         // Scoped to the same list the page renders. A session id from anywhere
         // else must not be closable, because closing is a state change and the
@@ -645,6 +743,7 @@ final class Terminal extends Page
         }
 
         app(TerminalService::class)->close($session);
+        $this->forgetEmbedTicket($session);
 
         Notification::make()
             ->title('Session closed')
@@ -666,7 +765,7 @@ final class Terminal extends Page
     {
         $service = app(TerminalService::class);
 
-        if (! $environment->terminal_enabled) {
+        if (! $environment->terminal_enabled && ! $this->isSandboxVictim($environment)) {
             return $this->state(
                 'terminal_disabled',
                 'NOT CONFIGURED',
@@ -781,4 +880,47 @@ final class Terminal extends Page
             ->danger()
             ->send();
     }
+
+
+    public static function shouldRegisterNavigation(): bool
+
+    {
+
+        return \Filament\Facades\Filament::getCurrentPanel()?->getId() === 'admin'
+
+            && auth()->user()?->isActive() === true
+
+            && auth()->user()?->isAdmin() === true;
+
+    }
+
+
+
+    public static function getNavigationLabel(): string
+
+    {
+
+        return \Filament\Facades\Filament::getCurrentPanel()?->getId() === 'admin'
+
+            ? 'Terminal'
+
+            : parent::getNavigationLabel();
+
+    }
+
+
+
+    public function getTitle(): string
+
+    {
+
+        return \Filament\Facades\Filament::getCurrentPanel()?->getId() === 'admin'
+
+            ? 'Terminal'
+
+            : parent::getTitle();
+
+    }
+
+
 }
