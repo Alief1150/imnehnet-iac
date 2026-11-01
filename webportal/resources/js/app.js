@@ -475,3 +475,29 @@ window.createImnehnetCourseChart = (element, values, totalStudents) => {
     };
 };
 
+
+
+/* IMNEHNET GLOBAL SEARCH SHORTCUT FIX
+ * Capture Ctrl+K / Cmd+K before Filament's global-search shortcut.
+ */
+document.addEventListener('keydown', (event) => {
+    if (
+        event.key.toLowerCase() !== 'k' ||
+        !(event.ctrlKey || event.metaKey) ||
+        event.altKey ||
+        event.shiftKey
+    ) {
+        return;
+    }
+
+    if (!document.querySelector('.im-search-trigger')) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    window.dispatchEvent(new CustomEvent('imnehnet:search-open'));
+}, true);
+
+import './imnehnet-lab-ux.js';
