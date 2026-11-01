@@ -1,0 +1,1570 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@plugin "flyonui";
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+
+/*
+|--------------------------------------------------------------------------
+| IMNEHNET — infrastructure control plane
+|--------------------------------------------------------------------------
+| Built for an operator reading a screen to decide what to touch next, so
+| the visual rules are about density and hierarchy rather than decoration.
+|
+| What this deliberately does not do, per the specification:
+| - no gradients, no glow, no glassmorphism, no large decorative blocks
+| - no colour doing work that text does not already state
+|
+| Every status is carried by three things at once: a colour, an icon and a
+| word. Colour alone would leave the interface unreadable to a good share of
+| people and ambiguous in a screenshot printed in black and white.
+|--------------------------------------------------------------------------
+*/
+
+/* =========================================================
+   PALETTE
+
+   Kept as raw values rather than Filament's generated shades so the
+   relationships are visible: near-black ground, graphite surfaces,
+   slate hairlines, teal accent.
+   ========================================================= */
+
+:root {
+    --imnehnet-ground: #08090b;
+    --imnehnet-surface: #0e1013;
+    --imnehnet-raised: #14171b;
+    --imnehnet-sunken: #0a0c0e;
+    --imnehnet-line: #1e232a;
+    --imnehnet-line-strong: #2a3038;
+
+    --imnehnet-text: #e8eaed;
+    --imnehnet-text-muted: #9aa3ae;
+    --imnehnet-text-faint: #6b7480;
+
+    --imnehnet-accent: #14b8a6;
+    --imnehnet-accent-dim: #0f766e;
+
+    --imnehnet-ready: #22c55e;
+    --imnehnet-info: #3b82f6;
+    --imnehnet-warn: #f59e0b;
+    --imnehnet-danger: #ef4444;
+    --imnehnet-idle: #64748b;
+}
+
+/* =========================================================
+   GROUND
+
+   Flat. The previous version painted a radial highlight into the
+   background, which is decoration that carries no information and
+   shows up as a visible smudge in screenshots.
+   ========================================================= */
+
+.fi-body {
+    background-color: var(--imnehnet-ground);
+    background-image: none;
+    color: var(--imnehnet-text);
+}
+
+/* The shell sits on the same ground; separation comes from a hairline
+   rather than from a second background colour. */
+.fi-body-override,
+.fi-body > div {
+    background-color: var(--imnehnet-ground);
+}
+
+/* =========================================================
+   SIDEBAR
+
+   Deep graphite with a faint teal cast, so the navigation reads as a
+   distinct plane without needing a border to prove it.
+   ========================================================= */
+
+.fi-sidebar {
+    background-color: var(--imnehnet-surface);
+    border-inline-end: 1px solid var(--imnehnet-line);
+}
+
+.fi-sidebar-header {
+    background-color: transparent;
+    border-block-end: 1px solid var(--imnehnet-line);
+    padding-block: 1rem;
+}
+
+/* Brand text is the identity, so it is set in the accent and treated as
+   a label rather than as a heading competing with page titles. */
+.fi-sidebar-header .fi-sidebar-brand {
+    color: var(--imnehnet-accent);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.fi-sidebar-group-label {
+    color: var(--imnehnet-text-faint);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.fi-sidebar-item-button {
+    border-radius: 0.375rem;
+    color: var(--imnehnet-text-muted);
+    transition: background-color 120ms ease, color 120ms ease;
+}
+
+.fi-sidebar-item-button:hover {
+    background-color: var(--imnehnet-raised);
+    color: var(--imnehnet-text);
+}
+
+.fi-sidebar-item.is-active .fi-sidebar-item-button {
+    background-color: color-mix(in oklab, var(--imnehnet-accent) 12%, transparent);
+    color: var(--imnehnet-text);
+    font-weight: 500;
+}
+
+/* The active marker is a rule, not a glow. */
+.fi-sidebar-item.is-active .fi-sidebar-item-button::before {
+    background-color: var(--imnehnet-accent);
+}
+
+.fi-sidebar-item-icon svg,
+.fi-sidebar-group-icon svg {
+    width: 1.125rem;
+    height: 1.125rem;
+}
+
+/* =========================================================
+   TOP BAR
+   ========================================================= */
+
+.fi-topbar > nav {
+    background-color: color-mix(in oklab, var(--imnehnet-ground) 88%, transparent);
+    border-block-end: 1px solid var(--imnehnet-line);
+    backdrop-filter: none;
+}
+
+/* =========================================================
+   SURFACES
+
+   Charcoal panels on a near-black ground, separated by a low-contrast
+   slate hairline. Enough contrast to see the edge, not enough to
+   draw attention to it.
+   ========================================================= */
+
+.fi-section,
+.fi-wi-stats-overview-stat,
+.fi-ta-ctn,
+.fi-dropdown-panel,
+.fi-modal-window {
+    background-color: var(--imnehnet-surface);
+    border: 1px solid var(--imnehnet-line);
+    border-radius: 0.5rem;
+    box-shadow: none;
+}
+
+.fi-section-header,
+.fi-wi-stats-overview-stat {
+    border-radius: 0.5rem;
+}
+
+.fi-section-header-ctn {
+    background-color: var(--imnehnet-raised);
+    border: 1px solid var(--imnehnet-line);
+    border-radius: 0.5rem;
+}
+
+.fi-modal-backdrop {
+    background-color: rgb(0 0 0 / 0.7);
+    backdrop-filter: none;
+}
+
+/* =========================================================
+   PAGE HEADING
+
+   One clear title per screen. The subheading is a single quiet line,
+   never a paragraph.
+   ========================================================= */
+
+.fi-header-heading {
+    color: var(--imnehnet-text);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.fi-header-subheading {
+    color: var(--imnehnet-text-faint);
+    font-size: 0.8125rem;
+}
+
+/* =========================================================
+   TABLES
+
+   The operational screen. Rows are compact so more of them fit without
+   scrolling, and the identifiers an operator scans for are set in a
+   monospace face so digits line up and a mistyped address is visible.
+   ========================================================= */
+
+.fi-ta-header-cell {
+    background-color: var(--imnehnet-raised);
+    color: var(--imnehnet-text-faint);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding-block: 0.5rem;
+    white-space: nowrap;
+}
+
+.fi-ta-row {
+    border-color: var(--imnehnet-line);
+}
+
+.fi-ta-row:hover {
+    background-color: color-mix(in oklab, var(--imnehnet-raised) 60%, transparent);
+}
+
+.fi-ta-cell {
+    padding-block: 0.5rem;
+    color: var(--imnehnet-text-muted);
+    font-size: 0.8125rem;
+}
+
+/* Identifiers: addresses, workspaces, container names. */
+.fi-ta-cell .fi-ta-text-item-label[data-lenis-prevent],
+.font-mono,
+.fi-ta-cell code {
+    font-family: ui-monospace, 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
+    font-size: 0.8125rem;
+}
+
+.fi-ta-cell [data-mono='true'] {
+    color: var(--imnehnet-text);
+}
+
+/* =========================================================
+   BADGES
+
+   Compact, bordered, no blur. A badge is a word plus a colour plus an
+   icon; the shape exists to separate it from ordinary text, not to
+   catch the eye on its own.
+   ========================================================= */
+
+.fi-badge {
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding-inline: 0.4375rem;
+    padding-block: 0.125rem;
+    border: 1px solid color-mix(in oklab, currentColor 30%, transparent);
+    background-color: color-mix(in oklab, currentColor 12%, transparent);
+}
+
+.fi-badge-icon svg {
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
+/* =========================================================
+   BUTTONS
+
+   One accent, used sparingly. Secondary actions stay neutral so the
+   single destructive or primary action on a screen is unambiguous.
+   ========================================================= */
+
+.fi-btn {
+    border-radius: 0.375rem;
+    font-weight: 500;
+    box-shadow: none;
+}
+
+.fi-btn.fi-color-primary,
+.fi-btn[class*='fi-color-primary'] {
+    background-color: var(--imnehnet-accent-dim);
+    border-color: var(--imnehnet-accent-dim);
+    color: #fff;
+}
+
+.fi-btn[class*='fi-color-primary']:hover {
+    background-color: var(--imnehnet-accent);
+    border-color: var(--imnehnet-accent);
+}
+
+/* Row actions are icon-only by design here: five verbs side by side need
+   less room as glyphs than as words, and each carries a tooltip. */
+.fi-ta-row .fi-btn {
+    padding-inline: 0.5rem;
+}
+
+/* =========================================================
+   INPUTS
+   ========================================================= */
+
+.fi-input,
+.fi-select-input,
+.fi-input-wrp {
+    background-color: var(--imnehnet-sunken);
+    border-color: var(--imnehnet-line-strong);
+    border-radius: 0.375rem;
+    color: var(--imnehnet-text);
+}
+
+.fi-input-wrp:focus-within {
+    border-color: var(--imnehnet-accent);
+    box-shadow: 0 0 0 1px var(--imnehnet-accent);
+}
+
+.fi-input::placeholder {
+    color: var(--imnehnet-text-faint);
+}
+
+/* =========================================================
+   STAT TILES
+
+   Figures first, label second. The description is a single quiet line
+   of context, never a second figure competing with the first.
+   ========================================================= */
+
+.fi-wi-stats-overview-stat {
+    padding: 0.875rem 1rem;
+}
+
+.fi-wi-stats-overview-stat-value {
+    color: var(--imnehnet-text);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.fi-wi-stats-overview-stat-label {
+    color: var(--imnehnet-text-faint);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.fi-wi-stats-overview-stat-description {
+    color: var(--imnehnet-text-muted);
+    font-size: 0.75rem;
+}
+
+.fi-wi-stats-overview-stat {
+    border-inline-start: 2px solid var(--imnehnet-line-strong);
+}
+
+.fi-wi-stats-overview-stat[data-color='success'] {
+    border-inline-start-color: var(--imnehnet-ready);
+}
+
+.fi-wi-stats-overview-stat[data-color='danger'] {
+    border-inline-start-color: var(--imnehnet-danger);
+}
+
+.fi-wi-stats-overview-stat[data-color='gray'] {
+    border-inline-start-color: var(--imnehnet-idle);
+}
+
+/* =========================================================
+   TERMINAL
+
+   Black on near-black, monospace, no scroll interception. The terminal
+   has to feel like a terminal, and smooth scrolling in a shell makes
+   it feel like a web page.
+   ========================================================= */
+
+[data-terminal-surface],
+.xterm-viewport {
+    scroll-behavior: auto !important;
+}
+
+[data-lenis-prevent] {
+    overscroll-behavior: contain;
+}
+
+/* =========================================================
+   MISCELLANEOUS
+
+   The parts that otherwise look borrowed from a component library.
+   ========================================================= */
+
+.fi-badge-tabs,
+.fi-tabs {
+    border-color: var(--imnehnet-line);
+}
+
+.fi-tabs-item {
+    color: var(--imnehnet-text-muted);
+}
+
+.fi-tabs-item.is-active {
+    color: var(--imnehnet-accent);
+    border-color: var(--imnehnet-accent);
+}
+
+.fi-dropdown-item {
+    color: var(--imnehnet-text-muted);
+}
+
+.fi-dropdown-item:hover {
+    background-color: var(--imnehnet-raised);
+    color: var(--imnehnet-text);
+}
+
+.fi-color-gray {
+    --fi-color-gray-50: var(--imnehnet-sunken);
+    --fi-color-gray-100: var(--imnehnet-surface);
+    --fi-color-gray-400: var(--imnehnet-text-faint);
+    --fi-color-gray-500: var(--imnehnet-text-muted);
+    --fi-color-gray-600: var(--imnehnet-text-muted);
+    --fi-color-gray-700: var(--imnehnet-line-strong);
+    --fi-color-gray-800: var(--imnehnet-raised);
+    --fi-color-gray-900: var(--imnehnet-surface);
+}
+
+.fi-color-primary {
+    --fi-color-primary-50: var(--imnehnet-accent);
+    --fi-color-primary-500: var(--imnehnet-accent);
+    --fi-color-primary-600: var(--imnehnet-accent-dim);
+}
+
+/* Scrollbars, so a long table does not introduce the one bright element
+   the palette was built to avoid. */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--imnehnet-sunken);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--imnehnet-line-strong);
+    border: 2px solid var(--imnehnet-sunken);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--imnehnet-text-faint);
+}
+
+    /* =========================================================
+       FORMS: SHARED BY SIGN IN AND REGISTRATION
+
+       The sign-in form is Filament's and the registration form is a plain Livewire
+       page, and when each was styled on its own they became two different products:
+       one in the panel palette, one in whatever utility classes were to hand. They
+       are the same product reached two ways, so they are styled here once.
+
+       The registration page loads this stylesheet alongside app.css, which is what
+       lets the same classes serve both.
+       ========================================================= */
+
+    .imnehnet-auth-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2.5rem 1rem;
+        background-color: var(--imnehnet-ground);
+        color: var(--imnehnet-text);
+    }
+
+    /* A very faint wash in the corner. Kept almost invisible: the palette was built
+       to avoid decoration, and a strong one would be the brightest thing on screen. */
+    .imnehnet-auth-glow {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(60rem 40rem at top left, rgba(20, 184, 166, 0.08), transparent 60%);
+    }
+
+    .imnehnet-auth-shell {
+        position: relative;
+        width: 100%;
+        max-width: 26rem;
+    }
+
+    .imnehnet-auth-card {
+        background-color: var(--imnehnet-raised);
+        border: 1px solid var(--imnehnet-line);
+        border-radius: 0.875rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+        padding: 1.75rem;
+        overflow: hidden;
+    }
+
+    /* The hairline along the top edge, which is the only decoration on either form. */
+    .imnehnet-auth-edge {
+        height: 1px;
+        background: linear-gradient(
+            to right,
+            transparent,
+            rgba(20, 184, 166, 0.5),
+            transparent
+        );
+    }
+
+    .imnehnet-auth-head {
+        text-align: center;
+        margin-bottom: 1.75rem;
+    }
+
+    .imnehnet-auth-wordmark {
+        display: flex;
+        justify-content: center;
+    }
+
+    .imnehnet-auth-tagline {
+        margin-top: 0.65rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--imnehnet-accent);
+        opacity: 0.85;
+    }
+
+    .imnehnet-auth-title {
+        margin-top: 0.9rem;
+        font-size: 1.375rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: #fff;
+    }
+
+    .imnehnet-auth-lede {
+        margin-top: 0.4rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        color: var(--imnehnet-text-muted);
+    }
+
+    .imnehnet-auth-field {
+        margin-bottom: 1.15rem;
+    }
+
+    .imnehnet-auth-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        /* The theme's own text colour rather than a picked slate, so the two
+           forms cannot end up with different greys for the same label. */
+        color: var(--imnehnet-text);
+    }
+
+    .imnehnet-auth-input {
+        display: block;
+        width: 100%;
+        margin-top: 0.375rem;
+        padding: 0.625rem 0.75rem;
+        font-size: 0.875rem;
+        color: var(--imnehnet-text);
+        background-color: var(--imnehnet-sunken);
+        border: 1px solid var(--imnehnet-line);
+        border-radius: 0.5rem;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .imnehnet-auth-input::placeholder {
+        color: var(--imnehnet-text-faint);
+    }
+
+    .imnehnet-auth-input:focus {
+        outline: none;
+        border-color: var(--imnehnet-accent);
+        box-shadow: 0 0 0 1px var(--imnehnet-accent);
+    }
+
+    /* Room for the reveal button on the right, applied only where there is one. */
+    .imnehnet-auth-input-has-reveal {
+        padding-right: 2.75rem;
+    }
+
+    .imnehnet-auth-reveal-wrap {
+        position: relative;
+    }
+
+    .imnehnet-auth-reveal {
+        position: absolute;
+        inset-block: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        padding-inline: 0.75rem;
+        color: var(--imnehnet-text-faint);
+        background: none;
+        border: 0;
+        cursor: pointer;
+        transition: color 0.15s;
+    }
+
+    .imnehnet-auth-reveal:hover,
+    .imnehnet-auth-reveal:focus-visible {
+        color: var(--imnehnet-accent);
+        outline: none;
+    }
+
+    .imnehnet-auth-error {
+        margin-top: 0.375rem;
+        font-size: 0.75rem;
+        color: var(--imnehnet-danger);
+    }
+
+    .imnehnet-auth-button {
+        display: block;
+        width: 100%;
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #fff;
+        background-color: var(--imnehnet-accent-dim);
+        border: 1px solid transparent;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.15s;
+    }
+
+    .imnehnet-auth-button:hover {
+        background-color: var(--imnehnet-accent);
+    }
+
+    .imnehnet-auth-button:focus-visible {
+        outline: 2px solid var(--imnehnet-accent);
+        outline-offset: 2px;
+    }
+
+    .imnehnet-auth-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+
+    /* The four password rules. They state what the server enforces, so a student can
+       see what is missing rather than submitting and being told only that
+       validation failed. */
+    .imnehnet-auth-checks {
+        margin-top: 0.75rem;
+        display: grid;
+        gap: 0.375rem;
+        font-size: 0.75rem;
+    }
+
+    .imnehnet-auth-check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--imnehnet-text-faint);
+        transition: color 0.15s;
+    }
+
+    .imnehnet-auth-check[data-met='true'] {
+        color: var(--imnehnet-accent);
+    }
+
+    .imnehnet-auth-check svg {
+        flex-shrink: 0;
+        opacity: 0.4;
+        transition: opacity 0.15s;
+    }
+
+    .imnehnet-auth-check[data-met='true'] svg {
+        opacity: 1;
+    }
+
+    .imnehnet-auth-foot {
+        margin-top: 1.5rem;
+        text-align: center;
+        font-size: 0.875rem;
+        color: var(--imnehnet-text-muted);
+    }
+
+    .imnehnet-auth-note {
+        margin-top: 1rem;
+        text-align: center;
+        font-size: 0.6875rem;
+        color: var(--imnehnet-text-faint);
+    }
+
+    .imnehnet-auth-link {
+        font-weight: 500;
+        color: var(--imnehnet-accent);
+        text-decoration: none;
+    }
+
+    .imnehnet-auth-link:hover {
+        text-decoration: underline;
+    }
+
+    /* =========================================================
+       FILAMENT'S OWN FORM, RESTYLED TO MATCH
+
+       The sign-in form is Filament's component, so its classes are overridden here
+       rather than replaced. The selectors are the ones Filament renders; if an
+       upgrade renames them the overrides simply stop applying and the form falls
+       back to Filament's own styling, which is the safe direction to fail in.
+       ========================================================= */
+
+    /* Filament's own card. The sign-in form lives inside it, so it is given the
+       same surface, border, radius and shadow as the registration card rather
+       than the two being allowed to differ. */
+    .fi-simple-page {
+        max-width: 26rem;
+        margin-inline: auto;
+        background-color: var(--imnehnet-raised);
+        border: 1px solid var(--imnehnet-line);
+        border-radius: 0.875rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+        padding: 1.75rem;
+    }
+
+    .fi-simple-header {
+        text-align: center;
+        margin-bottom: 1.75rem;
+    }
+
+    /* Filament centres the brand by default on this page already, but the mark is
+       now the wordmark component, so it is set here too rather than left to chance. */
+    .fi-simple-header .fi-logo,
+    .fi-simple-page .fi-logo {
+        display: flex;
+        justify-content: center;
+        height: auto;
+    }
+
+    .fi-simple-header-heading {
+        margin-top: 0.9rem;
+        font-size: 1.375rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: #fff;
+    }
+
+    /* The tagline sits above the title on both forms, so it is injected as a
+       separate block rather than as Filament's subheading, which renders below. */
+    /* Filament rounds its own controls more tightly and pads them less than the
+       registration form does. Both were visible differences between two pages
+       that are meant to look like the same thing, so both are set here rather
+       than left to whichever component happened to render. */
+    .fi-simple-page .fi-btn {
+        border-radius: 0.5rem;
+        font-weight: 600;
+        padding: 0.625rem 1rem;
+    }
+
+    .fi-simple-page .fi-input,
+    .fi-simple-page .fi-input-wrp {
+        border-radius: 0.5rem;
+    }
+
+    .fi-simple-header-subheading {
+        margin-top: 0.4rem;
+        font-size: 0.875rem;
+        color: var(--imnehnet-text-muted);
+    }
+
+/* =========================================================
+   REDUCED MOTION
+
+   Motion in this interface is decorative, so removing it costs nothing.
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Any spinner standing in for "working" becomes a static symbol, because a
+       frozen animation reads as a hung application. */
+    .lucide-loader-circle,
+    [class*='animate-spin'] {
+        animation: none !important;
+    }
+}
+
+
+/* =========================================================
+   ICON SIZING
+
+   The generated Lucide SVG carries a viewBox and no width or height. That is correct
+   markup, and it also means the icon has no intrinsic size — in a flex or block context
+   it expands to fill whatever space it is given. One did exactly that: the shield on the
+   published-ports warning grew until it filled its card and pushed the ports beneath it
+   off the bottom of the screen.
+
+   Capped here rather than at the call sites, because the next icon added would otherwise
+   have to remember.
+
+   :where() on purpose. The selector carries no specificity, so this is a default that any
+   class can still override. A plain [data-lucide] rule outside a layer would outrank
+   every size-* utility on the site, and the icons that ask for a size would silently stop
+   being able to have one.
+   ========================================================= */
+:where([data-lucide]) {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+}
+
+/*
+   Where the icon is the subject rather than an adornment — the leading icon on a stat
+   tile, or an empty state with nothing else in it. Still zero specificity, so an icon
+   that asks for a size keeps it.
+*/
+:where([data-lucide].size-8) {
+    width: 2rem;
+    height: 2rem;
+}
+
+
+/* =========================================================
+   SPRINT 1 — ADMIN DASHBOARD
+   ========================================================= */
+
+html:not(.dark) {
+    --imnehnet-ground: #f8fafc;
+    --imnehnet-surface: #ffffff;
+    --imnehnet-raised: #f8fafc;
+    --imnehnet-sunken: #f8fafc;
+    --imnehnet-line: #e2e8f0;
+    --imnehnet-line-strong: #cbd5e1;
+
+    --imnehnet-text: #0f172a;
+    --imnehnet-text-muted: #64748b;
+    --imnehnet-text-faint: #94a3b8;
+}
+
+/*
+    DARK GROUND
+    =========================================================
+
+    The block above declares its palette under html:not(.dark), so every colour that follows
+    from it is defined for the light theme only. Dark mode therefore fell back to Tailwind's
+    stock shades, which are a shade off from the surfaces the components draw themselves —
+    cards landed on the same value as the page behind them, and body text came out as the
+    muted token rather than the full-contrast one. That is the "dark looks different and is
+    harder to read" report, and it was a gap in the palette rather than a taste question.
+
+    Declared the same way as the light block so the two read as one set. Values are chosen
+    for contrast first:
+
+      text       #e2e8f0 on surface #131a26 — about 13:1, well past AA for body text
+      text-muted #94a3b8 — about 6:1, still past AA, for secondary text
+      text-faint #64748b — about 3.5:1, used only for large or non-essential marks
+
+    Surfaces are three distinct steps rather than one, so a card separates from the page
+    without relying on a border to do it.
+*/
+html.dark {
+    --imnehnet-ground: #0b111a;
+    --imnehnet-surface: #131a26;
+    --imnehnet-raised: #1a2331;
+    --imnehnet-sunken: #0e1520;
+    --imnehnet-line: #26324a;
+    --imnehnet-line-strong: #38455f;
+
+    --imnehnet-text: #e2e8f0;
+    --imnehnet-text-muted: #94a3b8;
+    --imnehnet-text-faint: #64748b;
+}
+
+/*
+    Apply the palette to the surfaces the framework draws.
+
+    Scoped to html.dark rather than left to defaults, because the light block above does
+    exactly this and a dark theme that renders through a different set of rules than the
+    light one is how the two drift apart in the first place.
+*/
+html.dark .fi-body,
+html.dark .fi-body > div {
+    background-color: var(--imnehnet-ground);
+    color: var(--imnehnet-text);
+}
+
+html.dark .card,
+html.dark .fi-section,
+html.dark [class*='rounded-xl'][class*='border-base-content'] {
+    background-color: var(--imnehnet-surface);
+    border-color: var(--imnehnet-line);
+    color: var(--imnehnet-text);
+}
+
+/*
+    Body copy.
+
+    Filament's default dark text is a muted grey, so paragraphs read as captions even when
+    the surrounding card is fine. Body text is forced to the full-contrast token; only the
+    genuinely secondary classes step down.
+*/
+html.dark .card p,
+html.dark .card-body p,
+html.dark .card h1,
+html.dark .card h2,
+html.dark .card h3 {
+    color: var(--imnehnet-text);
+}
+
+html.dark .text-base-content\/60,
+html.dark .text-base-content\/55,
+html.dark .text-base-content\/50 {
+    color: var(--imnehnet-text-muted);
+}
+
+html.dark .text-base-content\/45,
+html.dark .text-base-content\/40 {
+    color: var(--imnehnet-text-faint);
+}
+
+/* The theme toggle sits on the topbar, which is the one surface still on its own colour. */
+html.dark .fi-topbar > nav {
+    background-color: var(--imnehnet-surface);
+    border-color: var(--imnehnet-line);
+}
+
+html:not(.dark) .fi-body,
+html:not(.dark) .fi-body > div {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+html:not(.dark) .fi-sidebar {
+    background: #ffffff;
+    border-inline-end: 1px solid #e2e8f0;
+}
+
+html:not(.dark) .fi-sidebar-header,
+html:not(.dark) .fi-topbar > nav {
+    background: #ffffff;
+    border-color: #e2e8f0;
+}
+
+html:not(.dark) .fi-sidebar-item-button {
+    color: #475569;
+}
+
+html:not(.dark) .fi-sidebar-item-button:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+html:not(.dark) .fi-sidebar-item.is-active .fi-sidebar-item-button {
+    background: #e6f7f5;
+    color: #0f766e;
+}
+
+html:not(.dark) .fi-header-heading {
+    color: #0f172a;
+}
+
+html:not(.dark) .fi-header-subheading {
+    color: #64748b;
+}
+
+.im-admin-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.im-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.im-kpi-card,
+.im-dashboard-panel {
+    border: 1px solid var(--imnehnet-line);
+    background: var(--imnehnet-surface);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.03);
+}
+
+.im-kpi-card {
+    min-height: 132px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+}
+
+.im-kpi-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    flex: 0 0 3.5rem;
+    display: grid;
+    place-items: center;
+    border-radius: 0.75rem;
+}
+
+.im-kpi-icon svg {
+    width: 1.75rem;
+    height: 1.75rem;
+}
+
+.im-kpi-icon--teal {
+    background: #dff7f2;
+    color: #0d9488;
+}
+
+.im-kpi-icon--blue {
+    background: #e4efff;
+    color: #3b82f6;
+}
+
+.dark .im-kpi-icon--teal {
+    background: rgb(13 148 136 / 0.14);
+}
+
+.dark .im-kpi-icon--blue {
+    background: rgb(59 130 246 / 0.14);
+}
+
+.im-kpi-content {
+    min-width: 0;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+.im-kpi-label {
+    color: var(--imnehnet-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.im-kpi-content strong {
+    margin-top: 0.15rem;
+    color: var(--imnehnet-text);
+    font-size: 1.8rem;
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+.im-kpi-caption {
+    margin-top: 0.5rem;
+    color: var(--imnehnet-text-muted);
+    font-size: 0.75rem;
+}
+
+.im-mini-bars {
+    height: 34px;
+    display: flex;
+    align-items: end;
+    gap: 3px;
+}
+
+.im-mini-bars span {
+    width: 2px;
+    border-radius: 2px;
+    background: #14b8a6;
+    opacity: 0.8;
+}
+
+.im-mini-bars--blue span {
+    background: #3b82f6;
+}
+
+.im-dashboard-middle {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+    gap: 1rem;
+}
+
+.im-dashboard-panel {
+    padding: 1.25rem;
+}
+
+.im-panel-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.im-panel-heading h2 {
+    color: var(--imnehnet-text);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.im-panel-heading p {
+    margin-top: 0.2rem;
+    color: var(--imnehnet-text-muted);
+    font-size: 0.8rem;
+}
+
+.im-period-pill {
+    border-radius: 0.4rem;
+    background: #0d9488;
+    padding: 0.4rem 0.75rem;
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.im-line-chart {
+    display: flex;
+    height: 245px;
+    padding-top: 0.5rem;
+}
+
+.im-chart-y {
+    width: 38px;
+    padding: 0 8px 23px 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    color: var(--imnehnet-text-muted);
+    font-size: 0.65rem;
+    text-align: right;
+}
+
+.im-chart-canvas {
+    position: relative;
+    flex: 1;
+    border-left: 1px solid var(--imnehnet-line);
+    border-bottom: 1px solid var(--imnehnet-line);
+}
+
+.im-chart-canvas svg {
+    position: absolute;
+    inset: 0 0 22px;
+    width: 100%;
+    height: calc(100% - 22px);
+    overflow: visible;
+    color: #0d9488;
+}
+
+.im-grid-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1px dashed var(--imnehnet-line);
+}
+
+.im-grid-line--one {
+    top: 0;
+}
+
+.im-grid-line--two {
+    top: 38%;
+}
+
+.im-grid-line--three {
+    top: 76%;
+}
+
+.im-chart-labels {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    justify-content: space-between;
+    color: var(--imnehnet-text-muted);
+    font-size: 0.65rem;
+}
+
+.im-course-layout {
+    min-height: 245px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+}
+
+.im-donut {
+    width: 170px;
+    height: 170px;
+    flex: 0 0 170px;
+    display: grid;
+    place-items: center;
+    border-radius: 9999px;
+}
+
+.im-donut-hole {
+    width: 105px;
+    height: 105px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--imnehnet-surface);
+}
+
+.im-donut-hole strong {
+    color: var(--imnehnet-text);
+    font-size: 1.35rem;
+}
+
+.im-donut-hole span {
+    margin-top: 0.15rem;
+    color: var(--imnehnet-text-muted);
+    font-size: 0.68rem;
+}
+
+.im-course-legend {
+    min-width: 165px;
+    display: flex;
+    flex-direction: column;
+}
+
+.im-course-legend > div {
+    display: grid;
+    grid-template-columns: 12px 1fr auto;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--imnehnet-line);
+    color: var(--imnehnet-text-muted);
+    font-size: 0.75rem;
+}
+
+.im-course-legend strong {
+    color: var(--imnehnet-text);
+}
+
+.im-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 9999px;
+}
+
+.im-dot--green {
+    background: #0ea5a4;
+}
+
+.im-dot--blue {
+    background: #3b82f6;
+}
+
+.im-dot--orange {
+    background: #f59e0b;
+}
+
+.im-recent-panel {
+    padding-bottom: 0.5rem;
+}
+
+.im-recent-table-wrap {
+    overflow-x: auto;
+}
+
+.im-recent-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+}
+
+.im-recent-table th {
+    padding: 0.65rem 0.75rem;
+    background: var(--imnehnet-raised);
+    color: var(--imnehnet-text-muted);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.im-recent-table th:first-child {
+    border-radius: 0.4rem 0 0 0.4rem;
+}
+
+.im-recent-table th:last-child {
+    border-radius: 0 0.4rem 0.4rem 0;
+}
+
+.im-recent-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--imnehnet-line);
+    color: var(--imnehnet-text-muted);
+}
+
+.im-recent-table td:nth-child(2),
+.im-recent-table td:nth-child(4) {
+    color: var(--imnehnet-text);
+    font-weight: 500;
+}
+
+.im-type-badge {
+    display: inline-flex;
+    border-radius: 9999px;
+    background: #e6f7f5;
+    padding: 0.2rem 0.55rem;
+    color: #0f766e;
+    font-size: 0.65rem;
+    font-weight: 600;
+}
+
+.dark .im-type-badge {
+    background: rgb(20 184 166 / 0.12);
+    color: #5eead4;
+}
+
+.im-empty-state {
+    padding: 2rem !important;
+    text-align: center;
+}
+
+@media (max-width: 1100px) {
+    .im-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .im-dashboard-middle {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .im-kpi-card {
+        padding: 1rem;
+    }
+
+    .im-mini-bars {
+        display: none;
+    }
+
+    .im-course-layout {
+        flex-direction: column;
+    }
+
+    .im-dashboard-panel {
+        padding: 1rem;
+    }
+}
+
+/* Dashboard period selector */
+.im-period-select {
+    min-width: 132px;
+    height: 34px;
+    padding: 0 2rem 0 0.75rem;
+    border: 1px solid var(--imnehnet-line);
+    border-radius: 0.5rem;
+    background-color: var(--imnehnet-surface);
+    color: var(--imnehnet-text);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+}
+
+.im-period-select:hover {
+    border-color: var(--imnehnet-line-strong);
+}
+
+.im-period-select:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 3px rgb(13 148 136 / 0.10);
+}
+
+/* Brand visibility */
+html:not(.dark) .fi-logo {
+    color: #111827 !important;
+    opacity: 1 !important;
+}
+
+html:not(.dark) .fi-logo * {
+    color: #111827 !important;
+    opacity: 1 !important;
+}
+
+.dark .fi-logo {
+    color: #f8fafc !important;
+    opacity: 1 !important;
+}
+
+.dark .fi-logo * {
+    color: #f8fafc !important;
+    opacity: 1 !important;
+}
+
+/* ============================================================
+   IMNEHNET Motion System
+   ============================================================ */
+
+:root {
+    --im-motion-fast: 150ms;
+    --im-motion-normal: 220ms;
+    --im-motion-slow: 300ms;
+    --im-motion-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/*
+ * Smooth theme transition.
+ * Only animate visual properties to avoid layout jank.
+ */
+html,
+body,
+.fi-body,
+.fi-layout,
+.fi-main,
+.fi-sidebar,
+.fi-topbar,
+.fi-section,
+.fi-wi,
+.fi-ta,
+.fi-dropdown-panel,
+.fi-modal-window,
+.im-dashboard-card,
+.im-stat-card {
+    transition:
+        background-color var(--im-motion-normal) var(--im-motion-ease),
+        border-color var(--im-motion-normal) var(--im-motion-ease),
+        color var(--im-motion-normal) var(--im-motion-ease),
+        box-shadow var(--im-motion-normal) var(--im-motion-ease);
+}
+
+/* Interactive elements */
+.fi-sidebar-item-btn,
+.fi-btn,
+.fi-icon-btn,
+.fi-topbar button,
+.im-period-select,
+.im-theme-toggle-button {
+    transition:
+        background-color var(--im-motion-fast) var(--im-motion-ease),
+        border-color var(--im-motion-fast) var(--im-motion-ease),
+        color var(--im-motion-fast) var(--im-motion-ease),
+        opacity var(--im-motion-fast) var(--im-motion-ease),
+        transform var(--im-motion-fast) var(--im-motion-ease),
+        box-shadow var(--im-motion-fast) var(--im-motion-ease);
+}
+
+/* Subtle sidebar interaction */
+.fi-sidebar-item-btn:hover {
+    transform: translateX(2px);
+}
+
+/* Cards get a restrained lift */
+.im-dashboard-card:hover,
+.im-stat-card:hover {
+    transform: translateY(-1px);
+}
+
+/* ============================================================
+   Topbar Theme Toggle
+   ============================================================ */
+
+.im-theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.im-theme-toggle-button {
+    display: inline-flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.im-theme-toggle-button:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
+
+.im-theme-toggle-button:active {
+    transform: scale(0.94);
+}
+
+.im-theme-toggle-button:focus-visible {
+    outline: 2px solid #14b8a6;
+    outline-offset: 2px;
+}
+
+.im-theme-icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    transition:
+        transform var(--im-motion-normal) var(--im-motion-ease),
+        opacity var(--im-motion-fast) var(--im-motion-ease);
+}
+
+.dark .im-theme-toggle-button {
+    color: #94a3b8;
+}
+
+.dark .im-theme-toggle-button:hover {
+    background: rgb(255 255 255 / 0.08);
+    color: #f8fafc;
+}
+
+/* Respect accessibility preference */
+@media (prefers-reduced-motion: reduce) {
+    html,
+    body,
+    .fi-body,
+    .fi-layout,
+    .fi-main,
+    .fi-sidebar,
+    .fi-topbar,
+    .fi-section,
+    .fi-wi,
+    .fi-ta,
+    .fi-dropdown-panel,
+    .fi-modal-window,
+    .fi-sidebar-item-btn,
+    .fi-btn,
+    .fi-icon-btn,
+    .im-dashboard-card,
+    .im-stat-card,
+    .im-period-select,
+    .im-theme-toggle-button,
+    .im-theme-icon {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
+/* =========================================================
+   IMNEHNET × FLYONUI — dark surface integration
+   Keep FlyonUI components while aligning them with the
+   graphite / navy IMNEHNET application shell.
+   ========================================================= */
+
+.dark .im-admin-dashboard .card,
+.dark .fi-wi-widget .card {
+    background-color: #11151c;
+    border-color: #252c38;
+}
+
+.dark .fi-main {
+    background-color: #090c11;
+}
+
+.dark .fi-topbar {
+    background-color: #0f172a;
+}
+
+.dark .fi-sidebar {
+    background-color: #0c1015;
+}
+
+.dark .fi-wi-widget .table thead {
+    border-color: #29313d;
+}
+
+.dark .fi-wi-widget .table tbody tr {
+    border-color: #202733;
+}
