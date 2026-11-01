@@ -1,0 +1,335 @@
+/* IMNEHNET LOGIN V3 - EXPORT-ALIGNED LAYOUT */
+
+body.im-login {
+    --im3-text:#14234e;
+    --im3-muted:#7b8aa8;
+    --im3-card:rgba(255,255,255,.90);
+    --im3-input:#fff;
+    --im3-border:#dce5f3;
+
+    color:var(--im3-text)!important;
+    background:linear-gradient(
+        125deg,#ddf2ff 14%,#ece8ff 50%,#e1f8f4 86%
+    )!important;
+}
+
+body.im-login:not(.im-light) {
+    --im3-text:#f5f8ff;
+    --im3-muted:#afbed7;
+    --im3-card:rgba(26,37,61,.94);
+    --im3-input:#293650;
+    --im3-border:#44516b;
+
+    background:linear-gradient(
+        125deg,#101a31,#202342,#102f39
+    )!important;
+}
+
+/* Override the inherited Filament simple-layout constraints. */
+
+body.im-login .fi-simple-layout {
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    min-height:100vh!important;
+    height:auto!important;
+
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1.08fr)!important;
+    grid-template-rows:auto!important;
+    align-items:center!important;
+    justify-content:center!important;
+    justify-items:stretch!important;
+
+    gap:40px!important;
+    padding:40px!important;
+    margin:0!important;
+
+    overflow:hidden!important;
+    position:relative!important;
+    isolation:isolate;
+}
+
+/* The actual Filament form column can be an ancestor of .fi-simple-main. */
+
+body.im-login .im-form-column {
+    grid-column:1!important;
+    grid-row:1!important;
+
+    position:relative!important;
+    z-index:3!important;
+
+    width:100%!important;
+    max-width:620px!important;
+    min-width:0!important;
+    margin:0 auto!important;
+
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    justify-content:center!important;
+
+    transform:none!important;
+    inset:auto!important;
+}
+
+body.im-login .im-form-column .fi-simple-main {
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+
+    padding:40px!important;
+    border-radius:28px!important;
+    border:1px solid rgba(255,255,255,.65)!important;
+
+    background:var(--im3-card)!important;
+    box-shadow:0 16px 45px rgba(2,8,23,.18)!important;
+
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+}
+
+/* Restore contrast overridden by Filament's dark-theme utilities. */
+
+body.im-login .fi-simple-main h1,
+body.im-login .fi-simple-main h2,
+body.im-login .fi-simple-main label,
+body.im-login .fi-simple-main .fi-fo-field-label-content {
+    color:var(--im3-text)!important;
+    opacity:1!important;
+}
+
+body.im-login .fi-simple-main p,
+body.im-login .fi-simple-main .fi-simple-header-subheading {
+    color:var(--im3-muted)!important;
+    opacity:1!important;
+}
+
+body.im-login .fi-simple-main .fi-input-wrp {
+    min-height:52px!important;
+    border-radius:10px!important;
+    background:var(--im3-input)!important;
+    border:1px solid var(--im3-border)!important;
+    box-shadow:none!important;
+}
+
+body.im-login .fi-simple-main .fi-input-wrp input {
+    background:transparent!important;
+    color:var(--im3-text)!important;
+    -webkit-text-fill-color:var(--im3-text)!important;
+}
+
+body.im-login .fi-simple-main .fi-input-wrp input::placeholder {
+    color:var(--im3-muted)!important;
+    opacity:.75!important;
+}
+
+body.im-login .fi-simple-main .fi-input-wrp button {
+    color:var(--im3-muted)!important;
+}
+
+body.im-login .fi-simple-main .fi-btn-color-primary {
+    min-height:52px!important;
+    background:#326de5!important;
+    color:white!important;
+    border-radius:10px!important;
+}
+
+/* User/Admin FlyonUI-style segmented selector */
+
+body.im-login .im-role-tabs {
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:5px!important;
+
+    width:100%!important;
+    margin:24px 0 28px!important;
+
+    padding:5px!important;
+    background:var(--im3-input)!important;
+    border:1px solid var(--im3-border)!important;
+    border-radius:12px!important;
+}
+
+body.im-login .im-role-tabs a {
+    min-width:0!important;
+    color:var(--im3-muted)!important;
+    font-size:13px!important;
+    border-radius:8px!important;
+}
+
+body.im-login .im-role-tabs a[aria-current="page"] {
+    background:#dce8fc!important;
+    color:#14234e!important;
+}
+
+body.im-login:not(.im-light) .im-role-tabs a[aria-current="page"] {
+    background:#354662!important;
+    color:white!important;
+}
+
+/* Welcome feature panel belongs beside the form, not below it. */
+
+body.im-login .fi-simple-layout > .im-hero {
+    box-sizing:border-box!important;
+
+    grid-column:2!important;
+    grid-row:1!important;
+
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    justify-content:flex-end!important;
+
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+
+    height:calc(100vh - 80px)!important;
+    min-height:620px!important;
+    max-height:1000px!important;
+
+    margin:0!important;
+    padding:56px!important;
+    transform:none!important;
+    align-self:center!important;
+
+    background:#202d46!important;
+    color:#fff!important;
+
+    border:1px solid rgba(255,255,255,.15)!important;
+    border-radius:36px!important;
+
+    box-shadow:0 16px 45px rgba(2,8,23,.22)!important;
+
+    position:relative!important;
+    z-index:3!important;
+    overflow:hidden!important;
+}
+
+body.im-login .im-hero h2 {
+    color:#fff!important;
+    font-size:clamp(32px,3vw,44px)!important;
+}
+
+body.im-login .im-hero p {
+    color:#adBDD4!important;
+}
+
+body.im-login .im-hero-kicker {
+    color:#a9bcd9!important;
+}
+
+body.im-login .im-features {
+    width:100%!important;
+    background:#303b53!important;
+    border:1px solid #44516a!important;
+    border-radius:22px!important;
+}
+
+body.im-login .im-feature {
+    color:#e8edf9!important;
+}
+
+body.im-login .im-hero .im-feature svg {
+    color:#9cc5fa!important;
+}
+
+/* Original Canvas V1 is replaced by React Bits WebGL. */
+
+body.im-login .im-ascii {
+    display:none!important;
+}
+
+body.im-login #im-react-bits-ascii {
+    position:fixed!important;
+    inset:0!important;
+
+    width:100vw!important;
+    height:100vh!important;
+
+    z-index:0!important;
+    pointer-events:none!important;
+    overflow:hidden!important;
+    opacity:.60;
+}
+
+body.im-login #im-react-bits-ascii > div {
+    width:100%!important;
+    height:100%!important;
+}
+
+body.im-login #im-react-bits-ascii canvas {
+    width:100%!important;
+    height:100%!important;
+    display:block!important;
+}
+
+/* Fix mobile based on the mobile export composition. */
+
+@media(max-width:900px) {
+    body.im-login .fi-simple-layout {
+        display:flex!important;
+        flex-direction:column!important;
+        align-items:stretch!important;
+        justify-content:flex-start!important;
+
+        gap:20px!important;
+        padding:68px 16px 24px!important;
+
+        height:auto!important;
+        overflow:visible!important;
+    }
+
+    body.im-login .im-form-column {
+        width:100%!important;
+        max-width:540px!important;
+        margin:0 auto!important;
+        flex:0 0 auto!important;
+    }
+
+    body.im-login .im-form-column .fi-simple-main {
+        padding:28px 24px!important;
+        border-radius:24px!important;
+    }
+
+    body.im-login .fi-simple-layout > .im-hero {
+        width:100%!important;
+        max-width:540px!important;
+        height:auto!important;
+        min-height:360px!important;
+        max-height:none!important;
+
+        margin:0 auto!important;
+        padding:30px 26px!important;
+        border-radius:26px!important;
+        flex:0 0 auto!important;
+    }
+
+    body.im-login .im-hero h2 {
+        font-size:32px!important;
+    }
+}
+
+@media(max-width:420px) {
+    body.im-login .fi-simple-layout {
+        padding-left:12px!important;
+        padding-right:12px!important;
+    }
+
+    body.im-login .im-form-column .fi-simple-main {
+        padding:24px 20px!important;
+    }
+
+    body.im-login .fi-simple-layout > .im-hero {
+        padding:26px 22px!important;
+    }
+}
+
+@media(prefers-reduced-motion:reduce) {
+    body.im-login #im-react-bits-ascii {
+        opacity:.35;
+    }
+}

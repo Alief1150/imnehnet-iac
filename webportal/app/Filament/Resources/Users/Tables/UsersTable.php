@@ -9,7 +9,7 @@ use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -20,6 +20,18 @@ class UsersTable
     {
         return $table
             ->columns([
+                ImageColumn::make('avatar')
+
+                    ->label('Avatar')
+
+                    ->state(fn (User $record): string => \Filament\Facades\Filament::getUserAvatarUrl($record))
+
+                    ->circular()
+
+                    ->size(36),
+
+
+
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
@@ -60,11 +72,6 @@ class UsersTable
                     ->sortable()
                     ->toggleable(),
 
-                IconColumn::make('must_change_password')
-                    ->label('Must set password')
-                    ->boolean()
-                    ->tooltip('The account still uses a first-time password')
-                    ->toggleable(),
             ])
             ->defaultSort('name')
             ->filters([

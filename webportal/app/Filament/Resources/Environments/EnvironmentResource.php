@@ -14,6 +14,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * A student lab: one Linux system container inside Incus on the compute
@@ -95,5 +96,26 @@ class EnvironmentResource extends Resource
         }
 
         return $user->isAdmin() ? $query : $query->where('user_id', $user->getKey());
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['container_name', 'internal_ip', 'status'];
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'IP' => (string) ($record->internal_ip ?? '—'),
+            'Status' => (string) ($record->status?->value ?? $record->status ?? 'Unknown'),
+        ];
+    }
+
+    /**
+     * Paired labs must be created exclusively through My Labs.
+     */
+    public static function canCreate(): bool
+    {
+        return false;
     }
 }

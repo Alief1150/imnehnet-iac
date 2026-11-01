@@ -2,9 +2,10 @@
 
 namespace App\Filament\Pages;
 
-use App\Data\MonitoringBackend;
+use App\Services\IncusInventoryMonitoringService;
 use App\Services\InfrastructureStatusService;
 use App\Services\MonitoringService;
+use App\Services\MonitoringVmSeriesService;
 use App\Support\Lucide;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Support\Htmlable;
@@ -18,6 +19,21 @@ final class Monitoring extends Page
     /**
      * @return array<string, array<string, mixed>>
      */
+    public function hostDetails(): array
+    {
+        return app(\App\Services\MonitoringHostDetailsService::class)->summary();
+    }
+
+    public function physicalHost(): array
+
+    {
+
+        return app(\App\Services\MonitoringHostService::class)->summary();
+
+    }
+
+
+
     public function resources(): array
     {
         return app(MonitoringService::class)->summary();
@@ -44,10 +60,19 @@ final class Monitoring extends Page
      */
     public function backends(): array
     {
-        return array_map(
-            fn (MonitoringBackend $backend): array => $backend->toArray(),
-            app(MonitoringService::class)->backends(),
-        );
+        return app(MonitoringService::class)->backends();
+    }
+
+    /** @return array<string, mixed> */
+    public function containerInventory(): array
+    {
+        return app(IncusInventoryMonitoringService::class)->summary();
+    }
+
+    /** @return array<string, mixed> */
+    public function vmSeries(): array
+    {
+        return app(MonitoringVmSeriesService::class)->series();
     }
 
     public function isPolling(): bool

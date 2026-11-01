@@ -14,9 +14,12 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 
 class UserResource extends Resource
 {
+    protected static ?string $recordTitleAttribute = 'name';
+
     protected static ?string $model = User::class;
 
     public static function form(Schema $schema): Schema
@@ -59,4 +62,17 @@ class UserResource extends Resource
     protected static string|\UnitEnum|null $navigationGroup = 'USERS';
 
     protected static ?int $navigationSort = 10;
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'email'];
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Email' => (string) $record->email,
+            'Role' => (string) ($record->role?->value ?? $record->role ?? ''),
+        ];
+    }
 }

@@ -59,7 +59,8 @@ class UserForm
                     // makes the page generate a first-time password, so the
                     // only way this field is mandatory is when an operator has
                     // actually typed one and it fails validation.
-                    ->dehydrated(fn (?string $state): bool => filled($state))
+                    ->visibleOn('create')
+                    ->dehydrated(fn (?string $state, string $operation): bool => $operation === 'create' && filled($state))
                     ->helperText('Leave blank on create to generate a one-time password. It is shown once and never stored in plaintext.')
                     ->minLength(10),
             ]);

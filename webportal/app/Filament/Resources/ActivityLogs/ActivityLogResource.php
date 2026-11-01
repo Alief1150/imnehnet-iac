@@ -13,9 +13,12 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 
 class ActivityLogResource extends Resource
 {
+    protected static ?string $recordTitleAttribute = 'action';
+
     protected static ?string $model = ActivityLog::class;
 
     public static function canAccess(): bool
@@ -65,4 +68,17 @@ class ActivityLogResource extends Resource
     protected static ?string $label = 'Activity Logs';
 
     protected static ?string $pluralLabel = 'Activity Logs';
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['action', 'description', 'resource_type', 'resource_id'];
+    }
+
+    public static function getGlobalSearchResultDetails(Model $record): array
+    {
+        return [
+            'Details' => (string) ($record->description ?? ''),
+            'Time' => $record->created_at?->format('Y-m-d H:i:s') ?? '—',
+        ];
+    }
 }

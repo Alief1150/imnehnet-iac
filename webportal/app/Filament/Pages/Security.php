@@ -92,9 +92,6 @@ final class Security extends Page
     }
 
     /**
-     * @return list<array<string, mixed>>
-     */
-    /**
      * The cards whose explanation is open.
      *
      * @var list<string>

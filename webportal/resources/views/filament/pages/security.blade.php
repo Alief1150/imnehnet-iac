@@ -39,6 +39,8 @@
         .im-security .im-panel p.text-xs { font-size: 12px; }
         .im-security .fi-fi { display: inline-block; width: 18px; height: 18px; flex-shrink: 0; vertical-align: middle; }
         .im-security .im-page-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+        .im-security .im-range-selector { display: flex; gap: 8px; flex-shrink: 0; }
+        .im-security .im-range-note { margin-top: 6px; font-size: 11px; color: var(--sec-muted); }
         .im-security .im-page-heading h2 { margin: 0; font-size: 25px; letter-spacing: -.035em; font-weight: 700; }
         .im-security .im-page-heading p { margin-top: 4px; color: var(--sec-muted); font-size: 13px; }
         .im-security .im-freshness { margin-top: -12px; font-size: 12px; color: var(--sec-muted); }
@@ -220,6 +222,7 @@
                 <h2 class="text-xl font-bold tracking-tight text-gray-950 dark:text-white">Security</h2>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Monitor security alerts, agent activity, and environment coverage.</p>
             </div>
+            
         </div>
 
         @php $fresh = $this->freshness(); @endphp
@@ -229,6 +232,11 @@
                 — <span class="font-semibold text-amber-600 dark:text-amber-400">stale{{ $fresh['errors'] !== [] ? ': '.implode('; ', $fresh['errors']) : ': the collector has not reported yet' }}</span>
             @endif
         </p>
+        @if ($range === '1y')
+            <p class="im-range-note text-amber-600 dark:text-amber-400">
+                Catatan jujur: rentang 1Y hanya menampilkan data sejak 23 Okt 2025 (saat Wazuh dipasang). Data sebelum tanggal itu memang tidak tersedia.
+            </p>
+        @endif
 
         {{-- KPI cards --}}
         <section class="im-kpis grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Security overview">
@@ -400,28 +408,6 @@
                 </div>
         </section>
         </div>
-
-        {{-- Container visibility --}}
-        <section class="card im-panel" aria-label="Container visibility">
-                    <div class="card-body">
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <h3 class="card-title flex items-center gap-2 text-base font-semibold text-gray-950 dark:text-white">
-                        <span class="text-emerald-600 dark:text-emerald-400">{!! \App\Support\Flyon::html('eye') !!}</span>
-                        Container visibility
-                    </h3>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Paired lab containers the SIEM heard from in 24h. A container without an enrolled agent renders as missing, never as covered.</p>
-                </div>
-                <span class="im-visibility-value">{{ $visibility['expected'] !== null ? $visibility['reporting'].' of '.$visibility['expected'] : 'n/a' }}</span>
-            </div>
-            @if ($visibility['missing'] !== [])
-                <p class="im-missing mt-2 text-xs">Not reporting: <span class="font-mono">{{ implode(', ', $visibility['missing']) }}</span></p>
-            @endif
-            @if (($visibility['state'] ?? '') !== 'ready')
-                <p class="mt-2 text-xs"><span class="badge badge-soft bg-gray-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gray-500 dark:text-gray-400">collecting</span></p>
-            @endif
-            </div>
-        </section>
 
         {{-- Environment coverage --}}
         <section class="card im-panel" aria-label="Environment coverage">

@@ -1,0 +1,545 @@
+/* IMNEHNET LOGIN V4 — clean reference implementation */
+
+body.im-login-v4 {
+  --lg-text:#14234e;
+  --lg-muted:#7b8aa8;
+  --lg-card:#ffffffed;
+  --lg-field:#ffffff65;
+  --lg-line:#cfe0fa;
+  --lg-panel:#18253c;
+  --lg-benefit:#30374e;
+
+  margin:0!important;
+  min-height:100vh;
+  color:var(--lg-text);
+  background:linear-gradient(
+    180deg,#4a74b8 0%,#302760 40%,#10182f 75%,#0b1020 100%
+  )!important;
+  font-family:Inter,ui-sans-serif,system-ui,sans-serif;
+}
+
+body.im-login-v4.im-dark-v4 {
+  --lg-text:#f1f5ff;
+  --lg-muted:#acbad0;
+  --lg-card:#18243deF;
+  --lg-field:#18243d;
+  --lg-line:#394865;
+}
+
+body.im-login-v4 *,
+body.im-login-v4 *::before,
+body.im-login-v4 *::after {
+  box-sizing:border-box;
+}
+
+body.im-login-v4 .fi-simple-layout {
+  width:100%!important;
+  max-width:none!important;
+  min-height:100vh!important;
+  margin:0!important;
+  padding:40px!important;
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,680px)!important;
+  grid-template-rows:auto!important;
+  gap:40px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  isolation:isolate;
+  overflow:hidden!important;
+}
+
+/* Eliminate every inherited nested card. */
+body.im-login-v4 .im-login-column {
+  grid-column:1!important;
+  grid-row:1!important;
+  align-self:center!important;
+  justify-self:stretch!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  display:block!important;
+  position:relative!important;
+  z-index:4!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  transform:none!important;
+}
+
+body.im-login-v4 .im-login-column > :not(.fi-simple-main) {
+  max-width:100%!important;
+}
+
+body.im-login-v4 .im-login-column .fi-simple-main {
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:42px 40px!important;
+  border:1px solid rgba(255,255,255,.76)!important;
+  border-radius:28px!important;
+  background:var(--lg-card)!important;
+  color:var(--lg-text)!important;
+  box-shadow:0 16px 45px rgba(2,8,23,.19)!important;
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  overflow:visible!important;
+}
+
+/* Remove Filament's additional outer card styling. */
+body.im-login-v4 .im-login-column > div,
+body.im-login-v4 .im-login-column > section {
+  background:transparent!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+}
+
+body.im-login-v4 .fi-simple-main .fi-simple-header {
+  display:none!important;
+}
+
+body.im-login-v4 .im-brand {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:0 0 25px;
+}
+
+body.im-login-v4 .im-brand svg {
+  width:52px!important;
+  height:52px!important;
+  color:#05b9e4;
+  stroke-width:1.8;
+  flex:none;
+}
+
+body.im-login-v4 .im-brand-name {
+  color:var(--lg-text);
+  font-weight:750;
+  font-size:26px;
+  line-height:1.05;
+  letter-spacing:-.035em;
+}
+
+body.im-login-v4 .im-brand-sub {
+  font-size:14px;
+  color:#8197bd;
+  margin-top:3px;
+}
+
+body.im-login-v4 .im-login-title {
+  margin:0 0 8px;
+  font-size:36px;
+  line-height:1.18;
+  font-weight:750;
+  letter-spacing:-.035em;
+  color:var(--lg-text);
+}
+
+body.im-login-v4 .im-login-sub {
+  margin:0 0 25px;
+  font-size:15px;
+  color:var(--lg-muted);
+  line-height:1.5;
+}
+
+body.im-login-v4 .im-login-tabs {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:5px;
+  padding:5px;
+  margin:0 0 24px;
+  width:100%;
+  border-radius:11px;
+  border:1px solid #ffffffcc;
+  background:#ffffff30;
+  backdrop-filter:blur(10px);
+}
+
+body.im-login-v4 .im-login-tabs a {
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  padding:10px 5px;
+  border-radius:8px;
+  font-size:14px;
+  font-weight:500;
+  text-decoration:none;
+  color:var(--lg-muted)!important;
+  white-space:nowrap;
+}
+
+body.im-login-v4 .im-login-tabs a[aria-current="page"] {
+  background:rgba(255,255,255,.90);
+  color:var(--lg-text)!important;
+  font-weight:650;
+}
+
+body.im-login-v4.im-dark-v4 .im-login-tabs a[aria-current="page"] {
+  background:#ffffff0c;
+}
+
+body.im-login-v4 .im-login-tabs svg {
+  width:18px!important;
+  height:18px!important;
+  flex:none;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+/* Original Filament / Livewire form */
+body.im-login-v4 .fi-simple-main form {
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+}
+
+body.im-login-v4 .fi-simple-main form label,
+body.im-login-v4 .fi-simple-main .fi-fo-field-label-content,
+body.im-login-v4 .fi-simple-main .fi-checkbox-list-option-label {
+  color:var(--lg-text)!important;
+  opacity:1!important;
+}
+
+body.im-login-v4 .fi-simple-main .fi-input-wrp {
+  width:100%!important;
+  min-height:56px!important;
+  background:var(--lg-field)!important;
+  border:1px solid var(--lg-line)!important;
+  border-radius:10px!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+
+body.im-login-v4 .fi-simple-main .fi-input-wrp:focus-within {
+  border-color:#93c5fd!important;
+  outline:1px solid #93c5fd;
+}
+
+body.im-login-v4 .fi-simple-main input:not([type=checkbox]) {
+  color:var(--lg-text)!important;
+  -webkit-text-fill-color:var(--lg-text)!important;
+  background:transparent!important;
+  font-size:15px!important;
+}
+
+body.im-login-v4 .fi-simple-main input::placeholder {
+  color:#7c94b9!important;
+  -webkit-text-fill-color:#7c94b9!important;
+  opacity:1!important;
+}
+
+body.im-login-v4 .fi-simple-main .fi-input-wrp button {
+  color:#7894c1!important;
+}
+
+body.im-login-v4 .fi-simple-main .fi-btn-color-primary {
+  background:linear-gradient(90deg,#0084ff,#15aeff)!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:#fff!important;
+  border-radius:9px!important;
+  min-height:56px!important;
+  width:100%!important;
+  justify-content:center!important;
+  font-size:15px!important;
+  font-weight:600!important;
+}
+
+body.im-login-v4 .fi-simple-main .fi-form-actions,
+body.im-login-v4 .fi-simple-main .fi-actions {
+  width:100%!important;
+}
+
+body.im-login-v4 .fi-simple-main .fi-form-actions {
+  display:flex!important;
+  flex-direction:column!important;
+  gap:8px!important;
+}
+
+body.im-login-v4 .fi-simple-main a:not(.im-login-tabs a) {
+  color:#2096ff;
+}
+
+/* Welcome panel */
+body.im-login-v4 .im-login-welcome {
+  grid-column:2!important;
+  grid-row:1!important;
+  align-self:stretch!important;
+  justify-self:stretch!important;
+  position:relative!important;
+  z-index:3!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:flex-end!important;
+  gap:22px!important;
+  width:100%!important;
+  min-width:0!important;
+  height:calc(100vh - 80px)!important;
+  min-height:680px!important;
+  max-height:960px!important;
+  margin:0!important;
+  padding:56px!important;
+  border:0!important;
+  border-radius:36px!important;
+  background:#18253c!important;
+  box-shadow:none!important;
+  color:#fff!important;
+  overflow:hidden!important;
+}
+
+body.im-login-v4 .im-login-watermark {
+  position:absolute;
+  left:76px;
+  top:50px;
+  width:350px!important;
+  height:350px!important;
+  stroke:#a0bbed;
+  stroke-width:1.7;
+  fill:none;
+  opacity:.16;
+  pointer-events:none;
+}
+
+body.im-login-v4 .im-login-welcome > :not(.im-login-watermark) {
+  position:relative;
+  z-index:2;
+}
+
+body.im-login-v4 .im-welcome-kicker {
+  font-size:12px;
+  font-weight:500;
+  letter-spacing:1.5px;
+  color:#a9bcd9;
+}
+
+body.im-login-v4 .im-welcome-heading {
+  margin:0;
+  color:#fff!important;
+  font-size:44px;
+  font-weight:650;
+  line-height:1.12;
+  letter-spacing:-.025em;
+}
+
+body.im-login-v4 .im-welcome-description {
+  margin:0;
+  color:#adBDD4!important;
+  font-size:16px;
+  line-height:26px;
+}
+
+body.im-login-v4 .im-benefits {
+  width:100%;
+  padding:25px;
+  display:flex;
+  flex-direction:column;
+  gap:19px;
+  border:1px solid #3b465c;
+  border-radius:22px;
+  background:#30374e;
+}
+
+body.im-login-v4 .im-benefits-title {
+  margin:0;
+  font-size:22px;
+  font-weight:650;
+  line-height:1.2;
+  color:white!important;
+}
+
+body.im-login-v4 .im-benefit {
+  display:flex;
+  gap:12px;
+  align-items:center;
+  color:#c6d3e6;
+  font-size:14px;
+}
+
+body.im-login-v4 .im-benefit svg {
+  flex:none;
+  width:18px!important;
+  height:18px!important;
+  color:#9cc5fa;
+  stroke:currentColor;
+  stroke-width:1.8;
+  fill:none;
+}
+
+body.im-login-v4 .im-carousel-controls {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  min-height:44px;
+}
+
+body.im-login-v4 .im-carousel-dots {
+  display:flex;
+  gap:9px;
+  align-items:center;
+}
+
+body.im-login-v4 .im-carousel-dots button {
+  width:7px;
+  height:7px;
+  border:0;
+  border-radius:999px;
+  background:#74839e80;
+  padding:0;
+  cursor:pointer;
+}
+
+body.im-login-v4 .im-carousel-dots button.active {
+  width:30px;
+  background:#e5f0ff;
+}
+
+body.im-login-v4 .im-carousel-next {
+  display:grid;
+  place-items:center;
+  width:44px;
+  height:44px;
+  padding:0;
+  border-radius:50%;
+  border:1px solid #ffffff40;
+  background:#ffffff12;
+  color:#e5f0ff;
+  cursor:pointer;
+}
+
+body.im-login-v4 .im-carousel-next svg {
+  width:22px!important;
+  height:22px!important;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.7;
+}
+
+body.im-login-v4 .im-login-note {
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-top:18px;
+  color:var(--lg-muted);
+  font-size:12px;
+}
+
+body.im-login-v4 .im-login-note svg {
+  width:14px;
+  height:14px;
+  fill:none;
+  stroke:currentColor;
+}
+
+/* React Bits WebGL background */
+body.im-login-v4 #im-react-bits-ascii {
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  overflow:hidden!important;
+  z-index:-1!important;
+  pointer-events:none!important;
+}
+
+body.im-login-v4 #im-react-bits-ascii > div,
+body.im-login-v4 #im-react-bits-ascii canvas {
+  width:100%!important;
+  height:100%!important;
+}
+
+body.im-login-v4 .im-login-theme {
+  position:fixed;
+  top:12px;
+  right:14px;
+  z-index:30;
+  padding:7px 12px;
+  border-radius:999px;
+  color:var(--lg-text);
+  background:var(--lg-card);
+  border:1px solid var(--lg-line);
+  cursor:pointer;
+  font-size:12px;
+}
+
+/* Mobile export: login first, welcome below */
+@media(max-width:900px) {
+  body.im-login-v4 .fi-simple-layout {
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:20px!important;
+    min-height:100vh!important;
+    padding:55px 16px 24px!important;
+    overflow:visible!important;
+  }
+
+  body.im-login-v4 .im-login-column {
+    width:100%!important;
+    max-width:540px!important;
+    margin:0 auto!important;
+    flex:0 0 auto!important;
+  }
+
+  body.im-login-v4 .im-login-column .fi-simple-main {
+    padding:28px 24px!important;
+    border-radius:24px!important;
+  }
+
+  body.im-login-v4 .im-login-welcome {
+    width:100%!important;
+    max-width:540px!important;
+    height:auto!important;
+    min-height:430px!important;
+    max-height:none!important;
+    margin:0 auto!important;
+    padding:30px 26px!important;
+    border-radius:26px!important;
+    flex:0 0 auto!important;
+  }
+
+  body.im-login-v4 .im-login-watermark {
+    width:220px!important;
+    height:220px!important;
+    left:30px;
+    top:20px;
+  }
+
+  body.im-login-v4 .im-welcome-heading {
+    font-size:32px;
+  }
+}
+
+@media(max-width:420px) {
+  body.im-login-v4 .fi-simple-layout {
+    padding-left:12px!important;
+    padding-right:12px!important;
+  }
+
+  body.im-login-v4 .im-login-column .fi-simple-main {
+    padding:25px 20px!important;
+  }
+
+  body.im-login-v4 .im-login-welcome {
+    padding:26px 22px!important;
+  }
+
+  body.im-login-v4 .im-brand-name {
+    font-size:23px;
+  }
+
+  body.im-login-v4 .im-login-tabs a {
+    font-size:12px;
+  }
+}

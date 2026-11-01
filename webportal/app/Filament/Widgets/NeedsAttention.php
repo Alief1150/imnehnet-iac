@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Enums\EnvironmentStatus;
 use App\Filament\Resources\Environments\EnvironmentResource;
 use App\Models\LabEnvironment;
+use App\Models\LabSession;
 use App\Services\ComputePlaneInventory;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -84,6 +85,19 @@ final class NeedsAttention extends StatsOverviewWidget
         if (auth()->user()?->isAdmin() === true) {
             $stats[] = $this->unmanagedTile();
         }
+
+        $sessions = LabSession::query()->where('status', '!=', 'DELETED');
+        if (auth()->user()?->isAdmin() !== true) {
+            $sessions->where('user_id', auth()->id());
+        }
+        $errors = (clone $sessions)->whereNotNull('last_error')->where('last_error', '!=', '')->get();
+        $pending = (clone $sessions)->whereIn('status', ['PROVISIONING', 'CONFIGURING', 'RESETTING', 'DELETING'])->count();
+        $stats[] = Stat::make('CTF operations failed', $errors->count())
+            ->description($errors->last()?->last_error ?? 'Tidak ada kegagalan sesi CTF')
+            ->color($errors->isNotEmpty() ? 'danger' : 'gray');
+        $stats[] = Stat::make('CTF operations pending', $pending)
+            ->description('Termasuk Delete yang belum selesai; lihat My Labs')
+            ->color($pending ? 'warning' : 'gray');
 
         return $stats;
     }

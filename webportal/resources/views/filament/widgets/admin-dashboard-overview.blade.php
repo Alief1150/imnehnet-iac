@@ -2,134 +2,118 @@
     <div class="grid gap-5">
 
         {{-- =====================================================
-             KPI / FLYONUI STATISTICS
+             KPI / FLYONUI STATISTICS 6
              ===================================================== --}}
         <div class="grid gap-4 md:grid-cols-3">
 
-            <div class="card border border-base-content/10 shadow-sm">
-                <div class="card-body gap-3">
+            {{-- Running Containers --}}
+            <section class="card min-w-0 border border-base-content/10 border-b-4 shadow-sm" style="border-bottom-color: #8b5cf6">
+                <div class="card-body gap-3 p-5">
                     <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-sm font-medium text-base-content/70">Active Labs</p>
-                            <p class="mt-1 text-3xl font-semibold text-base-content">
-                                {{ number_format($activeLabs) }}
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-base-content/70">
+                                Running Containers
+                            </p>
+                            <p class="mt-2 text-3xl font-semibold tabular-nums text-base-content">
+                                {{ $runningContainers === null ? '—' : number_format($runningContainers) }}
                             </p>
                         </div>
 
-                        <div class="flex size-11 items-center justify-center rounded-lg bg-success/10 text-success">
-                            {{-- Lucide, not heroicon. This project generates its icon
-                                 set from the Lucide package and ships no Heroicons, so
-                                 a heroicon component resolves to nothing and renders as
-                                 an empty coloured box — which on a stat tile reads as a
-                                 fault in the page rather than a fault in the name. --}}
+                        <div class="flex size-11 shrink-0 items-center justify-center rounded-lg" style="background-color: #f3edff; color: #8b5cf6">
                             {!! \App\Support\Lucide::html('box') !!}
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2 text-xs">
-                        @if ($labActivityTrend['direction'] === 'up')
-                            <span class="badge badge-soft badge-success badge-sm">
-                                ↑ {{ $labActivityTrend['value'] }}%
+                    <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                        @if ($containerPercentage !== null)
+                            <span class="font-semibold tabular-nums" style="color: #8b5cf6">
+                                {{ number_format($containerPercentage, 1) }}%
                             </span>
-                        @elseif ($labActivityTrend['direction'] === 'down')
-                            <span class="badge badge-soft badge-error badge-sm">
-                                ↓ {{ $labActivityTrend['value'] }}%
-                            </span>
-                        @elseif ($labActivityTrend['direction'] === 'new')
-                            <span class="badge badge-soft badge-info badge-sm">
-                                New
+                            <span class="text-base-content/55">
+                                of containers running
                             </span>
                         @else
-                            <span class="badge badge-soft badge-neutral badge-sm">
-                                0%
+                            <span class="font-medium text-base-content/60">
+                                Inventory unavailable
                             </span>
                         @endif
-
-                        <span class="text-base-content/55">
-                            {{ $labActivityTrend['label'] }}
-                        </span>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div class="card border border-base-content/10 shadow-sm">
-                <div class="card-body gap-3">
+            {{-- Total Users --}}
+            <section class="card min-w-0 border border-base-content/10 border-b-4 shadow-sm" style="border-bottom-color: #06b6d4">
+                <div class="card-body gap-3 p-5">
                     <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-sm font-medium text-base-content/70">Total Users</p>
-                            <p class="mt-1 text-3xl font-semibold text-base-content">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-base-content/70">
+                                Total Users
+                            </p>
+                            <p class="mt-2 text-3xl font-semibold tabular-nums text-base-content">
                                 {{ number_format($totalUsers) }}
                             </p>
                         </div>
 
-                        <div class="flex size-11 items-center justify-center rounded-lg bg-info/10 text-info">
+                        <div class="flex size-11 shrink-0 items-center justify-center rounded-lg" style="background-color: #e6faff; color: #06b6d4">
                             {!! \App\Support\Lucide::html('users') !!}
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2 text-xs">
-                        @if ($userGrowthTrend['direction'] === 'up')
-                            <span class="badge badge-soft badge-success badge-sm">
-                                ↑ {{ $userGrowthTrend['value'] }}%
+                    <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                        @if (in_array($userGrowthTrend['direction'], ['up', 'down', 'flat'], true) && $userGrowthTrend['value'] !== null)
+                            <span class="font-semibold tabular-nums {{ $userGrowthTrend['direction'] === 'up' ? 'text-success' : ($userGrowthTrend['direction'] === 'down' ? 'text-error' : 'text-base-content/70') }}">
+                                {{ $userGrowthTrend['direction'] === 'up' ? '↑' : ($userGrowthTrend['direction'] === 'down' ? '↓' : '→') }}
+                                {{ number_format($userGrowthTrend['value'], 1) }}%
                             </span>
-                        @elseif ($userGrowthTrend['direction'] === 'down')
-                            <span class="badge badge-soft badge-error badge-sm">
-                                ↓ {{ $userGrowthTrend['value'] }}%
-                            </span>
-                        @elseif ($userGrowthTrend['direction'] === 'new')
-                            <span class="badge badge-soft badge-info badge-sm">
-                                New
+                            <span class="text-base-content/55">
+                                vs previous period
                             </span>
                         @else
-                            <span class="badge badge-soft badge-neutral badge-sm">
-                                0%
+                            <span class="font-semibold" style="color: #06b6d4">
+                                New
+                            </span>
+                            <span class="text-base-content/55">
+                                no previous baseline
                             </span>
                         @endif
-
-                        <span class="text-base-content/55">
-                            {{ $userGrowthTrend['label'] }}
-                        </span>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div class="card border border-base-content/10 shadow-sm">
-                <div class="card-body gap-3">
+            {{-- System Health --}}
+            <section class="card min-w-0 border border-base-content/10 border-b-4 shadow-sm {{ $systemHealth['percentage'] === 100 ? 'border-b-success' : ($systemHealth['percentage'] === null ? 'border-b-neutral' : 'border-b-warning') }}">
+                <div class="card-body gap-3 p-5">
                     <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-sm font-medium text-base-content/70">System Health</p>
-
-                            <p class="mt-1 text-3xl font-semibold text-base-content">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-base-content/70">
+                                System Health
+                            </p>
+                            <p class="mt-2 text-3xl font-semibold tabular-nums text-base-content">
                                 {{ $systemHealth['percentage'] === null ? '—' : $systemHealth['percentage'].'%' }}
                             </p>
                         </div>
 
-                        <div class="flex size-11 items-center justify-center rounded-lg bg-success/10 text-success">
+                        <div class="flex size-11 shrink-0 items-center justify-center rounded-lg {{ $systemHealth['percentage'] === 100 ? 'bg-success/10 text-success' : ($systemHealth['percentage'] === null ? 'bg-neutral/10 text-neutral' : 'bg-warning/10 text-warning') }}">
                             {!! \App\Support\Lucide::html('activity') !!}
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2 text-xs">
-                        @if ($systemHealth['percentage'] === null)
-                            <span class="badge badge-soft badge-neutral badge-sm">
-                                Unknown
+                    <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                        @if ($systemHealth['percentage'] !== null)
+                            <span class="font-semibold tabular-nums {{ $systemHealth['percentage'] === 100 ? 'text-success' : 'text-warning' }}">
+                                {{ $systemHealth['percentage'] }}%
                             </span>
-                        @elseif ($systemHealth['percentage'] === 100)
-                            <span class="badge badge-soft badge-success badge-sm">
-                                Healthy
+                            <span class="text-base-content/55">
+                                of services healthy
                             </span>
                         @else
-                            <span class="badge badge-soft badge-warning badge-sm">
-                                Attention
+                            <span class="font-medium text-base-content/60">
+                                Health not verified
                             </span>
                         @endif
-
-                        <span class="text-base-content/55">
-                            {{ $systemHealth['label'] }}
-                        </span>
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
 
         {{-- =====================================================
@@ -171,6 +155,7 @@
                         "
                     >
                         <div
+                            wire:ignore
                             x-ref="chart"
                             class="min-h-[260px] w-full"
                             aria-label="Lab activity chart"
@@ -254,13 +239,18 @@
         {{-- =====================================================
              RECENT ACTIVITY / FLYONUI BADGES
              ===================================================== --}}
-        <div class="card border border-base-content/10 shadow-sm">
+        <div wire:poll.10s class="card border border-base-content/10 shadow-sm">
             <div class="card-body gap-4">
-                <div>
-                    <h2 class="card-title text-base">Recent Activity</h2>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="card-title text-base">Recent Activity</h2>
                     <p class="mt-1 text-sm text-base-content/60">
                         Latest events across labs, users, and system
                     </p>
+                    </div>
+                    <span class="badge badge-soft badge-info badge-sm">
+                        Auto-refresh 10s
+                    </span>
                 </div>
 
                 <div class="overflow-x-auto">

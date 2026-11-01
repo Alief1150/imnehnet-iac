@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\Pages\Login;
 use App\Filament\Pages\Dashboard;
+use App\GlobalSearch\ImnehnetGlobalSearchProvider;
 use App\Http\Middleware\RedirectToOwnPanel;
 use App\Support\Wordmark;
 use Filament\Enums\ThemeMode;
@@ -51,6 +52,7 @@ class AdminPanelProvider extends PanelProvider
             ])
 
             ->defaultThemeMode(ThemeMode::Light)
+            ->globalSearch(ImnehnetGlobalSearchProvider::class)
             ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
             ->globalSearchFieldKeyBindingSuffix()
 

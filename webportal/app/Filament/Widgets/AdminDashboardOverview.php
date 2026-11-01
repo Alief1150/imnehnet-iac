@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Course;
 use App\Models\LabSession;
 use App\Models\User;
+use App\Services\IncusInventoryMonitoringService;
 use App\Services\InfrastructureStatusService;
 use Filament\Widgets\Widget;
 use Throwable;
@@ -31,12 +32,23 @@ final class AdminDashboardOverview extends Widget
      */
     protected function getViewData(): array
     {
-        $activeLabs = LabSession::query()
-            ->whereIn('status', [
-                LabSessionStatus::Ready->value,
-                LabSessionStatus::Running->value,
-            ])
-            ->count();
+        $inventory = app(IncusInventoryMonitoringService::class)->summary();
+
+        $containersAvailable =
+            ($inventory['freshness'] ?? null) === 'fresh'
+            && (int) ($inventory['available'] ?? 0) === 2;
+
+        $runningContainers = $containersAvailable
+            ? (int) ($inventory['running'] ?? 0)
+            : null;
+
+        $containerPercentage = $containersAvailable
+            && (int) ($inventory['total'] ?? 0) > 0
+                ? round(
+                    $runningContainers / (int) $inventory['total'] * 100,
+                    1
+                )
+                : null;
 
         $totalUsers = User::query()->count();
 
@@ -44,7 +56,8 @@ final class AdminDashboardOverview extends Widget
         $labActivity = $this->labActivity();
 
         return [
-            'activeLabs' => $activeLabs,
+            'runningContainers' => $runningContainers,
+            'containerPercentage' => $containerPercentage,
             'totalUsers' => $totalUsers,
             'systemHealth' => $systemHealth,
             'labActivity' => $labActivity,
@@ -115,8 +128,7 @@ final class AdminDashboardOverview extends Widget
             $sessions = $sessionsByStudent->get($studentId, collect());
 
             if ($sessions->contains(
-                fn (LabSession $session): bool =>
-                    $session->status === LabSessionStatus::Completed
+                fn (LabSession $session): bool => $session->status === LabSessionStatus::Completed
             )) {
                 $completed++;
 
@@ -322,5 +334,4 @@ final class AdminDashboardOverview extends Widget
             'label' => $label,
         ];
     }
-
-    }
+}

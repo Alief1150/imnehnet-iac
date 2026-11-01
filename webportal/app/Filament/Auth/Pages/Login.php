@@ -28,6 +28,10 @@ use Illuminate\Contracts\Support\Htmlable;
  */
 class Login extends BaseLogin
 {
+    // IMNEHNET_LOGIN_CUSTOM_V5
+    // Custom Blade presentation; native Filament authentication.
+    protected string $view = 'imnehnet.auth.login';
+
     /**
      * @return array<Action>
      */
@@ -56,8 +60,8 @@ class Login extends BaseLogin
      * also appears in the sidebar, where a second line would be clipped by the
      * logo box's fixed height.
      */
-    public function getSubHeading(): string | Htmlable | null
+    public function getSubHeading(): string|Htmlable|null
     {
-        return \App\Support\Wordmark::tagline();
+        return null;
     }
 }
