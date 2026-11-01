@@ -97,29 +97,29 @@ class LabSessionManager
                     $pair = $this->addresses->allocate();
 
                     return DB::connection((string) config('infrastructure.environment_connection'))
-                ->transaction(function () use ($user, $course, $pair): LabSession {
-                $victim = LabEnvironment::query()->create([
-                    'user_id' => $user->getKey(),
-                    'container_name' => $this->victimName($user),
-                    // Stored as a remote name. The configuration carries the trailing
-                    // colon because that is how the Incus command line spells it, and
-                    // adding another colon when a target is built produced
-                    // "lab-env::victim-web-104" and a provisioning failure on the very
-                    // first command.
-                    'incus_remote' => rtrim((string) config('infrastructure.incus_remote', 'lab-env'), ':'),
-                    'incus_project' => 'default',
-                    'image' => (string) config('infrastructure.lab_image', 'images:ubuntu/24.04'),
-                    'internal_ip' => $pair['victim_ip'],
-                    'status' => EnvironmentStatus::Provisioning,
-                    'runtime_status' => RuntimeStatus::Unknown,
-                    'cpu_limit' => (int) config('infrastructure.default_cpu_limit', 2),
-                    'memory_limit_mb' => (int) config('infrastructure.default_memory_limit_mb', 2048),
-                    'disk_limit_gb' => (int) config('infrastructure.default_disk_limit_gb', 8),
-                    'tofu_workspace' => 'ctf-victim-'.$pair['octet'],
-                    'terminal_enabled' => true,
-                ]);
+                        ->transaction(function () use ($user, $course, $pair): LabSession {
+                            $victim = LabEnvironment::query()->create([
+                                'user_id' => $user->getKey(),
+                                'container_name' => $this->victimName($user),
+                                // Stored as a remote name. The configuration carries the trailing
+                                // colon because that is how the Incus command line spells it, and
+                                // adding another colon when a target is built produced
+                                // "lab-env::victim-web-104" and a provisioning failure on the very
+                                // first command.
+                                'incus_remote' => rtrim((string) config('infrastructure.incus_remote', 'lab-env'), ':'),
+                                'incus_project' => 'default',
+                                'image' => (string) config('infrastructure.lab_image', 'images:ubuntu/24.04'),
+                                'internal_ip' => $pair['victim_ip'],
+                                'status' => EnvironmentStatus::Provisioning,
+                                'runtime_status' => RuntimeStatus::Unknown,
+                                'cpu_limit' => (int) config('infrastructure.default_cpu_limit', 2),
+                                'memory_limit_mb' => (int) config('infrastructure.default_memory_limit_mb', 2048),
+                                'disk_limit_gb' => (int) config('infrastructure.default_disk_limit_gb', 8),
+                                'tofu_workspace' => 'ctf-victim-'.$pair['octet'],
+                                'terminal_enabled' => false,
+                            ]);
 
-                /*
+                            /*
                  * The attacker is recorded as an environment as well.
                  *
                  * Not tidiness: the terminal is built around LabEnvironment, and the
@@ -133,52 +133,52 @@ class LabSessionManager
                  * a container that is not there yet would fail in a way that reads as a
                  * broken terminal rather than as a lab that is still being built.
                  */
-                $attacker = LabEnvironment::query()->create([
-                    'user_id' => $user->getKey(),
-                    'container_name' => $this->attackerName($user),
-                    'incus_remote' => rtrim((string) config('infrastructure.incus_attacker_remote', 'lab-atk'), ':'),
-                    'incus_project' => 'default',
-                    'image' => (string) config('infrastructure.attacker_image', 'images:kali'),
-                    'internal_ip' => $pair['attacker_ip'],
-                    'status' => EnvironmentStatus::Provisioning,
-                    'runtime_status' => RuntimeStatus::Unknown,
-                    'cpu_limit' => (int) config('infrastructure.default_cpu_limit', 2),
-                    'memory_limit_mb' => (int) config('infrastructure.default_memory_limit_mb', 2048),
-                    'disk_limit_gb' => (int) config('infrastructure.default_disk_limit_gb', 8),
-                    'tofu_workspace' => 'ctf-attacker-'.$pair['octet'],
-                    'terminal_enabled' => false,
-                ]);
+                            $attacker = LabEnvironment::query()->create([
+                                'user_id' => $user->getKey(),
+                                'container_name' => $this->attackerName($user),
+                                'incus_remote' => rtrim((string) config('infrastructure.incus_attacker_remote', 'lab-atk'), ':'),
+                                'incus_project' => 'default',
+                                'image' => (string) config('infrastructure.attacker_image', 'images:kali'),
+                                'internal_ip' => $pair['attacker_ip'],
+                                'status' => EnvironmentStatus::Provisioning,
+                                'runtime_status' => RuntimeStatus::Unknown,
+                                'cpu_limit' => (int) config('infrastructure.default_cpu_limit', 2),
+                                'memory_limit_mb' => (int) config('infrastructure.default_memory_limit_mb', 2048),
+                                'disk_limit_gb' => (int) config('infrastructure.default_disk_limit_gb', 8),
+                                'tofu_workspace' => 'ctf-attacker-'.$pair['octet'],
+                                'terminal_enabled' => false,
+                            ]);
 
-                $session = LabSession::query()->create([
-                    'user_id' => $user->getKey(),
-                    'course_id' => $course->getKey(),
-                    'victim_environment_id' => $victim->getKey(),
-                    'attacker_environment_id' => $attacker->getKey(),
-                    'attacker_container' => $attacker->container_name,
-                    'attacker_remote' => $attacker->incus_remote,
-                    'attacker_ip' => $pair['attacker_ip'],
-                    'victim_container' => $victim->container_name,
-                    'victim_remote' => $victim->incus_remote,
-                    'victim_ip' => $pair['victim_ip'],
-                    'status' => LabSessionStatus::Provisioning,
-                    'current_objective' => 1,
-                    'started_at' => now(),
-                ]);
+                            $session = LabSession::query()->create([
+                                'user_id' => $user->getKey(),
+                                'course_id' => $course->getKey(),
+                                'victim_environment_id' => $victim->getKey(),
+                                'attacker_environment_id' => $attacker->getKey(),
+                                'attacker_container' => $attacker->container_name,
+                                'attacker_remote' => $attacker->incus_remote,
+                                'attacker_ip' => $pair['attacker_ip'],
+                                'victim_container' => $victim->container_name,
+                                'victim_remote' => $victim->incus_remote,
+                                'victim_ip' => $pair['victim_ip'],
+                                'status' => LabSessionStatus::Provisioning,
+                                'current_objective' => 1,
+                                'started_at' => now(),
+                            ]);
 
-                // One row per objective up front, so progress is a question about
-                // existing rows rather than a reconstruction from events. It also means
-                // a locked objective has something to say "you cannot see this yet"
-                // about, instead of being absent and looking like it does not exist.
-                foreach ($course->objectives as $index => $objective) {
-                    ObjectiveProgress::query()->create([
-                        'lab_session_id' => $session->getKey(),
-                        'objective_id' => $objective->getKey(),
-                        'status' => $index === 0 ? ObjectiveStatus::Active : ObjectiveStatus::Locked,
-                    ]);
-                }
+                            // One row per objective up front, so progress is a question about
+                            // existing rows rather than a reconstruction from events. It also means
+                            // a locked objective has something to say "you cannot see this yet"
+                            // about, instead of being absent and looking like it does not exist.
+                            foreach ($course->objectives as $index => $objective) {
+                                ObjectiveProgress::query()->create([
+                                    'lab_session_id' => $session->getKey(),
+                                    'objective_id' => $objective->getKey(),
+                                    'status' => $index === 0 ? ObjectiveStatus::Active : ObjectiveStatus::Locked,
+                                ]);
+                            }
 
-                return $session;
-                });
+                            return $session;
+                        });
                 });
         });
     }
@@ -188,6 +188,26 @@ class LabSessionManager
      */
     public function markReady(LabSession $session): LabSession
     {
+        // The provisioning job reaches this method only after both
+        // compute planes, firewall policy and scenario have succeeded.
+        // Keep the environment inventory consistent with the session.
+        $victim = LabEnvironment::query()->findOrFail(
+            $session->victim_environment_id
+        );
+
+        $attacker = LabEnvironment::query()->findOrFail(
+            $session->attacker_environment_id
+        );
+
+        foreach ([$victim, $attacker] as $environment) {
+            $environment->forceFill([
+                'status' => EnvironmentStatus::Ready,
+                'runtime_status' => RuntimeStatus::Running,
+                'provisioned_at' => $environment->provisioned_at ?? now(),
+                'terminal_enabled' => $environment->getKey() === $attacker->getKey(),
+            ])->save();
+        }
+
         $session->forceFill(['status' => LabSessionStatus::Ready])->save();
 
         $this->activity->record($session->owner(), 'LAB_READY', $session, 'completed', 'Guided CTF lab is ready.');
@@ -200,7 +220,7 @@ class LabSessionManager
      */
     public function markFailed(LabSession $session, string $reason): LabSession
     {
-        $session->forceFill(['status' => LabSessionStatus::Failed])->save();
+        $session->forceFill(['status' => LabSessionStatus::Failed, 'last_error' => 'Provisioning gagal. Periksa timeline CTF atau hubungi administrator.'])->save();
 
         $this->activity->record($session->owner(), 'LAB_FAILED', $session, 'failed', $reason);
 

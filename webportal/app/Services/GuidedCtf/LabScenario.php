@@ -111,25 +111,55 @@ class LabScenario
      */
     private function installSsh(LabSession $session): void
     {
-        $installed = $this->inVictim($session, [
-            'sh', '-c',
-            'DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssh-server '
-            .'>/var/log/imnehnet-ssh-install.log 2>&1',
-        ], (int) config('infrastructure.victim_ssh_install_timeout_seconds', 420));
+        // IMNEHNET_REQUIRED_SSH_V3
+        // Required for Objective 2, including new and reset labs.
+        // Do not silently declare the lab READY without SSH.
+
+        $command = 'if test -x /usr/sbin/sshd; then exit 0; fi; '
+            .'DEBIAN_FRONTEND=noninteractive '
+            .'apt-get -o Acquire::Retries=2 '
+            .'-o Acquire::http::Timeout=20 update -qq '
+            .'>/var/log/imnehnet-ssh-install.log 2>&1 && '
+            .'DEBIAN_FRONTEND=noninteractive '
+            .'apt-get -o DPkg::Lock::Timeout=120 '
+            .'-o Acquire::Retries=2 install -y -qq '
+            .'--no-install-recommends openssh-server '
+            .'>>/var/log/imnehnet-ssh-install.log 2>&1';
+
+        $installed = $this->inVictim(
+            $session,
+            ['sh', '-c', $command],
+            (int) config(
+                'infrastructure.victim_ssh_install_timeout_seconds',
+                420
+            )
+        );
 
         if (! $installed['successful']) {
-            $this->sshShortfall = 'SSH could not be installed, so the port reconnaissance objective cannot be completed.';
-
-            return;
+            throw new RuntimeException(
+                'Required victim SSH installation failed. '
+                .'Check /var/log/imnehnet-ssh-install.log.'
+            );
         }
 
-        $this->must($session, 'set the SSH log level', [
-            'sed', '-i', 's/^#\?LogLevel.*/LogLevel INFO/', '/etc/ssh/sshd_config',
+        $this->must($session, 'set SSH log level', [
+            'sed', '-i',
+            's/^#\?LogLevel.*/LogLevel INFO/',
+            '/etc/ssh/sshd_config',
         ]);
 
-        if (! $this->inVictim($session, ['systemctl', 'enable', '--now', 'ssh'])['successful']) {
-            $this->sshShortfall = 'SSH is installed but not running, so the port reconnaissance objective cannot be completed.';
-        }
+        $this->must($session, 'enable victim SSH', [
+            'systemctl', 'enable', '--now', 'ssh',
+        ]);
+
+        $this->must($session, 'verify victim SSH service', [
+            'systemctl', 'is-active', '--quiet', 'ssh',
+        ]);
+
+        $this->must($session, 'verify victim SSH listener', [
+            'sh', '-c',
+            "ss -H -ltn '( sport = :22 )' | grep -q ':22'",
+        ]);
     }
 
     /**

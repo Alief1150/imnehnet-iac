@@ -89,10 +89,13 @@ class AttackerPlane
             return;
         }
 
-        $this->run([
+        $result = $this->run([
             self::NFT, 'add', 'element', 'inet', 'laa-ctf', 'allowed_pairs',
             '{ '.$attackerIp.' . '.$victimIp.' }',
         ]);
+        if (! $result['successful'] || $this->pairIsAllowed($attackerIp, $victimIp) !== true) {
+            throw new RuntimeException('Firewall pair add was not confirmed.');
+        }
     }
 
     public function denyPair(string $attackerIp, string $victimIp): void
@@ -101,10 +104,13 @@ class AttackerPlane
             return;
         }
 
-        $this->run([
+        $result = $this->run([
             self::NFT, 'delete', 'element', 'inet', 'laa-ctf', 'allowed_pairs',
             '{ '.$attackerIp.' . '.$victimIp.' }',
         ]);
+        if (! $result['successful'] || $this->pairIsAllowed($attackerIp, $victimIp) !== false) {
+            throw new RuntimeException('Firewall pair delete was not confirmed.');
+        }
     }
 
     /**
@@ -206,9 +212,9 @@ class AttackerPlane
      *
      * @param  list<string>  $arguments
      * @param  string|null  $stdin  Content for a command that reads stdin rather than a
-     *                             filename. Both privileged commands that take content
-     *                             are in the allowlist with an explicit path, so a
-     *                             caller cannot widen them into writing anything.
+     *                              filename. Both privileged commands that take content
+     *                              are in the allowlist with an explicit path, so a
+     *                              caller cannot widen them into writing anything.
      * @return array{successful: bool, stdout: string, stderr: string}
      */
     public function run(array $arguments, int $timeout = 15, ?string $stdin = null): array

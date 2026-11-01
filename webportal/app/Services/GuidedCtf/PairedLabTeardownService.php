@@ -21,6 +21,7 @@ final class PairedLabTeardownService
 
     public function teardown(LabSession $session): void
     {
+        ProvisioningTimeline::record((int) $session->id, 'delete-identity', 'Memeriksa owner, ID environment, remote, nama container, dan proteksi baseline.');
         $userId = (int) $session->user_id;
 
         if ($userId <= 0) {
@@ -49,8 +50,11 @@ final class PairedLabTeardownService
             $attackerContainer,
         );
 
+        ProvisioningTimeline::record((int) $session->id, 'delete-firewall', 'Identitas pasangan cocok. Mencabut akses jaringan pasangan.');
         $this->firewall->revoke($session);
+        ProvisioningTimeline::record((int) $session->id, 'delete-firewall', 'Akses jaringan pasangan dicabut.', 'success');
 
+        ProvisioningTimeline::record((int) $session->id, 'delete-victim', 'Menghapus victim environment #'.$session->victim_environment_id.' melalui workspace yang diverifikasi.');
         $this->destroyOne(
             $session->victimEnvironment,
             (string) $session->victim_remote,
@@ -59,6 +63,8 @@ final class PairedLabTeardownService
             $victimContainer,
         );
 
+        ProvisioningTimeline::record((int) $session->id, 'delete-victim', 'Victim terverifikasi tidak ada; workspace dibersihkan.', 'success');
+        ProvisioningTimeline::record((int) $session->id, 'delete-attacker', 'Menghapus attacker environment #'.$session->attacker_environment_id.' melalui workspace yang diverifikasi.');
         $this->destroyOne(
             $session->attackerEnvironment,
             (string) $session->attacker_remote,
@@ -66,6 +72,7 @@ final class PairedLabTeardownService
             $userId,
             $attackerContainer,
         );
+        ProvisioningTimeline::record((int) $session->id, 'delete-attacker', 'Attacker terverifikasi tidak ada; workspace dibersihkan.', 'success');
     }
 
     private function assertOwnedEnvironment(
@@ -88,7 +95,9 @@ final class PairedLabTeardownService
         }
 
         if (
-            $remote === ''
+            ! in_array(rtrim($remote, ':'), [rtrim((string) config('infrastructure.incus_remote'), ':'), rtrim((string) config('infrastructure.incus_attacker_remote'), ':')], true)
+            || ($environment->incus_project ?: 'default') !== 'default'
+            || $remote === ''
             || $container === ''
             || (int) $environment->user_id !== $userId
             || (string) $environment->incus_remote !== $remote
@@ -116,6 +125,7 @@ final class PairedLabTeardownService
             $expectedContainer,
         );
 
+        $this->tofu->reconcilePairedWorkspace($environment);
         $workspace = $this->tofu->workspaceFor($environment);
 
         if ($this->tofu->workspaceExists($workspace)) {

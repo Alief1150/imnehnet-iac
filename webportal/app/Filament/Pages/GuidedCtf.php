@@ -11,11 +11,20 @@ use App\Models\LabEnvironment;
 use App\Models\LabSession;
 use App\Models\Objective;
 use App\Services\GuidedCtf\LabSessionManager;
+use App\Services\GuidedCtf\LifecycleFailure;
+use App\Services\GuidedCtf\ObjectiveVerdict;
 use App\Services\GuidedCtf\ProvisioningTimeline;
+use App\Services\Terminal\AdminTerminalService;
+use App\Services\TerminalService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
+use Livewire\Attributes\Locked;
 
 /**
  * The guided lab: one course, one lab at a time.
@@ -43,6 +52,81 @@ class GuidedCtf extends Page
 
     /** What the student typed into the flag box. Never rendered back. */
     public string $flag = '';
+
+    // IMNEHNET_PENTEST_V12_SELECTION: navigasi tampilan saja; bukan progres.
+    public ?int $viewObjective = null;
+
+    public function selectObjective(int $sequence): void
+    {
+        $rows = $this->objectiveList();
+        $allowed = $rows->first(function ($row) use ($sequence) {
+            return (int) $row['objective']->sequence === $sequence
+                && in_array($row['status'], [ObjectiveStatus::Active, ObjectiveStatus::Completed], true);
+        });
+
+        if ($allowed) {
+            $this->viewObjective = $sequence;
+        }
+    }
+
+    #[Locked]
+    public ?string $embeddedTerminalId = null;
+
+    #[Locked]
+    public ?string $embeddedTerminalUrl = null;
+
+    #[Locked]
+    public ?string $embeddedTerminalError = null;
+
+    public function syncEmbeddedTerminal(): void
+    {
+        $lab = $this->session();
+        $user = auth()->user();
+        $cache = Cache::class;
+        if (! $user || ! $lab || ! $this->canWork($lab)
+            || $cache::has('imnehnet:terminal-hold:'.$lab->id)) {
+            $this->embeddedTerminalId = $this->embeddedTerminalUrl = null;
+            $this->embeddedTerminalError = null;
+
+            return;
+        }
+        $failureKey = 'imnehnet:terminal-error:'.$lab->id;
+        if ($message = $cache::get($failureKey)) {
+            $this->embeddedTerminalId = $this->embeddedTerminalUrl = null;
+            $this->embeddedTerminalError = $message;
+
+            return;
+        }
+        try {
+            $environment = $lab->attackerEnvironment;
+            if (! $environment) {
+                throw new \RuntimeException('Attacker environment belum tersedia.');
+            }
+            $service = app(TerminalService::class);
+            $terminal = $service->open($user, $environment, 'guided_ctf');
+            $ticket = $service->embedTicketFor($terminal);
+            $url = $service->browserUrl($terminal);
+            if ($ticket === null || $url === null) {
+                throw new \RuntimeException('Embed terminal belum tersedia.');
+            }
+            Cookie::queue(cookie(
+                AdminTerminalService::embedCookieName((int) $terminal->ttyd_port),
+                $ticket, max(1, (int) ceil(($terminal->expires_at->getTimestamp() - time()) / 60)),
+                '/embed/', null, request()->isSecure(), true, false, 'Lax',
+            ));
+            $this->embeddedTerminalId = (string) $terminal->id;
+            $this->embeddedTerminalUrl = $url;
+            $this->embeddedTerminalError = null;
+        } catch (\Throwable $error) {
+            $reference = (string) Str::uuid();
+            Log::error('Guided CTF terminal '.$reference, [
+                'lab_session_id' => $lab->id, 'user_id' => $user->id, 'exception' => $error,
+            ]);
+            $this->embeddedTerminalId = $this->embeddedTerminalUrl = null;
+            $this->embeddedTerminalError = 'Terminal belum tersambung. Mencoba kembali dalam 30 detik. Ref: '.$reference;
+            $cache::put($failureKey, $this->embeddedTerminalError, 30);
+        }
+    }
 
     /**
      * The session being worked on, or null before the lab exists.
@@ -76,6 +160,7 @@ class GuidedCtf extends Page
     public function provisioningEvents(): array
     {
         $session = $this->session();
+
         return $session ? ProvisioningTimeline::events((int) $session->getKey()) : [];
     }
 
@@ -139,6 +224,10 @@ class GuidedCtf extends Page
             return;
         }
 
+        ProvisioningTimeline::record((int) $session->id, 'queued',
+            'Create diterima. User #'.$session->user_id.'; session #'.$session->id.
+            '; victim environment #'.$session->victim_environment_id.
+            '; attacker environment #'.$session->attacker_environment_id.'.');
         Queue::push(new ProvisionLabSession($session->getKey()));
 
         Notification::make()
@@ -158,25 +247,34 @@ class GuidedCtf extends Page
      */
     public function checkProgress(): void
     {
+        $this->pollWorkspace();
+    }
+
+    public function pollWorkspace(): void
+    {
+        $this->syncEmbeddedTerminal();
         $session = $this->session();
-
-        if ($session === null || ! $session->status->allowsTerminal()) {
+        if (! $session || ! auth()->user()?->isActive() || ! $this->canWork($session)
+            || $session->current_objective > 5 || $this->embeddedTerminalError) {
             return;
         }
-
-        $verdict = app(LabSessionManager::class)->advance($session->refresh());
-
-        if ($verdict->proven) {
-            Notification::make()
-                ->title('Objective complete')
-                ->body($verdict->evidence['detail'] ?? 'Proven.')
-                ->success()
-                ->send();
-
-            return;
+        try {
+            Cache::lock('imnehnet:ctf:session-lifecycle:'.$session->id, 60)->get(function () use ($session): void {
+                $session->refresh();
+                if (! $this->canWork($session) || Cache::has('imnehnet:terminal-hold:'.$session->id)) {
+                    return;
+                }
+                $verdict = app(LabSessionManager::class)->advance($session);
+                if ($verdict->proven) {
+                    Notification::make()->title('Objective complete')
+                        ->body($verdict->evidence['detail'] ?? 'Aktivitas CTF terverifikasi.')
+                        ->success()->send();
+                }
+            });
+        } catch (\Throwable $error) {
+            report($error);
+            $this->embeddedTerminalError = 'Pemeriksaan bukti CTF belum tersedia; progres tidak ditambahkan.';
         }
-
-        $this->notice($verdict->reason ?? 'The validator found no evidence for this objective yet.');
     }
 
     /**
@@ -196,7 +294,16 @@ class GuidedCtf extends Page
             return;
         }
 
-        $verdict = app(LabSessionManager::class)->submitFlag($session, $this->flag);
+        $verdict = Cache::lock('imnehnet:ctf:session-lifecycle:'.$session->id, 60)
+            ->block(5, function () use ($session) {
+                $session->refresh();
+                if (! auth()->user()?->isActive() || ! $this->canWork($session)
+                    || Cache::has('imnehnet:terminal-hold:'.$session->id)) {
+                    return ObjectiveVerdict::unproven('Lab belum siap.');
+                }
+
+                return app(LabSessionManager::class)->submitFlag($session, $this->flag);
+            });
 
         // Cleared either way. Leaving it after a wrong answer puts the student's guess on
         // screen, and leaving it after a right one puts the answer there — which is the
@@ -226,20 +333,35 @@ class GuidedCtf extends Page
      */
     public function resetLab(): void
     {
-        $session = $this->session();
-
-        if ($session === null || ! $session->status->acceptsOperation()) {
+        $lab = $this->session();
+        if (! $lab) {
             return;
         }
-
-        Queue::push(new ResetLabSession($session->getKey()));
-
-        Notification::make()
-            ->title('Resetting your lab')
-            ->body('Your objective progress is kept. This will show the lab being reset.')
-            ->info()
-            ->persistent()
-            ->send();
+        try {
+            Cache::lock('imnehnet:ctf:session-lifecycle:'.$lab->id, 120)
+                ->block(5, function () use ($lab): void {
+                    $lab->refresh();
+                    if ((int) $lab->user_id !== (int) auth()->id() || ! $this->canWork($lab)
+                        || Cache::has('imnehnet:terminal-hold:'.$lab->id)) {
+                        return;
+                    }
+                    app(TerminalService::class)->closeOwnedLab($lab);
+                    $lab->forceFill(['status' => LabSessionStatus::Resetting, 'last_error' => null])->save();
+                    try {
+                        Queue::push(new ResetLabSession((int) $lab->id));
+                    } catch (\Throwable $error) {
+                        $lab->forceFill(['status' => LabSessionStatus::Failed])->save();
+                        throw $error;
+                    }
+                    $this->embeddedTerminalId = $this->embeddedTerminalUrl = null;
+                    Notification::make()->title('Reset dijadwalkan')
+                        ->body('Sesi terminal lama ditutup. Skenario dan progres dikembalikan ke awal.')
+                        ->info()->send();
+                });
+        } catch (\Throwable $error) {
+            $message = LifecycleFailure::record((int) $lab->id, 'Reset Lab', $error);
+            $this->failure($message);
+        }
     }
 
     /**
@@ -247,19 +369,19 @@ class GuidedCtf extends Page
      */
     public function finishLab(): void
     {
-        $session = $this->session();
-
-        if ($session === null) {
+        $lab = $this->session();
+        if (! $lab) {
             return;
         }
-
-        app(LabSessionManager::class)->finish($session);
-
-        Notification::make()
-            ->title('Lab finished')
-            ->body('Your progress has been kept.')
-            ->success()
-            ->send();
+        try {
+            app(TerminalService::class)->queueOwnedLabPower($lab, false);
+            $this->embeddedTerminalId = $this->embeddedTerminalUrl = null;
+            Notification::make()->title('Stop dijadwalkan')
+                ->body('Progres disimpan. Kedua container akan dihentikan.')->info()->send();
+        } catch (\Throwable $error) {
+            $message = LifecycleFailure::record((int) $lab->id, 'Stop Lab', $error);
+            $this->failure($message);
+        }
     }
 
     /**
@@ -324,6 +446,15 @@ class GuidedCtf extends Page
             return null;
         }
 
+        if ($hint === 'nmap -sn {target}') {
+            $hint = 'nmap --unprivileged -sn -PS22,80 {target}';
+        } elseif ($hint === 'nmap -sV {target}') {
+            $hint = 'nmap --unprivileged -sT -sV -Pn --top-ports 100 {target}';
+        } elseif (str_starts_with($hint, 'gobuster dir -u http://{target}')) {
+            $hint = <<<'COMMAND'
+{ curl -fsS http://{target}/robots.txt | awk '/^Disallow:/{print $2}'; cat /usr/share/wordlists/dirb/common.txt; } | sed 's#^/##; s#/$##' | sort -u > /tmp/imnehnet-ctf-words.txt && gobuster dir -u http://{target} -w /tmp/imnehnet-ctf-words.txt --add-slash
+COMMAND;
+        }
         if (! str_contains($hint, '{target}')) {
             return $hint;
         }
@@ -360,7 +491,7 @@ class GuidedCtf extends Page
 
     public function canWork(LabSession $session): bool
     {
-        return $session->status->allowsTerminal();
+        return in_array($session->status, [LabSessionStatus::Ready, LabSessionStatus::Running, LabSessionStatus::Completed], true);
     }
 
     /**

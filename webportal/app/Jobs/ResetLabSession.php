@@ -5,8 +5,10 @@ namespace App\Jobs;
 use App\Enums\LabSessionStatus;
 use App\Enums\ObjectiveStatus;
 use App\Models\LabSession;
+use App\Services\GuidedCtf\CtfEvidence;
 use App\Services\GuidedCtf\LabFirewall;
 use App\Services\GuidedCtf\LabScenario;
+use App\Services\GuidedCtf\LifecycleFailure;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
@@ -17,10 +19,18 @@ final class ResetLabSession implements ShouldQueue
 {
     use Queueable;
 
+    public bool $failOnTimeout = true;
+
     public int $tries = 1;
+
     public int $timeout = 1800;
 
     public function __construct(public readonly int $sessionId) {}
+
+    public function failed(?Throwable $error): void
+    {
+        LifecycleFailure::record($this->sessionId, 'Reset Lab', $error ?? new \RuntimeException('Worker timed out.'));
+    }
 
     public function handle(LabScenario $scenario, LabFirewall $firewall): void
     {
@@ -45,6 +55,7 @@ final class ResetLabSession implements ShouldQueue
                     );
                 }
 
+                app(CtfEvidence::class)->reset($session);
                 // Restore the victim before clearing earned progress.
                 $scenario->apply($session);
 
@@ -99,8 +110,11 @@ final class ResetLabSession implements ShouldQueue
                         ])->save();
                     }
 
+                    // IMNEHNET_CTF_ATTEMPT_DURATION_V1
+                    // Reset starts a new attempt, not the original lab timer.
                     $session->forceFill([
                         'current_objective' => 1,
+                        'started_at' => now(),
                         'completed_at' => null,
                         'status' => LabSessionStatus::Ready,
                         'last_error' => null,
@@ -112,7 +126,7 @@ final class ResetLabSession implements ShouldQueue
                 if ($session->status === LabSessionStatus::Resetting) {
                     $session->forceFill([
                         'status' => LabSessionStatus::Failed,
-                        'last_error' => 'Lab reset failed. Contact administrator.',
+                        'last_error' => LifecycleFailure::record($this->sessionId, 'Reset Lab', $exception),
                     ])->save();
                 }
 

@@ -3,17 +3,24 @@
 namespace App\Jobs;
 
 use App\Enums\LabSessionStatus;
+use App\Enums\UserRole;
 use App\Models\LabEnvironment;
 use App\Models\LabSession;
+use App\Models\User;
+use App\Notifications\LabProvisionFailed;
+use App\Notifications\LabReady;
+use App\Services\GuidedCtf\AttackerTools;
 use App\Services\GuidedCtf\LabFirewall;
-use App\Services\GuidedCtf\LabSessionManager;
 use App\Services\GuidedCtf\LabScenario;
+use App\Services\GuidedCtf\LabSessionManager;
+use App\Services\GuidedCtf\LifecycleFailure;
 use App\Services\GuidedCtf\ProvisioningTimeline;
 use App\Services\OpenTofuService;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use RuntimeException;
+use Symfony\Component\Process\Process;
 
 /**
  * Builds both halves of a lab, permits the pair, and applies the scenario.
@@ -40,12 +47,32 @@ final class ProvisionLabSession implements ShouldQueue
 {
     use Queueable;
 
+    public bool $failOnTimeout = true;
+
     public int $tries = 1;
 
     /** Two container creations, a firewall write and an Ansible run. */
     public int $timeout = 2400;
 
     public function __construct(public readonly int $sessionId) {}
+
+    public function failed(?\Throwable $error): void
+    {
+        LifecycleFailure::record($this->sessionId, 'Provision Lab', $error ?? new RuntimeException('Worker timed out.'));
+
+        // Notify administrators about the job failure.
+        $session = LabSession::query()->find($this->sessionId);
+        if ($session !== null) {
+            $student = User::query()->find($session->user_id);
+            foreach (User::query()->where('role', UserRole::Admin->value)->where('status', 'active')->get() as $admin) {
+                $admin->notify(new LabProvisionFailed(
+                    $session->victim_container ?? $session->container_name ?? 'Lab',
+                    $error->getMessage(),
+                    $student?->name,
+                ));
+            }
+        }
+    }
 
     public function handle(
         OpenTofuService $tofu,
@@ -59,98 +86,165 @@ final class ProvisionLabSession implements ShouldQueue
         )->block(60, function () use (
             $tofu, $firewall, $scenario, $sessions
         ): void {
-        $session = LabSession::query()->find($this->sessionId);
+            $session = LabSession::query()->find($this->sessionId);
 
-        if ($session === null) {
-            // Deleted while the job waited. Nothing to build and nothing to report.
-            return;
-        }
+            if ($session === null) {
+                // Deleted while the job waited. Nothing to build and nothing to report.
+                return;
+            }
 
-        // A queued provisioning job must never revive a session that is
-        // being torn down or has already been deleted.
-        if (in_array($session->status, [
-            LabSessionStatus::Deleting,
-            LabSessionStatus::Deleted,
-        ], true)) {
-            return;
-        }
+            // A queued provisioning job must never revive a session that is
+            // being torn down or has already been deleted.
+            if (in_array($session->status, [
+                LabSessionStatus::Deleting,
+                LabSessionStatus::Deleted,
+            ], true)) {
+                return;
+            }
 
-        $session->forceFill(['status' => LabSessionStatus::Provisioning])->save();
-        ProvisioningTimeline::record($this->sessionId, 'session', 'Provisioning worker started.');
+            $session->forceFill(['status' => LabSessionStatus::Provisioning])->save();
+            ProvisioningTimeline::record($this->sessionId, 'session', 'Provisioning worker started.');
 
-        $victim = LabEnvironment::query()->find($session->victim_environment_id);
+            $victim = LabEnvironment::query()->find($session->victim_environment_id);
 
-        if ($victim === null) {
-            $sessions->markFailed($session->refresh(), 'The victim record disappeared before the lab could be built.');
+            if ($victim === null) {
+                $sessions->markFailed($session->refresh(), 'The victim record disappeared before the lab could be built.');
 
-            return;
-        }
+                return;
+            }
 
-        try {
-            // Both halves are sized from the victim's record. They are the same values
-            // for the pair, and the victim row is the one that already carries them —
-            // the session holds addresses and status, not resources.
-            $cpu = (int) $victim->cpu_limit;
-            $megabytes = (int) $victim->memory_limit_mb;
+            try {
+                // Both halves are sized from the victim's record. They are the same values
+                // for the pair, and the victim row is the one that already carries them —
+                // the session holds addresses and status, not resources.
+                $cpu = (int) $victim->cpu_limit;
+                $megabytes = (int) $victim->memory_limit_mb;
 
-            ProvisioningTimeline::record($this->sessionId, 'victim', 'Starting LAB-ENV victim provisioning through OpenTofu.');
-            // --- 1. victim -----------------------------------------------------
-            $this->applyInstance(
-                $tofu,
-                $victim->tofu_workspace,
-                $victim->container_name,
-                'lab-env',
-                $victim->internal_ip,
-                $cpu,
-                $megabytes,
-                // No ACL: LAB-ENV runs Incus 6.0.0 and does not support them, and the
-                // victim is the side being reached rather than the side initiating.
-                '',
-            );
+                ProvisioningTimeline::record($this->sessionId, 'victim', 'Starting LAB-ENV victim provisioning through OpenTofu.');
+                // --- 1. victim -----------------------------------------------------
+                $this->applyInstance(
+                    $tofu,
+                    $victim->tofu_workspace,
+                    $victim->container_name,
+                    'lab-env',
+                    $victim->internal_ip,
+                    $cpu,
+                    $megabytes,
+                    // No ACL: LAB-ENV runs Incus 6.0.0 and does not support them, and the
+                    // victim is the side being reached rather than the side initiating.
+                    '',
+                );
 
-            ProvisioningTimeline::record($this->sessionId, 'victim', 'LAB-ENV victim provisioning completed.', 'success');
-            ProvisioningTimeline::record($this->sessionId, 'attacker', 'Starting LAB-ATK attacker provisioning through OpenTofu.');
-            // --- 2. attacker ---------------------------------------------------
-            $this->applyInstance(
-                $tofu,
-                $session->attacker_container,
-                $session->attacker_container,
-                $session->attacker_remote,
-                $session->attacker_ip,
-                $cpu,
-                $megabytes,
-                // The ACL is what puts the restriction on the side that initiates the
-                // connection. Without it the attacker has no reason to refuse another
-                // student's victim, and the nftables set alone would be the only guard.
-                (string) config('infrastructure.attacker_acl', 'ctf-attacker'),
-            );
+                ProvisioningTimeline::record($this->sessionId, 'victim', 'LAB-ENV victim provisioning completed.', 'success');
+                ProvisioningTimeline::record($this->sessionId, 'attacker', 'Starting LAB-ATK attacker provisioning through OpenTofu.');
+                // --- 2. attacker ---------------------------------------------------
+                $this->applyInstance(
+                    $tofu,
+                    LabEnvironment::query()->findOrFail($session->attacker_environment_id)->tofu_workspace,
+                    $session->attacker_container,
+                    $session->attacker_remote,
+                    $session->attacker_ip,
+                    $cpu,
+                    $megabytes,
+                    // The ACL is what puts the restriction on the side that initiates the
+                    // connection. Without it the attacker has no reason to refuse another
+                    // student's victim, and the nftables set alone would be the only guard.
+                    (string) config('infrastructure.attacker_acl', 'ctf-attacker'),
+                );
 
-            ProvisioningTimeline::record($this->sessionId, 'attacker', 'LAB-ATK attacker provisioning completed.', 'success');
-            ProvisioningTimeline::record($this->sessionId, 'network', 'Applying paired network access policy.');
-            // --- 3. permit the pair --------------------------------------------
-            $firewall->permit($session->refresh());
+                // Prepare an unprivileged shell account before LAB READY.
+                // Only the attacker container of this session is modified.
+                ProvisioningTimeline::record(
+                    $this->sessionId,
+                    'attacker',
+                    'Preparing the student terminal account.'
+                );
 
-            ProvisioningTimeline::record($this->sessionId, 'network', 'Paired network access policy applied.', 'success');
-            ProvisioningTimeline::record($this->sessionId, 'scenario', 'Configuring Web Server Breach scenario.');
-            // --- 4. the scenario ----------------------------------------------
-            $session->forceFill(['status' => LabSessionStatus::Configuring])->save();
+                $bootstrap = new Process([
+                    (string) config('infrastructure.incus_binary', 'incus'),
+                    'exec',
+                    rtrim($session->attacker_remote, ':').':'.$session->attacker_container,
+                    '--',
+                    'sh',
+                    '-ec',
+                    'if ! id student >/dev/null 2>&1; then '.
+                        'useradd --create-home --shell /bin/bash --user-group student; '.
+                    'fi; '.
+                    'test "$(id -u student)" -gt 0; '.
+                    'test "$(id -g student)" -gt 0; '.
+                    'test -x /bin/bash',
+                ]);
 
-            $scenario->apply($session->refresh());
+                $bootstrap->setEnv(['INCUS_CONF' => (string) env('INCUS_CONF', '/var/lib/imnehnet-incus')]);
+                $bootstrap->setTimeout(60);
+                $bootstrap->run();
 
-            $sessions->markReady($session->refresh());
-            ProvisioningTimeline::record($this->sessionId, 'ready', 'Both containers are ready. Guided CTF is available.', 'success');
-        } catch (RuntimeException $exception) {
-            ProvisioningTimeline::record($this->sessionId, 'failed', 'Provisioning failed; cleanup is starting.', 'error');
-            // Said plainly. A lab that half exists is worse than one that failed with a
-            // reason, because the student cannot tell which of the two containers is
-            // missing and neither can an operator from the page.
-            $sessions->markFailed(
-                $session->refresh(),
-                'The lab could not be built: '.$exception->getMessage(),
-            );
+                if (! $bootstrap->isSuccessful()) {
+                    throw new RuntimeException(
+                        'Student terminal bootstrap failed: '.
+                        trim($bootstrap->getErrorOutput())
+                    );
+                }
 
-            $this->undo($tofu, $firewall, $session->refresh(), $victim);
-        }
+                ProvisioningTimeline::record(
+                    $this->sessionId,
+                    'attacker',
+                    'Student terminal account ready.',
+                    'success'
+                );
+
+                ProvisioningTimeline::record($this->sessionId, 'tools', 'Installing and checking Nmap, curl, Gobuster and wordlist.');
+                app(AttackerTools::class)->ensure($session->refresh());
+                ProvisioningTimeline::record($this->sessionId, 'tools', 'Attacker tools verified as student.', 'success');
+                ProvisioningTimeline::record($this->sessionId, 'attacker', 'LAB-ATK attacker provisioning completed.', 'success');
+                ProvisioningTimeline::record($this->sessionId, 'network', 'Applying paired network access policy.');
+                // --- 3. permit the pair --------------------------------------------
+                $firewall->permit($session->refresh());
+
+                ProvisioningTimeline::record($this->sessionId, 'network', 'Paired network access policy applied.', 'success');
+                ProvisioningTimeline::record($this->sessionId, 'scenario', 'Configuring Web Server Breach scenario.');
+                // --- 4. the scenario ----------------------------------------------
+                $session->forceFill(['status' => LabSessionStatus::Configuring])->save();
+
+                $scenario->apply($session->refresh());
+
+                $sessions->markReady($session->refresh());
+                ProvisioningTimeline::record($this->sessionId, 'ready', 'Both containers are ready. Guided CTF is available.', 'success');
+
+                // Notify the student that the lab is ready.
+                $student = User::query()->find($session->user_id);
+                if ($student !== null) {
+                    $student->notify(new LabReady($session->victim_container ?? $session->container_name ?? 'Lab'));
+                }
+            } catch (RuntimeException $exception) {
+                ProvisioningTimeline::record($this->sessionId, 'failed', 'Provisioning failed; cleanup is starting.', 'error');
+                // Said plainly. A lab that half exists is worse than one that failed with a
+                // reason, because the student cannot tell which of the two containers is
+                // missing and neither can an operator from the page.
+                $sessions->markFailed(
+                    $session->refresh(),
+                    'The lab could not be built: '.$exception->getMessage(),
+                );
+
+                // Notify the student and administrators about the failure.
+                $student = User::query()->find($session->user_id);
+                if ($student !== null) {
+                    $student->notify(new LabProvisionFailed(
+                        $session->victim_container ?? $session->container_name ?? 'Lab',
+                        $exception->getMessage(),
+                        $student->name,
+                    ));
+                }
+                foreach (User::query()->where('role', UserRole::Admin->value)->where('status', 'active')->get() as $admin) {
+                    $admin->notify(new LabProvisionFailed(
+                        $session->victim_container ?? $session->container_name ?? 'Lab',
+                        $exception->getMessage(),
+                        $student?->name,
+                    ));
+                }
+
+                $this->undo($tofu, $firewall, $session->refresh(), $victim);
+            }
         });
     }
 

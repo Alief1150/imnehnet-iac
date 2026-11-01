@@ -20,11 +20,13 @@ final class MonitoringService
      * @var array<string, string>
      */
     private const QUERIES = [
-        'cpu' => '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100)',
-        'memory' => '100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))',
-        'storage' => 'max(100 * (1 - (node_filesystem_avail_bytes{fstype!="tmpfs",fstype!="overlay"} / node_filesystem_size_bytes{fstype!="tmpfs",fstype!="overlay"})))',
-        'storage_total' => 'max(node_filesystem_size_bytes{fstype!="tmpfs",fstype!="overlay"})',
+        'cpu' => 'avg(100 * (1 - avg by (host) (rate(node_cpu_seconds_total{job="imnehnet_vm",mode="idle"}[2m])))) and on() (count(100 * (1 - avg by (host) (rate(node_cpu_seconds_total{job="imnehnet_vm",mode="idle"}[2m])))) == 3)',
+        'memory' => 'avg(100 * (1 - (node_memory_MemAvailable_bytes{job="imnehnet_vm"} / node_memory_MemTotal_bytes{job="imnehnet_vm"}))) and on() (count(node_memory_MemTotal_bytes{job="imnehnet_vm"}) == 3)',
+        'storage' => 'avg(100 * (1 - (node_filesystem_avail_bytes{job="imnehnet_vm",mountpoint="/",fstype!="rootfs"} / node_filesystem_size_bytes{job="imnehnet_vm",mountpoint="/",fstype!="rootfs"}))) and on() (count(node_filesystem_size_bytes{job="imnehnet_vm",mountpoint="/",fstype!="rootfs"}) == 3)',
+        'storage_total' => 'sum(node_filesystem_size_bytes{job="imnehnet_vm",mountpoint="/",fstype!="rootfs"})',
         'containers' => 'count(count by (name) (container_last_seen{name!=""}))',
+        'network_rx' => 'sum(rate(node_network_receive_bytes_total{device!~"lo|veth.*|docker.*|br-.*"}[2m])) * 8',
+        'network_tx' => 'sum(rate(node_network_transmit_bytes_total{device!~"lo|veth.*|docker.*|br-.*"}[2m])) * 8',
     ];
 
     /**
@@ -68,17 +70,19 @@ final class MonitoringService
     }
 
     /**
-     * The consoles behind the figures, so an operator can open the source
-     * instead of trusting a number with no origin.
+     * Cache only scalar/array payloads, never serialized DTO instances.
      *
-     * @return array<int, MonitoringBackend>
+     * @return array<int, array<string, mixed>>
      */
     public function backends(): array
     {
         return Cache::remember(
-            'monitoring.backends',
+            'monitoring.backends.v2',
             now()->addSeconds((int) config('infrastructure.resource_cache_seconds', 10)),
-            fn (): array => $this->probeBackends(),
+            fn (): array => array_map(
+                fn (MonitoringBackend $backend): array => $backend->toArray(),
+                $this->probeBackends(),
+            ),
         );
     }
 
@@ -93,8 +97,6 @@ final class MonitoringService
         if ($url === '') {
             return [$this->notConfigured()];
         }
-
-        $storageTotal = $this->scalar($url, self::QUERIES['storage_total'], $timeout);
 
         return [
             $this->usage(
@@ -114,7 +116,6 @@ final class MonitoringService
                 label: 'Storage',
                 percent: $this->percent($url, self::QUERIES['storage'], $timeout),
                 source: $this->source($url, self::QUERIES['storage']),
-                totalBytes: $storageTotal,
             ),
             $this->containerUsage($this->scalar($url, self::QUERIES['containers'], $timeout), $url),
         ];
@@ -174,7 +175,7 @@ final class MonitoringService
                 'label' => 'Prometheus',
                 'url' => (string) config('infrastructure.console_base_url').':'.(string) config('infrastructure.prometheus_console_port'),
                 'description' => 'Time-series database queried for every figure on this page.',
-                'scope' => 'IAAS-MGMT host metrics, scraped by node_exporter',
+                'scope' => 'Native Node Exporters on IAAS-MGMT, LAB-ENV and LAB-ATK',
                 'check' => fn (): bool => $this->reachable((string) config('infrastructure.prometheus_health_url'), $timeout, 'Prometheus Server is Healthy.'),
             ],
             [
@@ -182,13 +183,13 @@ final class MonitoringService
                 'label' => 'Grafana',
                 'url' => (string) config('infrastructure.console_base_url').':'.(string) config('infrastructure.grafana_console_port'),
                 'description' => 'Dashboard and visualisation layer over the same Prometheus data.',
-                'scope' => 'Visualises IAAS-MGMT host metrics',
+                'scope' => 'Visualisation service for infrastructure telemetry',
                 'check' => fn (): bool => $this->reachable((string) config('infrastructure.grafana_health_url'), $timeout, null),
             ],
             [
                 'key' => 'wazuh_dashboard',
                 'label' => 'Wazuh Dashboard',
-                'url' => (string) config('infrastructure.console_base_url').':8443',
+                'url' => 'https://'.(parse_url((string) config('infrastructure.console_base_url'), PHP_URL_HOST) ?: '100.77.79.18').':8443',
                 'description' => 'Security operations interface over the Wazuh indexer.',
                 'scope' => 'Alert triage and agent inventory',
                 'check' => fn (): bool => $this->reachable((string) config('infrastructure.wazuh_dashboard_url'), $timeout, null, verifyTls: false),
@@ -196,9 +197,9 @@ final class MonitoringService
             [
                 'key' => 'wazuh_api',
                 'label' => 'Wazuh API',
-                'url' => (string) config('infrastructure.console_base_url').':'.(string) config('infrastructure.wazuh_console_port'),
+                'url' => 'https://'.(parse_url((string) config('infrastructure.console_base_url'), PHP_URL_HOST) ?: '100.77.79.18').':'.(string) config('infrastructure.wazuh_console_port'),
                 'description' => 'Management API the portal would query for security telemetry.',
-                'scope' => 'Agents, alerts and manager status',
+                'scope' => 'Management API reachability; authentication not verified',
                 'check' => fn (): bool => $this->apiReachable((string) config('infrastructure.wazuh_health_url'), $timeout),
             ],
         ];
@@ -342,7 +343,7 @@ final class MonitoringService
             key: $key,
             label: $label,
             status: $this->threshold($percent),
-            summary: sprintf('%.1f%% of the host capacity is in use.', $percent),
+            summary: sprintf('%.1f%% average utilization across three monitored VMs.', $percent),
             source: $source,
             checkedAt: Carbon::now(),
             usedPercent: round($percent, 1),

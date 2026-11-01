@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Models\TerminalSession;
+use App\Notifications\SessionExpiring;
 use App\Services\Terminal\AdminTerminalService;
 use App\Services\TerminalService;
 use Illuminate\Console\Command;
@@ -40,6 +42,29 @@ class ReapTerminalSessionsCommand extends Command
     public function handle(AdminTerminalService $admin, TerminalService $student): int
     {
         $results = [];
+
+        // Notify students whose sessions are expiring soon (within 5 minutes),
+        // before the reaper closes them. Each session is only in this window
+        // once, so the notification is not repeated on subsequent runs.
+        $expiringSoon = TerminalSession::query()
+            ->whereNull('closed_at')
+            ->where('expires_at', '>', now())
+            ->where('expires_at', '<=', now()->addMinutes(5))
+            ->with('user')
+            ->get();
+
+        foreach ($expiringSoon as $session) {
+            $user = $session->user;
+            if ($user === null) {
+                continue;
+            }
+
+            $minutes = max(1, (int) $session->expires_at->diffInMinutes(now()));
+            $environment = $session->environment;
+            $envName = $environment !== null ? ($environment->container_name ?? 'Lab') : 'Lab';
+
+            $user->notify(new SessionExpiring($envName, $minutes));
+        }
 
         // Each reaper is isolated: one kind of session throwing must not leave the other
         // kind un-reaped, because a failure that stops the backstop is the failure this

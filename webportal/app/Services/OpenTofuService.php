@@ -65,6 +65,66 @@ class OpenTofuService
      * The workspace this environment owns. Falls back to the derived name when
      * the record has none yet, which is the case during provisioning.
      */
+    public function reconcilePairedWorkspace(LabEnvironment $environment): void
+    {
+        $this->withDirectoryLock(function () use ($environment): void {
+            $name = (string) $environment->container_name;
+            EnvironmentWorkspace::assertValidContainerName($name);
+            $inventory = $this->listWorkspaces();
+            if (! $inventory->successful()) {
+                throw new RuntimeException('Cannot inspect OpenTofu workspace inventory.');
+            }
+            $existing = $this->parseWorkspaceList($inventory->stdout);
+            $candidates = array_unique([$this->workspaceFor($environment), $name]);
+            $matches = [];
+            foreach ($candidates as $workspace) {
+                EnvironmentWorkspace::assertUsable($workspace, $name);
+                if (! in_array($workspace, $existing, true)) {
+                    continue;
+                }
+                if (! $this->run(['workspace', 'select', $workspace])->successful()) {
+                    throw new RuntimeException('Cannot inspect candidate workspace.');
+                }
+                $result = $this->run(['state', 'pull']);
+                if (! $result->successful()) {
+                    throw new RuntimeException('Cannot read candidate workspace state.');
+                }
+                $state = json_decode($result->stdout, true, 512, JSON_THROW_ON_ERROR);
+                if (! is_array($state) || ! isset($state['version'])) {
+                    throw new RuntimeException('Unexpected OpenTofu state format.');
+                }
+                $count = 0;
+                foreach ($state['resources'] ?? [] as $resource) {
+                    if (($resource['mode'] ?? '') !== 'managed') {
+                        continue;
+                    }
+                    foreach ($resource['instances'] ?? [] as $instance) {
+                        $a = $instance['attributes'] ?? [];
+                        if (($resource['type'] ?? '') !== 'incus_instance'
+                            || ($a['name'] ?? '') !== $name
+                            || rtrim((string) ($a['remote'] ?? ''), ':') !== rtrim((string) $environment->incus_remote, ':')
+                            || ($a['project'] ?? 'default') !== ($environment->incus_project ?: 'default')) {
+                            throw new RuntimeException('Workspace ownership cannot be verified; destroy refused.');
+                        }
+                        $count++;
+                    }
+                }
+                if ($count > 1) {
+                    throw new RuntimeException('Multiple managed instances found; destroy refused.');
+                }
+                if ($count === 1) {
+                    $matches[] = $workspace;
+                }
+            }
+            if (count($matches) > 1) {
+                throw new RuntimeException('Duplicate OpenTofu ownership; destroy refused.');
+            }
+            if (count($matches) === 1 && $environment->tofu_workspace !== $matches[0]) {
+                $environment->forceFill(['tofu_workspace' => $matches[0]])->save();
+            }
+        });
+    }
+
     public function workspaceFor(LabEnvironment $environment): string
     {
         return $environment->tofu_workspace

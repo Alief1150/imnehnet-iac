@@ -19,7 +19,7 @@ class CommandRunner
     /**
      * @param  list<string>  $command
      * @param  string|null  $input  Written to the process's stdin, for a command that
-     *                             takes content rather than a filename.
+     *                              takes content rather than a filename.
      * @return array{successful: bool, stdout: string, stderr: string}
      */
     public function run(
@@ -33,6 +33,7 @@ class CommandRunner
             // running tofu in the wrong directory reports a healthy client while
             // reading the wrong state. Optional so existing callers are unchanged.
             $process = new Process($command, $workingDirectory, env: [
+                'INCUS_CONF' => (string) env('INCUS_CONF', '/var/lib/imnehnet-incus'),
                 'LANG' => 'C.UTF-8',
                 'LC_ALL' => 'C.UTF-8',
             ]);

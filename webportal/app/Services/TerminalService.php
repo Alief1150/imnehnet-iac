@@ -3,12 +3,18 @@
 namespace App\Services;
 
 use App\Enums\ActivityAction;
+use App\Jobs\ChangePairedLabPower;
 use App\Models\LabEnvironment;
+use App\Models\LabSession;
 use App\Models\TerminalSession;
 use App\Models\User;
+use App\Services\GuidedCtf\CtfEvidence;
 use App\Support\EnvironmentWorkspace;
+use App\Support\TerminalEmbedTicket;
 use App\Support\TerminalSlotAuth;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 
@@ -60,6 +66,22 @@ class TerminalService
         private readonly ?ActivityLogService $activity = null,
     ) {}
 
+    /**
+     * Twelve letters, no digits or punctuation.
+     * Uses a cryptographically secure random source.
+     */
+    private function generateReadableCredential(): string
+    {
+        $alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $credential = '';
+
+        for ($i = 0; $i < 12; $i++) {
+            $credential .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
+
+        return $credential;
+    }
+
     public static function fromConfig(?Container $app = null): self
     {
         $app ??= app();
@@ -89,13 +111,212 @@ class TerminalService
      * who clicks Reconnect after a page refresh should get their shell back
      * rather than a second ttyd competing for the same container.
      */
-    public function open(User $user, LabEnvironment $environment): TerminalSession
+
+    // IMNEHNET_STUDENT_EMBED_V1
+    public function open(User $user, LabEnvironment $environment, string $purpose = 'sandbox'): TerminalSession
     {
-        $this->assertOpenable($environment);
+        if (! in_array($purpose, ['sandbox', 'guided_ctf'], true)) {
+            throw new RuntimeException('Invalid terminal purpose.');
+        }
+        $service = clone $this;
+        $service->sessionPurpose = $purpose;
+
+        return $service->openScoped($user, $environment);
+    }
+
+    private string $sessionPurpose = 'sandbox';
+
+    private ?int $pairedLabId = null;
+
+    private ?string $evidenceEpoch = null;
+
+    private function account(): string
+    {
+        return $this->sessionPurpose === 'guided_ctf' ? 'ctfstudent' : 'student';
+    }
+
+    private function openScoped(User $user, LabEnvironment $environment): TerminalSession
+    {
+        // IMNEHNET_SANDBOX_VICTIM_V2
+        if (! $user->isActive() || (int) $environment->user_id !== (int) $user->getKey()) {
+            throw new RuntimeException('This terminal is not assigned to your account.');
+        }
+
+        $pair = LabSession::query()
+            ->where('user_id', $user->getKey())
+            ->where(function ($query) use ($environment): void {
+                $query->where('attacker_environment_id', $environment->getKey());
+
+                if ($this->sessionPurpose === 'sandbox') {
+                    $query->orWhere('victim_environment_id', $environment->getKey());
+                }
+            })
+            ->latest('id')
+            ->first();
+
+        if ($pair === null) {
+            throw new RuntimeException('No paired lab is assigned to this environment.');
+        }
+
+        return Cache::lock(
+            'imnehnet:ctf:session-lifecycle:'.$pair->getKey(), 120
+        )->block(10, function () use ($pair, $user, $environment): TerminalSession {
+            $pair->refresh();
+            $environment->refresh();
+            $isAttacker = (int) $pair->attacker_environment_id === (int) $environment->getKey();
+            $isVictim = $this->sessionPurpose === 'sandbox'
+                && (int) $pair->victim_environment_id === (int) $environment->getKey();
+
+            $expectedName = $isAttacker ? $pair->attacker_container : $pair->victim_container;
+            $expectedRemote = $isAttacker ? $pair->attacker_remote : $pair->victim_remote;
+            $configuredRemote = $isAttacker
+                ? config('infrastructure.incus_attacker_remote', 'lab-atk')
+                : config('infrastructure.incus_remote', 'lab-env');
+
+            if ((! $isAttacker && ! $isVictim)
+                || ! in_array($pair->status->value, ['READY', 'RUNNING', 'COMPLETED'], true)
+                || (int) $pair->user_id !== (int) $user->getKey()
+                || (int) $environment->user_id !== (int) $user->getKey()
+                || $environment->container_name !== $expectedName
+                || rtrim((string) $expectedRemote, ':') !== rtrim((string) $environment->incus_remote, ':')
+                || rtrim((string) $environment->incus_remote, ':') !== rtrim((string) $configuredRemote, ':')
+                || ($isAttacker && $environment->container_name !== 'attacker-user-'.$user->getKey())
+                || $this->shellUser !== 'student') {
+                throw new RuntimeException('Terminal target or lab lifecycle is not valid.');
+            }
+
+            $this->assertOpenable($environment, $isVictim);
+            $this->pairedLabId = (int) $pair->id;
+            $this->evidenceEpoch = $pair->ctf_epoch;
+            if ($this->sessionPurpose === 'guided_ctf') {
+                app(CtfEvidence::class)->assertHealthy($pair);
+            }
+            // IMNEHNET_CTF_EMBED_V2
+            if (Cache::has('imnehnet:terminal-hold:'.$pair->id)) {
+                throw new RuntimeException('Operasi Stop masih diproses.');
+            }
+            $existing = TerminalSession::query()->where('user_id', $user->id)
+                ->where('lab_environment_id', $environment->id)
+                ->where('purpose', $this->sessionPurpose)->where('lab_session_id', $pair->id)
+                ->where('ctf_epoch', $pair->ctf_epoch)->usable()->latest('created_at')->get()
+                ->first(fn (TerminalSession $row): bool => $this->isConnected($row));
+            if ($existing && $this->embedTicketFor($existing) !== null) {
+                if ($existing->expires_at->lt(now()->addMinutes(5))) {
+                    $existing->forceFill(['expires_at' => now()->addMinutes(max(15, $this->sessionTtlMinutes))])->save();
+                }
+
+                return $existing;
+            }
+            $bootstrap = new Process([
+                (string) config('infrastructure.incus_binary', 'incus'),
+                'exec', rtrim($environment->incus_remote, ':').':'.$environment->container_name,
+                '--', 'sh', '-ec',
+                'if ! id student >/dev/null 2>&1; then useradd -m -U -s /bin/bash student; fi; '.
+                'test "$(id -u student)" -gt 0; test "$(id -g student)" -gt 0; '.
+                'test -x /bin/bash; test -d /home/student; '.
+                'test "$(getent passwd student | cut -d: -f6)" = /home/student; '.
+                'for g in $(id -nG student); do case "$g" in root|sudo|wheel|docker|lxd|incus-admin) exit 23;; esac; done',
+            ]);
+            $bootstrap->setEnv($this->environment());
+            $bootstrap->setTimeout(30);
+            $bootstrap->run();
+            if (! $bootstrap->isSuccessful()) {
+                throw new RuntimeException('Cannot prepare the student account: '.trim($bootstrap->getErrorOutput()));
+            }
+
+            return Cache::lock('imnehnet:student-terminal:allocate', 60)
+                ->block(10, function () use ($user, $environment): TerminalSession {
+                    $session = $this->openPrepared($user, $environment);
+                    try {
+                        if ($this->embedTickets()->tokenFor((int) $session->ttyd_port) === null) {
+                            $this->embedTickets()->issue((int) $session->ttyd_port);
+                        }
+                    } catch (\Throwable $exception) {
+                        $this->close($session);
+                        throw $exception;
+                    }
+
+                    return $session;
+                });
+        });
+    }
+
+    public function queueOwnedLabPower(LabSession $lab, bool $start): void
+    {
+        Cache::lock('imnehnet:ctf:session-lifecycle:'.$lab->id, 120)
+            ->block(5, function () use ($lab, $start): void {
+                $lab->refresh();
+                if (! auth()->user()?->isActive() || (int) $lab->user_id !== (int) auth()->id()) {
+                    throw new RuntimeException('Lab ownership verification failed.');
+                }
+                $allowed = $start ? ['STOPPED'] : ['READY', 'RUNNING', 'COMPLETED'];
+                if (! in_array($lab->status->value, $allowed, true)) {
+                    throw new RuntimeException('Status lab tidak menerima operasi ini.');
+                }
+                $key = 'imnehnet:terminal-hold:'.$lab->id;
+                if (Cache::has($key)) {
+                    throw new RuntimeException('Operasi power sebelumnya masih diproses.');
+                }
+                Cache::put($key, true, 3600);
+                try {
+                    $this->closeOwnedLab($lab);
+                    Queue::push(new ChangePairedLabPower((int) $lab->id, $start));
+                } catch (\Throwable $error) {
+                    Cache::forget($key);
+                    throw $error;
+                }
+            });
+    }
+
+    public function closeOwnedLab(LabSession $lab): void
+    {
+        if (! auth()->user()?->isActive() || (int) $lab->user_id !== (int) auth()->id()) {
+            throw new RuntimeException('Lab ownership verification failed.');
+        }
+        $ids = array_filter([$lab->attacker_environment_id, $lab->victim_environment_id]);
+        foreach (TerminalSession::query()->where('user_id', $lab->user_id)
+            ->whereIn('lab_environment_id', $ids)->whereNull('closed_at')->get() as $terminal) {
+            $this->close($terminal);
+        }
+    }
+
+    private function embedTickets(): TerminalEmbedTicket
+    {
+        return new TerminalEmbedTicket(
+            (string) config('infrastructure.terminal.embed_directory')
+        );
+    }
+
+    public function embedTicketFor(TerminalSession $session): ?string
+    {
+        return $session->isUsable() && $this->isConnected($session)
+            ? $this->embedTickets()->tokenFor((int) $session->ttyd_port) : null;
+    }
+
+    private function openPrepared(User $user, LabEnvironment $environment): TerminalSession
+    {
+        $pairedVictim = false;
+
+        if ($this->sessionPurpose === 'sandbox' && $this->pairedLabId !== null) {
+            $pair = LabSession::query()->find($this->pairedLabId);
+            $pairedVictim = $pair !== null
+                && (int) $pair->user_id === (int) $user->getKey()
+                && in_array($pair->status->value, ['READY', 'RUNNING', 'COMPLETED'], true)
+                && (int) $pair->victim_environment_id === (int) $environment->getKey()
+                && (int) $environment->user_id === (int) $user->getKey()
+                && $pair->victim_container === $environment->container_name
+                && rtrim((string) $pair->victim_remote, ':') === rtrim((string) $environment->incus_remote, ':')
+                && rtrim((string) $environment->incus_remote, ':') === rtrim((string) config('infrastructure.incus_remote', 'lab-env'), ':');
+        }
+
+        $this->assertOpenable($environment, $pairedVictim);
 
         $existing = TerminalSession::query()
             ->where('user_id', $user->id)
             ->where('lab_environment_id', $environment->id)
+            ->where('purpose', $this->sessionPurpose)
+            ->where('lab_session_id', $this->pairedLabId)
+            ->where('ctf_epoch', $this->evidenceEpoch)
             ->usable()
             ->orderByDesc('created_at')
             ->get()
@@ -105,22 +326,34 @@ class TerminalService
             return $existing;
         }
 
-        $shellUid = $this->resolveShellUid($environment->container_name);
+        $shellUid = $this->resolveShellUid($environment->container_name, $environment->incus_remote);
 
         if ($shellUid === null) {
             throw new RuntimeException(sprintf(
                 'The "%s" user does not exist in container "%s", so no shell can be opened as a student. Bootstrap the environment first.',
-                $this->shellUser,
+                $this->account(),
                 $environment->container_name,
             ));
+        }
+
+        $shellGid = $this->resolveShellGid(
+            $environment->container_name,
+            $environment->incus_remote
+        );
+
+        if ($shellGid === null || $shellGid === 0) {
+            throw new RuntimeException(
+                'Student primary group is invalid or privileged.'
+            );
         }
 
         $this->enforceSessionLimit($user);
 
         $port = $this->reservePort();
-        $credential = bin2hex(random_bytes(self::CREDENTIAL_BYTES));
+        $this->embedTickets()->revoke($port);
+        $credential = $this->generateReadableCredential();
 
-        $pid = $this->spawn($environment->container_name, $shellUid, $port, $credential);
+        $pid = $this->spawn($environment->container_name, $environment->incus_remote, $shellUid, $shellGid, $port, $credential);
 
         $session = TerminalSession::query()->create([
             'user_id' => $user->id,
@@ -130,7 +363,10 @@ class TerminalService
             'ttyd_port' => (string) $port,
             'credential' => $credential,
             'shell_uid' => $shellUid,
-            'shell_user' => $this->shellUser,
+            'shell_user' => $this->account(),
+            'purpose' => $this->sessionPurpose,
+            'lab_session_id' => $this->pairedLabId,
+            'ctf_epoch' => $this->evidenceEpoch,
             'expires_at' => now()->addMinutes($this->sessionTtlMinutes),
         ]);
 
@@ -149,7 +385,7 @@ class TerminalService
             status: 'completed',
             description: sprintf(
                 'Opened a %s shell on %s for session %s.',
-                $this->shellUser,
+                $this->account(),
                 (string) $environment->container_name,
                 (string) $session->id,
             ),
@@ -176,6 +412,11 @@ class TerminalService
             $session->forceFill(['closed_at' => now()])->save();
         }
 
+        if (TerminalSession::query()->where('ttyd_port', $session->ttyd_port)
+            ->where('id', '!=', $session->id)->usable()->exists()) {
+            return;
+        }
+        $this->embedTickets()->revoke((int) $session->ttyd_port);
         $this->terminate($session);
 
         // Revoked after the process is gone, so the window in which the slot is
@@ -208,15 +449,51 @@ class TerminalService
                 }
             });
 
+        // IMNEHNET_CLOSED_TTYD_REAPER_V1
+        // Recover processes left running after their database sessions
+        // were marked closed. Never interfere with a usable session.
+        TerminalSession::query()
+            ->whereNotNull('closed_at')
+            ->whereNotNull('pid')
+            ->get()
+            ->each(function (TerminalSession $session) use (&$reaped): void {
+                if ($session->pid === null || ! is_numeric($session->pid)) {
+                    return;
+                }
+
+                $pid = (int) $session->pid;
+
+                if (! $this->isTerminalProcess($pid)
+                    || ! $this->processIsAlive($pid)) {
+                    return;
+                }
+
+                if (TerminalSession::query()
+                    ->where('ttyd_port', $session->ttyd_port)
+                    ->where('id', '!=', $session->id)
+                    ->usable()
+                    ->exists()) {
+                    return;
+                }
+
+                $this->close($session);
+
+                if (! $this->processIsAlive($pid)) {
+                    $reaped++;
+                }
+            });
+
         return $reaped;
     }
 
     /**
      * @throws RuntimeException when the environment cannot host a terminal
      */
-    private function assertOpenable(LabEnvironment $environment): void
-    {
-        if (! $environment->terminal_enabled) {
+    private function assertOpenable(
+        LabEnvironment $environment,
+        bool $authorizedSandboxVictim = false
+    ): void {
+        if (! $environment->terminal_enabled && ! $authorizedSandboxVictim) {
             throw new RuntimeException(sprintf(
                 'The terminal is not enabled for environment "%s".',
                 $environment->container_name,
@@ -247,20 +524,21 @@ class TerminalService
      * Returns null rather than a default when the user is missing. Every caller
      * treats null as "refuse the session", because the alternative guesses.
      */
-    private function resolveShellUid(string $containerName): ?int
+    private function resolveShellUid(string $containerName, string $remote): ?int
     {
         EnvironmentWorkspace::assertValidContainerName($containerName);
 
         $process = new Process([
             (string) config('infrastructure.incus_binary', 'incus'),
             'exec',
-            $this->incusRemote.$containerName,
+            rtrim($remote, ':').':'.$containerName,
             '--',
             'id',
             '-u',
-            $this->shellUser,
+            $this->account(),
         ]);
-        $process->setTimeout($this->probeTimeoutSeconds);
+        $process->setEnv($this->environment());
+        $process->setTimeout(max(10, $this->probeTimeoutSeconds));
 
         try {
             $process->run();
@@ -275,6 +553,37 @@ class TerminalService
         $uid = trim($process->getOutput());
 
         return ctype_digit($uid) && (int) $uid > 0 ? (int) $uid : null;
+    }
+
+    private function resolveShellGid(string $containerName, string $remote): ?int
+    {
+        EnvironmentWorkspace::assertValidContainerName($containerName);
+
+        $process = new Process([
+            (string) config('infrastructure.incus_binary', 'incus'),
+            'exec',
+            rtrim($remote, ':').':'.$containerName,
+            '--',
+            'id',
+            '-g',
+            $this->account(),
+        ]);
+        $process->setEnv($this->environment());
+        $process->setTimeout(max(10, $this->probeTimeoutSeconds));
+
+        try {
+            $process->run();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (! $process->isSuccessful()) {
+            return null;
+        }
+
+        $gid = trim($process->getOutput());
+
+        return ctype_digit($gid) && (int) $gid > 0 ? (int) $gid : null;
     }
 
     /**
@@ -299,7 +608,11 @@ class TerminalService
         // No credential in the address. Apache checks this slot's per-session password file,
         // so the secret is presented as HTTP Basic rather than carried in a query string,
         // where it would be written to the access log and to browser history.
-        return sprintf('/terminal/%s/', $session->ttyd_port);
+        if ($this->embedTicketFor($session) === null) {
+            return null;
+        }
+
+        return sprintf('/embed/%s/', $session->ttyd_port);
     }
 
     /**
@@ -332,7 +645,7 @@ class TerminalService
             ->orderByDesc('created_at')
             ->get();
 
-        $live->slice($this->maxSessionsPerUser)->each(
+        $live->slice(max(2, $this->maxSessionsPerUser) - 1)->each(
             fn (TerminalSession $session) => $this->close($session),
         );
     }
@@ -343,25 +656,30 @@ class TerminalService
      * Output is disabled rather than piped: this process outlives the request,
      * and a pipe nobody drains would fill and block the shell.
      */
-    private function spawn(string $containerName, int $shellUid, int $port, string $credential): int
+    private function spawn(string $containerName, string $remote, int $shellUid, int $shellGid, int $port, string $credential): int
     {
         $command = [
             $this->binary,
             '-i', '127.0.0.1',
             '-p', (string) $port,
             '-W',
-            '-t', 'titleFixed='.$this->shellUser.'@'.$containerName,
-            'incus',
+            '-t', 'titleFixed='.$this->account().'@'.$containerName,
+            (string) config('infrastructure.incus_binary', 'incus'),
             'exec',
-            $this->incusRemote.$containerName,
+            rtrim($remote, ':').':'.$containerName,
             '--user', (string) $shellUid,
+            '--group', (string) $shellGid,
+            '--cwd', '/home/'.$this->account().($this->sessionPurpose === 'guided_ctf' ? '/ctf' : ''),
+            '--env', 'HOME=/home/'.$this->account(),
+            '--env', 'USER='.$this->account(),
+            '--env', 'LOGNAME='.$this->account(),
             '--',
             // bash -l, not bash -i — see AdminTerminalService::NODES. The ttyd build this
             // project is configured to use segfaults on an interactive shell command, so
             // this line was one of the two reasons a student terminal had never once
             // opened a shell.
-            'bash',
-            '-l',
+            'setpriv', '--no-new-privs',
+            'bash', '-l',
         ];
 
         $this->prepareLogDirectory();
@@ -537,19 +855,16 @@ class TerminalService
      */
     private function environment(): array
     {
-        $pairs = [
-            'TERM=xterm-256color',
-            'LANG=C.UTF-8',
-            'LC_ALL=C.UTF-8',
-        ];
-
-        $path = getenv('PATH');
-
-        if (is_string($path) && $path !== '') {
-            $pairs[] = 'PATH='.$path;
+        $config = (string) env('INCUS_CONF', '/var/lib/imnehnet-incus');
+        if ($config === '' || ! is_readable($config.'/config.yml')) {
+            throw new RuntimeException('Incus client config is not readable by the web process.');
         }
 
-        return $pairs;
+        return [
+            'TERM' => 'xterm-256color', 'LANG' => 'C.UTF-8', 'LC_ALL' => 'C.UTF-8',
+            'PATH' => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin',
+            'INCUS_CONF' => $config,
+        ];
     }
 
     private function logPath(int $port): string

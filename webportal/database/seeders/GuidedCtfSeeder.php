@@ -83,7 +83,7 @@ class GuidedCtfSeeder extends Seeder
                 'sequence' => 2,
                 'title' => 'Port & Service Reconnaissance',
                 'description' => 'Discover the open ports and running services on your target.',
-                'hint' => 'nmap -sV '.self::TARGET_PLACEHOLDER,
+                'hint' => 'nmap -n --unprivileged -sT -sV --version-light -Pn -p 22,80 '.self::TARGET_PLACEHOLDER,
                 'validation_type' => ValidationType::Event,
                 // Two distinct ports. One open service is a finding; two means the
                 // student looked rather than guessed the obvious one.
