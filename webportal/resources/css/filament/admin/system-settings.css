@@ -1,0 +1,143 @@
+/* Scoped additions: reuse the existing FlyonUI plugin and leave other pages alone. */
+.im-settings { --ss-bg:#fff; --ss-raised:#f8fafc; --ss-line:#e2e8f0; --ss-text:#172033; --ss-muted:#526176; --ss-accent:#0f766e; --ss-soft:#f0fdfa; --ss-danger:#b91c1c; display:flex; flex-direction:column; gap:22px; color:var(--ss-text); font-size:14px; line-height:1.6; min-width:0; }
+.dark .im-settings { --ss-bg:var(--imnehnet-surface,#0e1013); --ss-raised:var(--imnehnet-raised,#14171b); --ss-line:var(--imnehnet-line-strong,#2a3038); --ss-text:var(--imnehnet-text,#e8eaed); --ss-muted:var(--imnehnet-text-muted,#9aa3ae); --ss-accent:#2dd4bf; --ss-soft:#0d2423; --ss-danger:#fca5a5; }
+.im-settings .im-settings-tabs { display:flex; gap:8px; border-bottom:1px solid var(--ss-line); padding-bottom:12px; flex-wrap:wrap; }
+.im-settings .im-settings-tab { display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:8px; border:1px solid transparent; background:transparent; color:var(--ss-muted); font-weight:600; cursor:pointer; }
+.im-settings .im-settings-tab.is-active { color:var(--ss-accent); background:var(--ss-soft); border-color:var(--ss-line); }
+.im-settings .im-settings-tab:hover { background:var(--ss-raised); }
+.im-settings svg { width:19px; height:19px; flex-shrink:0; }
+.im-settings .im-settings-card { display:block; min-width:0; border:1px solid var(--ss-line); border-radius:12px; background:var(--ss-bg); color:var(--ss-text); box-shadow:none; overflow:hidden; }
+.im-settings .im-settings-card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:20px 24px; border-bottom:1px solid var(--ss-line); }
+.im-settings h2 { margin:0; font-size:16px; font-weight:650; letter-spacing:-.02em; line-height:1.45; color:var(--ss-text); }
+.im-settings .im-settings-card-head p { margin:4px 0 0; font-size:12px; color:var(--ss-muted); }
+.im-settings .im-settings-card-body { padding:24px; }
+.im-settings .im-settings-eyebrow { font-size:10px; font-weight:700; letter-spacing:.14em; color:var(--ss-accent); }
+.im-settings .im-settings-intro { border-top:3px solid var(--ss-accent); }
+.im-settings .im-settings-intro-top,.im-settings .im-settings-intro-main { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.im-settings .im-settings-intro-main { margin-top:20px; margin-bottom:18px; }
+.im-settings .im-settings-intro h2 { font-size:25px; }
+.im-settings .im-settings-institution { margin:5px 0 0; font-size:12px; color:var(--ss-muted); }
+.im-settings .im-settings-prose { margin:0; color:var(--ss-muted); white-space:pre-line; overflow-wrap:anywhere; line-height:1.85; }
+.im-settings .im-settings-tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
+.im-settings .im-settings-tags span { padding:3px 10px; border:1px solid var(--ss-line); border-radius:6px; font-size:11px; color:var(--ss-muted); background:var(--ss-raised); }
+.im-settings .im-settings-overview-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.im-settings .im-settings-account-grid { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:22px; align-items:start; }
+.im-settings .im-settings-stack { display:flex; flex-direction:column; gap:20px; min-width:0; }
+.im-settings .im-settings-icon { display:inline-flex; padding:9px; border:1px solid var(--ss-line); background:var(--ss-raised); color:var(--ss-accent); border-radius:9px; }
+.im-settings .im-settings-badge { display:inline-flex; align-items:center; border:1px solid var(--ss-line); border-radius:5px; padding:3px 8px; font-size:10px; line-height:1.5; background:var(--ss-raised); color:var(--ss-muted); white-space:nowrap; height:auto; font-weight:600; }
+.im-settings .im-settings-badge-auto { background:var(--ss-soft); color:var(--ss-accent); }
+.im-settings .im-settings-legend { display:flex; gap:20px; flex-wrap:wrap; padding:14px 24px; font-size:11px; color:var(--ss-muted); background:var(--ss-raised); }
+.im-settings .im-settings-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--ss-accent); margin-right:5px; }
+.im-settings .im-settings-tech-group h3 { margin:0; padding:16px 24px 10px; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ss-muted); font-weight:700; }
+.im-settings .im-settings-table-scroll { overflow-x:auto; }
+.im-settings .im-settings-table { width:100%; min-width:560px; border-collapse:collapse; font-size:12px; background:transparent; color:var(--ss-text); }
+.im-settings .im-settings-table th,.im-settings .im-settings-table td { text-align:left; padding:12px 24px; border-bottom:1px solid var(--ss-line); white-space:normal; }
+.im-settings .im-settings-table thead th { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--ss-muted); background:var(--ss-raised); font-weight:600; }
+.im-settings .im-settings-table tbody th { width:20%; font-weight:600; }
+.im-settings .im-settings-table td:nth-child(2) { width:45%; color:var(--ss-muted); }
+.im-settings .im-settings-table code { font-family:ui-monospace,monospace; font-size:11px; }
+.im-settings .im-settings-table tbody tr:hover { background:var(--ss-raised); }
+.im-settings .im-settings-btn { display:inline-flex; justify-content:center; align-items:center; gap:8px; padding:9px 15px; min-height:40px; height:auto; border:1px solid var(--ss-line); border-radius:7px; font-size:12px; font-weight:650; cursor:pointer; box-shadow:none; text-transform:none; white-space:normal; background:var(--ss-raised); color:var(--ss-text); }
+.im-settings .im-settings-btn-primary { background:#0f766e; color:#fff; border-color:#0f766e; }
+.im-settings .im-settings-btn-primary:hover { background:#115e59; }
+.im-settings .im-settings-btn-secondary:hover { border-color:var(--ss-accent); }
+.im-settings .im-settings-btn-danger { color:var(--ss-danger); background:transparent; }
+.im-settings button:disabled { opacity:.5; cursor:wait; }
+.im-settings button:focus-visible,.im-settings input:focus-visible,.im-settings select:focus-visible,.im-settings textarea:focus-visible { outline:2px solid var(--ss-accent); outline-offset:3px; }
+.im-settings .im-settings-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+.im-settings .im-settings-wide { grid-column:1/-1; }
+.im-settings .im-settings-field { display:flex; flex-direction:column; gap:7px; min-width:0; }
+.im-settings .im-settings-field label { font-size:12px; font-weight:600; color:var(--ss-text); }
+.im-settings .im-settings-input { width:100%; max-width:none; background:var(--ss-bg); color:var(--ss-text); border:1px solid var(--ss-line); padding:10px 12px; border-radius:7px; box-shadow:none; font-size:13px; height:auto; min-height:42px; line-height:1.5; }
+.im-settings textarea.im-settings-input { resize:vertical; }
+.im-settings .im-settings-help { font-size:11px; color:var(--ss-muted); margin:0; }
+.im-settings .im-settings-error { font-size:12px; color:var(--ss-danger); }
+.im-settings .im-settings-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.im-settings .im-settings-software-edit { padding:20px; border:1px solid var(--ss-line); border-radius:9px; background:var(--ss-raised); display:flex; flex-direction:column; align-items:flex-start; gap:15px; }
+.im-settings .im-settings-software-edit .im-settings-form-grid { width:100%; }
+.im-settings .im-settings-editor-actions { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:18px 22px; border:1px solid var(--ss-line); border-radius:10px; background:var(--ss-bg); font-size:12px; color:var(--ss-muted); }
+.im-settings .im-settings-note { padding:12px 16px; background:var(--ss-soft); border-left:3px solid var(--ss-accent); color:var(--ss-muted); font-size:12px; border-radius:4px; }
+.im-settings .im-settings-alert { padding:16px 20px; border:1px solid var(--ss-danger); color:var(--ss-danger); border-radius:9px; }
+.im-settings .im-settings-alert ul { list-style:disc; padding-left:20px; }
+.im-settings .im-settings-profile-head { display:flex; align-items:center; gap:20px; }
+.im-settings .im-settings-avatar { width:76px; height:76px; min-width:76px; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:16px; background:var(--ss-soft); border:1px solid var(--ss-line); color:var(--ss-accent); font-size:28px; font-weight:700; }
+.im-settings .im-settings-avatar img { width:100%; height:100%; object-fit:cover; }
+.im-settings .im-settings-avatar-small { width:60px; height:60px; min-width:60px; border-radius:12px; font-size:22px; }
+.im-settings .im-settings-profile-title { min-width:0; }
+.im-settings .im-settings-profile-title p { margin:3px 0; color:var(--ss-muted); font-size:12px; overflow-wrap:anywhere; }
+.im-settings .im-settings-profile-title .im-settings-tags { margin-top:8px; }
+.im-settings .im-settings-profile-caption { margin-left:auto; text-align:right; font-size:10px; letter-spacing:.08em; color:var(--ss-accent); }
+.im-settings .im-settings-profile-caption span { letter-spacing:normal; color:var(--ss-muted); }
+.im-settings .im-settings-upload { display:flex; align-items:center; gap:16px; padding:15px; border:1px dashed var(--ss-line); border-radius:9px; }
+.im-settings .im-settings-file { width:100%; font-size:11px; color:var(--ss-muted); }
+.im-settings .im-settings-file::file-selector-button { color:var(--ss-text); background:var(--ss-raised); border:1px solid var(--ss-line); border-radius:5px; padding:6px 10px; margin-right:10px; cursor:pointer; }
+.im-settings .im-settings-sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.dark .im-settings .im-settings-prose,.dark .im-settings .im-settings-help,.dark .im-settings .im-settings-institution,.dark .im-settings .im-settings-card-head p { color:var(--ss-muted); }
+@media(max-width:900px) { .im-settings .im-settings-account-grid { grid-template-columns:1fr; } }
+@media(max-width:640px) { .im-settings .im-settings-overview-grid,.im-settings .im-settings-form-grid { grid-template-columns:1fr; } .im-settings .im-settings-card-head,.im-settings .im-settings-card-body { padding:18px; } .im-settings .im-settings-intro-main,.im-settings .im-settings-editor-actions { align-items:flex-start; flex-direction:column; } .im-settings .im-settings-intro h2 { font-size:21px; } .im-settings .im-settings-profile-head { flex-wrap:wrap; } .im-settings .im-settings-profile-caption { display:none; } .im-settings .im-settings-legend { padding:14px 18px; gap:8px; } .im-settings .im-settings-upload { align-items:flex-start; flex-direction:column; } .im-settings .im-settings-card-head { flex-wrap:wrap; } }
+
+
+
+
+/* im-settings-equal-cards-v1 */
+
+@media (min-width: 901px) {
+
+    .im-settings .im-settings-account-grid {
+
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+
+        align-items: stretch;
+
+    }
+
+
+
+    .im-settings .im-settings-account-grid > .im-settings-card,
+
+    .im-settings .im-settings-account-grid > .im-settings-stack > .im-settings-card {
+
+        display: flex;
+
+        flex-direction: column;
+
+    }
+
+
+
+    .im-settings .im-settings-account-grid > .im-settings-stack {
+
+        align-self: stretch;
+
+    }
+
+
+
+    .im-settings .im-settings-account-grid > .im-settings-stack > .im-settings-card {
+
+        flex: 1;
+
+    }
+
+
+
+    .im-settings .im-settings-account-grid .im-settings-card > form {
+
+        display: flex;
+
+        flex-direction: column;
+
+        flex: 1;
+
+    }
+
+
+
+    .im-settings .im-settings-account-grid .im-settings-card > form > .im-settings-actions {
+
+        margin-top: auto;
+
+    }
+
+}
+
