@@ -19,7 +19,7 @@ Route::get('/login', function () {
 // the rate limit inside the component.
 // A view, not the component class: pointing the route straight at the Livewire
 // class makes Livewire look for a layout named "layouts", which does not exist.
-Route::view('/login/regist', 'register')->name('register');
+Route::view('/login/regist', 'imnehnet.auth.register')->name('register');
 
 // Compatibility route for the original Filament Student Dashboard name.
 // Redirects legacy links to the current Student Dashboard.

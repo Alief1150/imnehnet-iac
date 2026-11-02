@@ -97,10 +97,11 @@
             {{-- The four rules the server enforces, so a student can see what is
                  missing instead of submitting and being told only that validation
                  failed. data-met drives the colour in the stylesheet. --}}
-            <ul class="imnehnet-auth-checks" aria-live="polite">
+            <ul class="imnehnet-auth-checks" x-show="value.length > 0" x-cloak aria-live="polite">
                 @foreach ([
                     ['value.length >= 8', 'At least 8 characters'],
                     ['/[A-Z]/.test(value)', 'One uppercase letter'],
+                    ['/[a-z]/.test(value)', 'One lowercase letter'],
                     ['/[0-9]/.test(value)', 'One number'],
                     ['/[^A-Za-z0-9]/.test(value)', 'One symbol, e.g. # or $'],
                 ] as [$test, $label])
@@ -118,21 +119,79 @@
             @enderror
         </div>
 
-        <div class="imnehnet-auth-field">
-            <label for="password_confirmation" class="imnehnet-auth-label">Confirm password</label>
-            <input
-                id="password_confirmation"
-                type="password"
-                wire:model="password_confirmation"
-                autocomplete="new-password"
-                required
-                class="imnehnet-auth-input"
-                placeholder="Type it again"
-            >
-            @error('password_confirmation')
-                <p class="imnehnet-auth-error">{{ $message }}</p>
-            @enderror
-        </div>
+        <div x-data="{ show: false }" class="imnehnet-auth-field">
+
+    <label for="password_confirmation" class="imnehnet-auth-label">Confirm password</label>
+
+    <div class="imnehnet-auth-reveal-wrap">
+
+        <input
+
+            id="password_confirmation"
+
+            :type="show ? 'text' : 'password'"
+
+            wire:model="password_confirmation"
+
+            autocomplete="new-password"
+
+            required
+
+            class="imnehnet-auth-input imnehnet-auth-input-has-reveal"
+
+            placeholder="Repeat your password"
+
+        >
+
+        <button type="button"
+
+                class="imnehnet-auth-reveal"
+
+                @click="show = !show"
+
+                :aria-label="show ? 'Hide confirmation password' : 'Show confirmation password'"
+
+                :title="show ? 'Hide password' : 'Show password'">
+
+            <svg x-show="!show" x-cloak width="19" height="19"
+
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
+
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+
+                 aria-hidden="true">
+
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+
+                <circle cx="12" cy="12" r="3"/>
+
+            </svg>
+
+            <svg x-show="show" x-cloak width="19" height="19"
+
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor"
+
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+
+                 aria-hidden="true">
+
+                <path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c7 0 10 7 10 7a14 14 0 0 1-3.2 4.2M6.3 6.3C3.5 8.3 2 12 2 12s3 7 10 7a10 10 0 0 0 4.3-1"/>
+
+                <path d="M10.5 10.5a2.1 2.1 0 0 0 3 3"/>
+
+            </svg>
+
+        </button>
+
+    </div>
+
+    @error('password_confirmation')
+
+        <p class="imnehnet-auth-error">{{ $message }}</p>
+
+    @enderror
+
+</div>
 
         <button
             type="submit"
