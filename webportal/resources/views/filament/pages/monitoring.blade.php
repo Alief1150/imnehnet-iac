@@ -537,6 +537,46 @@
                 </div>
             </section>
         </div>
+
+    {{-- Advanced infrastructure monitoring --}}
+    <section class="card min-w-0 border border-base-content/10 shadow-sm"
+             aria-label="Advanced Monitoring Grafana">
+        <div class="card-body relative gap-1 md:pr-44">
+            <div>
+                <h3 class="card-title text-base">
+                    Advanced Monitoring — Grafana
+                </h3>
+                <p class="mt-1 text-sm text-base-content/60">
+                    Explore detailed CPU, memory, disk, network,
+                    and historical infrastructure metrics.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="text-xs text-base-content/60">
+                    Prometheus metrics · Grafana dashboards
+                </div>
+
+                @php
+                    $grafanaUrl = config('services.grafana.url')
+                        ?: config('monitoring.grafana_url')
+                        ?: 'http://100.77.79.18:3000/login';
+                @endphp
+
+                <a href="{{ $grafanaUrl }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="inline-flex items-center justify-center gap-2 md:absolute md:right-5 md:top-1/2 md:-translate-y-1/2 rounded-lg border border-teal-500/20 bg-teal-500/10 px-3 py-2 text-sm font-semibold text-teal-500 transition hover:bg-teal-500/15">
+                    Open Grafana ↗
+                </a>
+            </div>
+            <p class="text-xs text-base-content/50">
+                Opens the Grafana dashboard in a new tab.
+                Authentication may be required.
+            </p>
+        </div>
+    </section>
+
     </div>
 
     @script
