@@ -16,6 +16,7 @@ use App\Services\GuidedCtf\ObjectiveVerdict;
 use App\Services\GuidedCtf\ProvisioningTimeline;
 use App\Services\Terminal\AdminTerminalService;
 use App\Services\TerminalService;
+use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
@@ -40,6 +41,16 @@ use Livewire\Attributes\Locked;
  */
 class GuidedCtf extends Page
 {
+    public static function shouldRegisterNavigation(): bool
+    {
+        return Filament::getCurrentPanel()?->getId() === 'student';
+    }
+
+    public static function canAccess(): bool
+    {
+        return Filament::getCurrentPanel()?->getId() === 'student';
+    }
+
     protected static ?string $navigationLabel = 'CTF Management';
 
     protected static ?string $title = 'Guided CTF';
