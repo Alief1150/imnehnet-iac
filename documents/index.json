@@ -287,6 +287,26 @@
       "received_at": "2026-10-20T07:27:46+07:00",
       "source": "telegram-upload",
       "notes": "Bukti Guided CTF mencapai 6/6 dan COURSE COMPLETED pada 19 Oktober 2026. Klaim dibatasi pada alur Guided CTF yang terlihat dan tidak digeneralisasi ke seluruh fungsi platform."
+    },
+    {
+      "id": "imnehnet-testing-plan-kelompok-5-2026-11-11",
+      "title": "Rencana Pengujian Proyek Lab-as-a-Service IMNEHNET",
+      "document_type": "testing-plan",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "current-testing-plan-reference",
+      "authority": "testing-plan-not-runtime-result",
+      "path": "documents/testing/2026-11-11-kelompok-5-rencana-pengujian-imnehnet-november-2026.pdf",
+      "original_filename": "Rencana_Pengujian_Kelompok_5_IMNEHNET_November_2026.pdf",
+      "media_type": "application/pdf",
+      "page_count": 14,
+      "size_bytes": 122588,
+      "sha256": "e86dc459b1d05cb775eca089315ef3ae438d057f632924dd36b4f76205b79a4d",
+      "received_at": "2026-11-11T12:32:14+07:00",
+      "source": "telegram-upload",
+      "notes": "Rencana pengujian P1–P7 dan UAT minimal 100 pengguna untuk periode November 2026. Dokumen dipahami sebagai protokol kerja: P2 → P1 → P4 → P3 → P5 → P6 → P7, dengan go/no-go sebelum UAT, pengujian bertahap sesuai kapasitas host, bukti bertimestamp, dan rollback. Target, jadwal, metrik, serta kriteria di dalamnya belum merupakan hasil aktual dan tidak menggantikan docs/status.md."
     }
   ]
 }

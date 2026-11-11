@@ -232,3 +232,8 @@ Verified on 2026-10-12:
 
 - The signed approval sheet and PBL activity logbook are archived intact at `documents/administrative/2026-10-12-lembar-pengesahan-dan-logbook-imnehnet-kelompok-5.pdf` and catalogued in `documents/index.json`.
 - The PDF has 6 A4 pages, size 13178091 bytes, and SHA-256 `d9076a43f126ad1260863bf1c358d99d953d89b3a51f9675d92f8ff45cb7e5fc`. It is an administrative/activity record, not evidence of runtime deployment, and the repository must remain private because the signed source contains personal and signature-audit metadata.
+
+Verified on 2026-11-11:
+
+- The 14-page November testing plan is archived intact at `documents/testing/2026-11-11-kelompok-5-rencana-pengujian-imnehnet-november-2026.pdf` and catalogued in `documents/index.json`.
+- The PDF is 122588 bytes with SHA-256 `e86dc459b1d05cb775eca089315ef3ae438d057f632924dd36b4f76205b79a4d`. It defines planned P1–P7 and UAT procedures, sequencing, safety gates, evidence handling, and target metrics; none of those targets or PASS/FAIL outcomes are recorded as runtime results merely by archiving the plan.

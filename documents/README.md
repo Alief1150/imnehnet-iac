@@ -7,6 +7,7 @@ dan direplikasi melalui repository GitHub privat.
 - `proposals/` menyimpan proposal akademik dalam format PDF dan arsip sumber final.
 - **Proposal terbaru: v4** — `proposals/2026-10-06-kelompok-5-proposal-pbl-imnehnet-final-v4.pdf`, diterima Selasa, 6 Oktober 2026. Versi sebelumnya tetap disimpan sebagai riwayat dan ditandai `superseded-final-reference` dalam `index.json`.
 - `presentations/` menyimpan artefak presentasi PBL yang dapat diedit dan sudah melalui structural read-back serta visual QA.
+- `testing/` menyimpan rencana dan protokol pengujian proyek. Target, jadwal, metrik, dan kriteria di dalamnya tetap diklasifikasikan sebagai rencana sampai didukung bukti eksekusi.
 - `audit/` menyimpan dokumentasi setup/troubleshooting audit yang sudah disanitasi; raw audit log dan mapping identitas aktual tidak boleh disimpan di repository.
 - `handoffs/` menyimpan breakpoint implementasi dan context note yang sudah disanitasi; setiap fakta runtime yang dapat berubah tetap harus diverifikasi terhadap `docs/status.md` dan sistem live.
 - `administrative/` menyimpan rekaman administratif bertanda tangan dan logbook kegiatan. Dokumen di direktori ini dapat memuat data identitas atau metadata audit penandatanganan; repository wajib tetap privat dan dokumen tidak boleh dipublikasikan ulang tanpa peninjauan privasi.
