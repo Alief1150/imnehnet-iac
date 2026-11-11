@@ -69,6 +69,8 @@ final class SecurityTelemetryCollector
         $alerts = $this->collectAlerts($read, $now);
 
         if ($alerts !== null) {
+            Cache::put('security.alert_rows.v1', $alerts['retained_rows'], now()->addMinutes(5));
+            unset($alerts['retained_rows']);
             $telemetry['alerts'] = $alerts;
         } else {
             $telemetry['alerts'] = $this->staled($telemetry['alerts'] ?? null, 'The Wazuh alert log could not be read.');
@@ -298,6 +300,7 @@ final class SecurityTelemetryCollector
             'by_agent' => $byAgent,
             'hourly' => $hourly,
             'recent' => $recent,
+            'retained_rows' => array_slice(array_reverse($day), 0, 500),
         ];
     }
 
@@ -390,136 +393,101 @@ final class SecurityTelemetryCollector
                         'med' => ['range' => ['field' => 'rule.level', 'ranges' => [['from' => 7, 'to' => 12]]]],
                         'high' => ['range' => ['field' => 'rule.level', 'ranges' => [['from' => 12]]]],
                     ]],
-                    'per_hour' =>                     array (
-                    'filter' => 
-                    array (
-                    'range' => 
-                    array (
-                    'timestamp' => 
-                    array (
-                    'gte' => 'now-7d',
-                    'lt' => 'now',
-                    ),
-                    ),
-                    ),
-                    'aggs' => 
-                    array (
-                    'hours' => 
-                    array (
-                    'date_histogram' => 
-                    array (
-                    'field' => 'timestamp',
-                    'calendar_interval' => '1h',
-                    'min_doc_count' => 0,
-                    'extended_bounds' => 
-                    array (
-                    'min' => 'now-7d',
-                    'max' => 'now',
-                    ),
-                    ),
-                    'aggs' => 
-                    array (
-                    'low' => 
-                    array (
-                    'range' => 
-                    array (
-                    'field' => 'rule.level',
-                    'ranges' => 
-                    array (
-                    0 => 
-                    array (
-                    'to' => 7,
-                    ),
-                    ),
-                    ),
-                    ),
-                    'med' => 
-                    array (
-                    'range' => 
-                    array (
-                    'field' => 'rule.level',
-                    'ranges' => 
-                    array (
-                    0 => 
-                    array (
-                    'from' => 7,
-                    'to' => 12,
-                    ),
-                    ),
-                    ),
-                    ),
-                    'high' => 
-                    array (
-                    'range' => 
-                    array (
-                    'field' => 'rule.level',
-                    'ranges' => 
-                    array (
-                    0 => 
-                    array (
-                    'from' => 12,
-                    ),
-                    ),
-                    ),
-                    ),
-                    'agents' => 
-                    array (
-                    'terms' => 
-                    array (
-                    'field' => 'agent.name',
-                    'size' => 100,
-                    ),
-                    'aggs' => 
-                    array (
-                    'low' => 
-                    array (
-                    'range' => 
-                    array (
-                    'field' => 'rule.level',
-                    'ranges' => 
-                    array (
-                    0 => 
-                    array (
-                    'to' => 7,
-                    ),
-                    ),
-                    ),
-                    ),
-                    'med' => 
-                    array (
-                    'range' => 
-                    array (
-                    'field' => 'rule.level',
-                    'ranges' => 
-                    array (
-                    0 => 
-                    array (
-                    'from' => 7,
-                    'to' => 12,
-                    ),
-                    ),
-                    ),
-                    ),
-                    'high' => 
-                    array (
-                    'range' => 
-                    array (
-                    'field' => 'rule.level',
-                    'ranges' => 
-                    array (
-                    0 => 
-                    array (
-                    'from' => 12,
-                    ),
-                    ),
-                    ),
-                    ),
-                    ),
-                    ),
-                    ),
-                    ),
-                    ),
-                    ),
+                    'per_hour' => [
+                        'filter' => [
+                            'range' => [
+                                'timestamp' => [
+                                    'gte' => 'now-7d',
+                                    'lt' => 'now',
+                                ],
+                            ],
+                        ],
+                        'aggs' => [
+                            'hours' => [
+                                'date_histogram' => [
+                                    'field' => 'timestamp',
+                                    'calendar_interval' => '1h',
+                                    'min_doc_count' => 0,
+                                    'extended_bounds' => [
+                                        'min' => 'now-7d',
+                                        'max' => 'now',
+                                    ],
+                                ],
+                                'aggs' => [
+                                    'low' => [
+                                        'range' => [
+                                            'field' => 'rule.level',
+                                            'ranges' => [
+                                                0 => [
+                                                    'to' => 7,
+                                                ],
+                                            ],
+                                        ],
+                                    ],
+                                    'med' => [
+                                        'range' => [
+                                            'field' => 'rule.level',
+                                            'ranges' => [
+                                                0 => [
+                                                    'from' => 7,
+                                                    'to' => 12,
+                                                ],
+                                            ],
+                                        ],
+                                    ],
+                                    'high' => [
+                                        'range' => [
+                                            'field' => 'rule.level',
+                                            'ranges' => [
+                                                0 => [
+                                                    'from' => 12,
+                                                ],
+                                            ],
+                                        ],
+                                    ],
+                                    'agents' => [
+                                        'terms' => [
+                                            'field' => 'agent.name',
+                                            'size' => 100,
+                                        ],
+                                        'aggs' => [
+                                            'low' => [
+                                                'range' => [
+                                                    'field' => 'rule.level',
+                                                    'ranges' => [
+                                                        0 => [
+                                                            'to' => 7,
+                                                        ],
+                                                    ],
+                                                ],
+                                            ],
+                                            'med' => [
+                                                'range' => [
+                                                    'field' => 'rule.level',
+                                                    'ranges' => [
+                                                        0 => [
+                                                            'from' => 7,
+                                                            'to' => 12,
+                                                        ],
+                                                    ],
+                                                ],
+                                            ],
+                                            'high' => [
+                                                'range' => [
+                                                    'field' => 'rule.level',
+                                                    'ranges' => [
+                                                        0 => [
+                                                            'from' => 12,
+                                                        ],
+                                                    ],
+                                                ],
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
                 ],
             ]);
         } catch (\Throwable) {

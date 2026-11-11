@@ -199,7 +199,6 @@
         $chart = $this->alertTrend();
         $donut = $this->severityDonut();
         $integrations = collect($this->integrations());
-        $grafana = $integrations->firstWhere('key', 'grafana');
         $wazuhDash = $integrations->firstWhere('key', 'wazuh_dashboard');
         $wazuhApi = $integrations->firstWhere('key', 'wazuh_api');
         $recent = $this->recentAlerts();
@@ -211,7 +210,6 @@
         $baseUrl = \App\Filament\Pages\Security::getUrl(panel: 'admin');
 
         $integrationCards = [
-            ['entry' => $grafana, 'name' => 'Grafana', 'icon' => 'chart-bar', 'blurb' => 'View dashboards and visualizations'],
             ['entry' => $wazuhDash, 'name' => 'Wazuh', 'icon' => 'shield', 'blurb' => 'Investigate alerts and manage agents'],
         ];
     @endphp
@@ -219,10 +217,9 @@
     <div wire:poll.15s class="im-security">
         <div class="im-page-heading">
             <div>
-                <h2 class="text-xl font-bold tracking-tight text-gray-950 dark:text-white">Security</h2>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Monitor security alerts, agent activity, and environment coverage.</p>
             </div>
-            
+
         </div>
 
         @php $fresh = $this->freshness(); @endphp
@@ -458,7 +455,7 @@
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Access external security tools for deeper analysis and monitoring.</p>
                 </div>
             </div>
-            <div class="im-integrations-grid">
+            <div class="im-integrations-grid" style="grid-template-columns: minmax(0, 1fr);">
                 @foreach ($integrationCards as $card)
                     @php $entry = $card['entry'] ?? null; $ok = ($entry['status'] ?? '') === 'healthy'; @endphp
                     <div class="im-integration">
@@ -509,9 +506,7 @@
                     </h3>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Latest event per reporter, newest first.</p>
                 </div>
-                @if ($wazuhDash !== null && ! empty($wazuhDash['url']))
-                    <a href="{{ $wazuhDash['url'] }}" target="_blank" rel="noopener noreferrer" class="shrink-0 text-xs font-semibold text-teal-600 hover:underline dark:text-teal-400">View all alerts →</a>
-                @endif
+                <button type="button" wire:click="openAlerts" class="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-teal-600 hover:underline dark:text-teal-400">{!! \App\Support\Flyon::html('eye') !!} View all alerts →</button>
             </div>
             <div class="join im-segments im-alert-filter" role="group" aria-label="Severity filter">
                 @foreach (['all' => 'All', 'low' => 'Low', 'medium' => 'Medium', 'high' => 'High'] as $sevKey => $sevLabel)
@@ -541,4 +536,5 @@
             </div>
         </section>
     </div>
+    @include("filament.pages.partials.security-alerts-modal")
 </x-filament-panels::page>

@@ -8,6 +8,7 @@ use App\Services\SecurityTelemetryCollector;
 use App\Support\Lucide;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Url;
 
 /**
@@ -31,6 +32,76 @@ final class Security extends Page
     public string $range = '24h';
 
     public string $sev = 'all';
+
+    public bool $showAlerts = false;
+
+    public int $alertsPage = 1;
+
+    public string $alertsSeverity = 'all';
+
+    public string $alertsSearch = '';
+
+    public function openAlerts(): void
+    {
+
+        $this->showAlerts = true;
+
+        $this->alertsPage = 1;
+
+    }
+
+    public function closeAlerts(): void
+    {
+
+        $this->showAlerts = false;
+
+    }
+
+    public function setAlertsPage(int $page): void
+    {
+
+        $this->alertsPage = max(1, $page);
+
+    }
+
+    public function alertBrowser(): array
+    {
+
+        $rows = Cache::get('security.alert_rows.v1', []);
+
+        $rows = is_array($rows) ? $rows : [];
+
+        $cutoff = time() - 86400;
+
+        $severity = $this->alertsSeverity;
+
+        $search = mb_strtolower(trim($this->alertsSearch));
+
+        $rows = array_values(array_filter($rows, static fn ($r): bool => is_array($r) && ($r['ts'] ?? 0) >= $cutoff));
+
+        $retained = count($rows);
+
+        $rows = array_values(array_filter($rows, static function ($r) use ($severity, $search): bool {
+
+            if ($severity !== 'all' && ($r['severity'] ?? '') !== $severity) {
+                return false;
+            }
+
+            $haystack = mb_strtolower(implode(' ', [$r['agent'] ?? '', $r['description'] ?? '', $r['rule'] ?? '', $r['ip'] ?? '']));
+
+            return $search === '' || str_contains($haystack, $search);
+
+        }));
+
+        $total = count($rows);
+
+        $pages = max(1, (int) ceil($total / 25));
+
+        $page = min(max(1, $this->alertsPage), $pages);
+
+        return ['rows' => array_slice($rows, ($page - 1) * 25, 25), 'total' => $total, 'retained' => $retained, 'page' => $page, 'pages' => $pages];
+
+    }
 
     public function mount(): void
     {
