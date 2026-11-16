@@ -1,4 +1,4 @@
-# Dokumentasi — Verifikasi Server Fisik dan Lingkungan Virtualisasi
+# Dokumentasi 01 — Verifikasi Server Fisik dan Lingkungan Virtualisasi
 
 ## Tujuan
 
@@ -61,7 +61,7 @@ egrep -c '(vmx|svm)' /proc/cpuinfo
 
 **Hasil yang diharapkan:**
 
-Perintah menampilkan angka lebih dari 0 sebagai indikasi bahwa prosesor menyediakan dukungan virtualisasi.
+Perintah menampilkan angka lebih dari 0, yang menunjukkan bahwa prosesor memiliki dukungan virtualisasi hardware. Pada server IMNEHNET, hasil pemeriksaan menunjukkan angka `8`.
 
 ### 5. Persiapan Lingkungan Virtualisasi
 
@@ -99,17 +99,25 @@ Perintah berhasil dijalankan dan menampilkan daftar VM yang terdaftar pada libvi
 1. Hasil pemeriksaan hostname dan sistem operasi server.
    <img width="806" height="361" alt="image" src="https://github.com/user-attachments/assets/e836feec-82a9-4c5c-9341-2b8034151172" />
 
-3. Hasil pemeriksaan spesifikasi CPU dan RAM.
+2. Hasil pemeriksaan spesifikasi CPU dan RAM.
+   <img width="1141" height="422" alt="image" src="https://github.com/user-attachments/assets/863b3923-0288-43c4-9f9d-8bd7dbb290f8" />
+   <img width="986" height="129" alt="image" src="https://github.com/user-attachments/assets/da624a59-0860-42b3-a152-547fe3ece3dc" />
+
+3. Hasil pemeriksaan kapasitas penyimpanan.
+   <img width="645" height="262" alt="Screenshot 2026-11-16 122841" src="https://github.com/user-attachments/assets/4de37a2a-3574-4619-ae04-8e0b6669434f" />
+   <img width="784" height="309" alt="Screenshot 2026-11-16 122903" src="https://github.com/user-attachments/assets/29d58876-1015-46d6-b38e-cc090c0a9c77" />
    
-5. Hasil pemeriksaan kapasitas penyimpanan.
+4. Hasil pemeriksaan dukungan virtualisasi.
+   <img width="637" height="83" alt="image" src="https://github.com/user-attachments/assets/d4aae198-c19c-4f23-bed4-c9ba7e425a5d" />
    
-7. Hasil pemeriksaan dukungan virtualisasi.
-   
-9. Proses instalasi komponen KVM, QEMU, dan libvirt.
+5. Proses instalasi komponen KVM, QEMU, dan libvirt.
+   <img width="1365" height="713" alt="Screenshot 2026-09-12 221803" src="https://github.com/user-attachments/assets/fd802b1c-be66-410c-9de9-34d29a881e0e" />
     
-11. Hasil pemeriksaan status layanan libvirt.
+6. Hasil pemeriksaan status layanan libvirt.
+   <img width="1358" height="541" alt="Screenshot 2026-09-12 224525" src="https://github.com/user-attachments/assets/47a263ec-64ff-4ead-a5e3-97b88888bd18" />
     
-13. Hasil verifikasi koneksi menggunakan virsh.
+7. Hasil verifikasi koneksi menggunakan virsh.
+   <img width="441" height="147" alt="image" src="https://github.com/user-attachments/assets/05532eb0-df41-4970-9d4b-df59f590b19b" />
 
 ## Hasil Tahap
 
