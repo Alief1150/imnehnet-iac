@@ -1,28 +1,55 @@
 # Ansible
 
-Ansible configures guest operating systems and applications after infrastructure provisioning.
+Ansible mengonfigurasi guest dan container setelah provisioning OpenTofu. Folder
+ini merupakan source utama playbook IMNEHNET; dokumentasi `jobdesc/` hanya
+menautkannya dan tidak menyimpan salinan kedua.
 
-Expected roles include:
+## Controller dan inventory
 
-- common baseline/hardening
-- Zabbix server/agent
-- Wazuh manager/agent
-- client configuration
-- Windows/PWA workload configuration where required
-- distributed node-local audit reporting
+- [`ansible.cfg`](ansible.cfg) menetapkan inventory lokal, roles path, host-key checking, timeout, pipelining, dan SSH multiplexing.
+- [`inventory/hosts.ini.example`](inventory/hosts.ini.example) adalah template tanpa credential untuk controller, `LAB-ENV`, `LAB-ATK`, dan student container.
+- `inventory/hosts.ini` bersifat machine-local dan diabaikan Git.
+- Private key, become password, vault password, token, dan raw inventory rahasia tidak boleh disimpan di repository.
 
-The current repository includes:
+Siapkan inventory lokal tanpa mengubah template:
 
-- `playbooks/imnehnet-audit.yml` and role `roles/imnehnet_audit` for Debian/
-  Ubuntu audit deployment;
-- `playbooks/imnehnet-audit-rollback.yml` for conservative removal of managed
-  audit files without uninstalling packages;
-- reviewed Tailscale APT keyring repair and rollback playbooks for the verified
-  LAB-ENV empty-keyring failure.
+```bash
+cp ansible/inventory/hosts.ini.example ansible/inventory/hosts.ini
+```
 
-Run audit deployment one node at a time with `--check --diff` before apply.
-Actor mappings belong in a protected temporary vars file outside Git. Inventory,
-become passwords, raw logs, private keys, and node-specific credentials must not
-be committed.
+Isi placeholder hanya pada salinan lokal. Jangan menambahkan password atau private
+key ke inventory.
 
-Do not store vault passwords, plaintext credentials, or SSH private keys in this repository.
+## Enam playbook provisioning dan pemeriksaan
+
+- [`playbooks/controller-check.yml`](playbooks/controller-check.yml) — pemeriksaan fakta controller dan Python.
+- [`playbooks/lab-env-check.yml`](playbooks/lab-env-check.yml) — pemeriksaan `LAB-ENV` dan instalasi Incus.
+- [`playbooks/container-check.yml`](playbooks/container-check.yml) — pemeriksaan konektivitas, identitas, alamat, dan uptime container pada `student_labs`.
+- [`playbooks/student-bootstrap.yml`](playbooks/student-bootstrap.yml) — bootstrap user dan paket dasar setelah container tersedia.
+- [`playbooks/install-incus-wrapper.yml`](playbooks/install-incus-wrapper.yml) — pemasangan wrapper Incus terbatas serta validasi sudoers.
+- [`playbooks/ctf-lab-pair.yml`](playbooks/ctf-lab-pair.yml) — provisioning pasangan victim/attacker Guided CTF dengan input eksplisit.
+
+Inventory aktif yang diaudit belum memiliki grup `lab_atk` dan `student_labs`.
+Akibatnya syntax-check playbook terkait menghasilkan warning sampai inventory lokal
+tersebut dilengkapi dan diverifikasi.
+
+## Playbook operasional lain
+
+Repository juga memuat playbook/role terpisah untuk distributed audit reporting dan
+perbaikan keyring Tailscale yang telah terdokumentasi sebelumnya. Source tersebut
+tidak digantikan oleh enam playbook di atas.
+
+## Validasi aman
+
+```bash
+ansible-inventory --graph
+ansible all -m ansible.builtin.ping
+for playbook in ansible/playbooks/*.yml; do
+  ansible-playbook --syntax-check "$playbook"
+done
+```
+
+Untuk playbook yang dapat mengubah host/container, jalankan `--check --diff` satu
+target per kali dan review `PLAY RECAP` sebelum apply. `ctf-lab-pair.yml` memakai
+command yang memprovisioning container dan tidak boleh dijalankan sebagai bagian
+dari audit read-only.

@@ -24,6 +24,12 @@ crash.*.log
 # Ansible runtime secrets
 ansible/.vault_pass
 ansible/vault-password*
+ansible/vault_password*
+
+# Ansible machine-local inventory/runtime
+ansible/inventory/hosts.ini
+*.retry
+.ansible/
 
 # Local Hermes overrides / memories
 AGENTS.override.md
