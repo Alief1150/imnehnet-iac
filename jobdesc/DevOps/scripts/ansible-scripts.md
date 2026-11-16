@@ -5,7 +5,7 @@
 **Tanggal dokumentasi:** 16 November 2026  
 **Jenis bukti:** screenshot konfigurasi Ansible dan playbook dari `Audit File DevOps_V2.zip`, dibandingkan dengan source GitHub `ansible/`.
 
-> **Status gambar:** 8 screenshot Ansible berasal dari ZIP audit V2. File Markdown sudah menyematkan path relatif, tetapi gambar baru tampil di GitHub **setelah** PNG sumber diunggah ke `jobdesc/DevOps/images/ansible/`. Screenshot memperlihatkan potongan source, bukan bukti semua task telah dijalankan.
+> **Status gambar: TERLAMPIR.** Delapan screenshot asli Ansible dari ZIP audit V2 tersimpan pada `jobdesc/DevOps/images/ansible/` dan ditampilkan langsung di setiap subbagian. Screenshot memperlihatkan potongan source, **bukan** bukti semua task telah dijalankan.
 
 ## 1. Tujuan
 

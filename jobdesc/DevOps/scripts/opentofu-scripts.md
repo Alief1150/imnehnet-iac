@@ -5,7 +5,7 @@
 **Tanggal dokumentasi:** 16 November 2026  
 **Jenis bukti:** screenshot kode OpenTofu dari `Audit File DevOps_V2.zip`, dibandingkan dengan source GitHub `tofu/`.
 
-> **Status gambar:** 5 screenshot bersumber dari ZIP audit V2. File Markdown ini sudah disusun dengan referensi gambar relatif; gambar akan tampil di GitHub **setelah** berkas PNG diunggah ke `jobdesc/DevOps/images/opentofu/`. Screenshots adalah potongan tampilan file, bukan bukti eksekusi `tofu apply`.
+> **Status gambar: TERLAMPIR.** Lima screenshot asli dari ZIP audit V2 tersimpan pada `jobdesc/DevOps/images/opentofu/` dan ditampilkan langsung di setiap subbagian. Screenshot merupakan potongan source konfigurasi, **bukan** bukti eksekusi `tofu apply`.
 
 ## 1. Tujuan
 

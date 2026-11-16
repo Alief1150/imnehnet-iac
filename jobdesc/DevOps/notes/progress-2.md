@@ -56,6 +56,6 @@ Catatan di atas merekam **kondisi saat audit sebelum submission**. Setelahnya, s
 
 ![Screenshot git fetch origin main](../images/git/fetch-origin-main.png)
 
-**Gambar — inspeksi/fetch repository.** Screenshot dari `Audit File DevOps_V2.zip` memperlihatkan pemeriksaan commit dan daftar perubahan repository melalui Git. Gambar ini adalah bukti aktivitas inspeksi/sinkronisasi, **bukan** bukti deployment atau berhasilnya provisioning live. Berkas PNG harus diunggah ke `../images/git/` agar gambar muncul di GitHub.
+**Gambar — inspeksi/fetch repository.** Screenshot dari `Audit File DevOps_V2.zip` memperlihatkan pemeriksaan commit dan daftar perubahan repository melalui Git. Gambar ini adalah bukti aktivitas inspeksi/sinkronisasi, **bukan** bukti deployment atau berhasilnya provisioning live. Berkas PNG asli telah diunggah ke `../images/git/` dan disematkan pada dokumentasi ini.
 
 Untuk status terkini gunakan riwayat commit dan status PR yang tertaut, bukan catatan staging historis di atas.

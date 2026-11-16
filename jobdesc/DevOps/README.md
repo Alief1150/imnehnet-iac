@@ -16,7 +16,7 @@ DevOps bertanggung jawab atas otomasi provisioning dan konfigurasi IMNEHNET, mel
 - [scripts/](scripts/) — penjelasan konfigurasi OpenTofu dan Ansible serta tautan ke source kanonik.
 - [notes/](notes/) — enam catatan audit V2, audit konfigurasi sebelumnya, dan laporan progres.
 - [pengujian/](pengujian/) — hasil pengujian read-only, targeted tests, dan known issues.
-- [images/](images/) — inventaris screenshot konfigurasi; sumber ZIP V2 disiapkan terpisah untuk unggahan biner.
+- [images/](images/) — 14 screenshot asli audit V2 (5 OpenTofu, 8 Ansible, 1 Git), disematkan dalam dokumentasi terkait.
 
 ## Source utama
 

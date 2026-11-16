@@ -25,4 +25,4 @@ Screenshot berasal dari unggahan `Audit File DevOps_V2.zip` (16 November 2026). 
 
 - `fetch-origin-main.png` — screenshot sinkronisasi/inspeksi sumber Git.
 
-**Status unggahan:** sumber ZIP telah diperiksa, tetapi screenshot biner **belum di-commit ke GitHub**. Dokumen ini hanya daftar referensi supaya tidak menghasilkan tautan gambar rusak. Untuk publikasi perlu menambahkan 14 PNG ke direktori ini sesuai kelompok `opentofu/`, `ansible/` dan `git/`, lalu mengubah dokumentasi menjadi menyematkan gambar yang benar.
+**Status unggahan: SELESAI.** Ke-14 screenshot PNG asli dari Audit DevOps V2 sudah di-commit ke folder `opentofu/`, `ansible/`, dan `git/` pada branch dokumentasi. Semua gambar direferensikan langsung dari [dokumentasi OpenTofu](../scripts/opentofu-scripts.md), [dokumentasi Ansible](../scripts/ansible-scripts.md), dan [catatan progress](../notes/progress-2.md). Screenshot merupakan bukti source/configuration review, bukan bukti provisioning live.
