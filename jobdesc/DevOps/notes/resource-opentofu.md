@@ -50,5 +50,6 @@ tofu state list
   ctf-victim-109
   env-lab-web-smoke
 
+
 ========== MANAGED RESOURCES ==========
 incus_instance.student_lab
