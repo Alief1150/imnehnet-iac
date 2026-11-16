@@ -47,3 +47,15 @@ Source utama: [`tofu/`](../../../tofu/) dan
 2. Menjalankan pengujian Ansible check mode dan integrasi Laravel hanya pada staging yang terisolasi.
 3. Menindaklanjuti 55 kegagalan full suite sebagai known issues pada iterasi development berikutnya. Submission Progress 2 hanya mengklaim 7 targeted tests PASS dengan 27 assertions, bukan kelulusan full suite atau provisioning nyata end-to-end.
 4. Menyimpan bukti pengujian berikutnya tanpa state, kredensial, `.env`, private key, atau output sensitif.
+
+## Pembaruan publikasi GitHub — 16 November 2026
+
+Catatan di atas merekam **kondisi saat audit sebelum submission**. Setelahnya, source terpilih dan laporan Progress 2 sudah masuk `main` melalui [PR #3](https://github.com/Alief1150/imnehnet-iac/pull/3), merge commit `50456572dc115c8520cd5c323d64ec89f791a16f`. Reorganisasi folder `jobdesc/` dan bukti visual disiapkan terpisah dalam [PR #4](https://github.com/Alief1150/imnehnet-iac/pull/4).
+
+### Bukti visual inspeksi repository
+
+![Screenshot git fetch origin main](../images/git/fetch-origin-main.png)
+
+**Gambar — inspeksi/fetch repository.** Screenshot dari `Audit File DevOps_V2.zip` memperlihatkan pemeriksaan commit dan daftar perubahan repository melalui Git. Gambar ini adalah bukti aktivitas inspeksi/sinkronisasi, **bukan** bukti deployment atau berhasilnya provisioning live. Berkas PNG asli telah diunggah ke `../images/git/` dan disematkan pada dokumentasi ini.
+
+Untuk status terkini gunakan riwayat commit dan status PR yang tertaut, bukan catatan staging historis di atas.

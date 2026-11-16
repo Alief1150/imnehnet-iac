@@ -13,3 +13,11 @@ Portal Developer bertanggung jawab atas aplikasi Laravel/Filament sebagai contro
 ## Batas dokumentasi
 
 Portal mengorkestrasi provider dan tidak menggantikan tanggung jawab OpenTofu atau Ansible. Folder ini tidak menyatakan fitur deployed, sehat, atau production-ready tanpa hasil pengujian dan verifikasi endpoint aktual. `.env`, credential database, token, state, dan material private key tidak boleh disimpan di repository.
+
+## Struktur folder terstandar
+
+- [scripts/](scripts/) — rujukan script dan prosedur.
+- [notes/](notes/) — catatan serta dokumentasi teknis.
+- [pengujian/](pengujian/) — bukti/hasil pengujian.
+- [images/](images/) — screenshot bukti konfigurasi.
+\n\n**Status kontribusi individu:** dokumentasi progres Malik belum tersedia; direktori disediakan sebagai template, bukan bukti implementasi.\n
