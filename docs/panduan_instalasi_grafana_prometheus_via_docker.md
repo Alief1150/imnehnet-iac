@@ -108,3 +108,7 @@ sudo docker-compose up -d
 *Contoh tampilan import dashboard:*
 
 ![Import Dashboard Grafana](assets/11%20Import%20template%20Node%20Exporter%20FULL.PNG)
+
+*Contoh tampilan Dashboard grafana:*
+
+![Tampilan Dashboard grafana](assets/dashboard-grafana.png)
