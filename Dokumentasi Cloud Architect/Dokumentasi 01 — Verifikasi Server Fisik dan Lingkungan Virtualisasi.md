@@ -117,7 +117,6 @@ Perintah berhasil dijalankan dan menampilkan daftar VM yang terdaftar pada libvi
    <img width="1358" height="541" alt="Screenshot 2026-09-12 224525" src="https://github.com/user-attachments/assets/47a263ec-64ff-4ead-a5e3-97b88888bd18" />
     
 7. Hasil verifikasi koneksi menggunakan virsh.
-   
    <img width="441" height="147" alt="image" src="https://github.com/user-attachments/assets/05532eb0-df41-4970-9d4b-df59f590b19b" />
 
 ## Hasil Tahap
