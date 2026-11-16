@@ -25,6 +25,7 @@ scrape_configs:
 ```
 
 *Contoh tampilan file konfigurasi:*
+
 ![Konfigurasi Prometheus](assets/7-isi-prometheus.yml.PNG)
 
 ---
@@ -69,6 +70,7 @@ volumes:
 ```
 
 *Contoh struktur docker-compose:*
+
 ![Docker Compose Konfigurasi](assets/8%20docker%20compose%20grafana%20dan%20prometheus.PNG)
 
 ---
@@ -93,6 +95,7 @@ sudo docker-compose up -d
 5. Gulir ke bawah lalu klik tombol **Save & test**.
 
 *Contoh pengaturan Datasource:*
+
 ![Koneksi Prometheus ke Grafana](assets/10%20koneksi%20prometheus%20ke%20grafana.PNG)
 
 ---
@@ -103,4 +106,5 @@ sudo docker-compose up -d
 3. Beri nama dashboard (misal: *Server Imnehnet-Node Exporter Full*), pilih folder penyimpanan, lalu klik **Import**.
 
 *Contoh tampilan import dashboard:*
+
 ![Import Dashboard Grafana](assets/11%20Import%20template%20Node%20Exporter%20FULL.PNG)
