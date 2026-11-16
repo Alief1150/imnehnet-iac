@@ -1,4 +1,4 @@
-# Dokumentasi Cloud Architect 01 — Verifikasi Server Fisik dan Lingkungan Virtualisasi
+# Dokumentasi — Verifikasi Server Fisik dan Lingkungan Virtualisasi
 
 ## Tujuan
 
@@ -96,15 +96,20 @@ Perintah berhasil dijalankan dan menampilkan daftar VM yang terdaftar pada libvi
 
 ## Dokumentasi
 
-Screenshot yang dilampirkan:
-
 1. Hasil pemeriksaan hostname dan sistem operasi server.
-2. Hasil pemeriksaan spesifikasi CPU dan RAM.
-3. Hasil pemeriksaan kapasitas penyimpanan.
-4. Hasil pemeriksaan dukungan virtualisasi.
-5. Proses instalasi komponen KVM, QEMU, dan libvirt.
-6. Hasil pemeriksaan status layanan libvirt.
-7. Hasil verifikasi koneksi menggunakan virsh.
+   <img width="806" height="361" alt="image" src="https://github.com/user-attachments/assets/e836feec-82a9-4c5c-9341-2b8034151172" />
+
+3. Hasil pemeriksaan spesifikasi CPU dan RAM.
+   
+5. Hasil pemeriksaan kapasitas penyimpanan.
+   
+7. Hasil pemeriksaan dukungan virtualisasi.
+   
+9. Proses instalasi komponen KVM, QEMU, dan libvirt.
+    
+11. Hasil pemeriksaan status layanan libvirt.
+    
+13. Hasil verifikasi koneksi menggunakan virsh.
 
 ## Hasil Tahap
 
