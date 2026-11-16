@@ -13,11 +13,10 @@ DevOps bertanggung jawab atas otomasi provisioning dan konfigurasi IMNEHNET, mel
 
 ## Struktur dokumentasi
 
-- [`configuration/`](configuration/) — arsitektur serta konfigurasi OpenTofu, Ansible, dan integrasi Laravel.
-- [`testing/`](testing/) — bukti pengujian aktual dan batas klaim hasil audit.
-- [`progress/`](progress/) — progres terverifikasi, kendala, dan tindak lanjut.
-
-Source produksi tetap berada pada lokasi kanoniknya. Folder ini tidak menyimpan salinan source agar tidak terbentuk dua versi konfigurasi yang berbeda.
+- [scripts/](scripts/) — penjelasan konfigurasi OpenTofu dan Ansible serta tautan ke source kanonik.
+- [notes/](notes/) — enam catatan audit V2, audit konfigurasi sebelumnya, dan laporan progres.
+- [pengujian/](pengujian/) — hasil pengujian read-only, targeted tests, dan known issues.
+- [images/](images/) — inventaris screenshot konfigurasi; sumber ZIP V2 disiapkan terpisah untuk unggahan biner.
 
 ## Source utama
 

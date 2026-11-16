@@ -13,3 +13,11 @@ Cloud Architect bertanggung jawab menjaga konsistensi rancangan arsitektur IMNEH
 ## Batas dokumentasi
 
 Folder ini hanya memuat keputusan, rancangan, dan progres yang memiliki bukti atau sumber yang dapat ditelusuri. Status implementasi bidang lain tidak boleh disimpulkan dari rancangan arsitektur. Kondisi runtime terverifikasi tetap dicatat pada `docs/status.md`, sedangkan keputusan arsitektur dicatat pada `docs/decisions.md`.
+
+## Struktur folder terstandar
+
+- [scripts/](scripts/) — rujukan script dan prosedur.
+- [notes/](notes/) — catatan serta dokumentasi teknis.
+- [pengujian/](pengujian/) — bukti/hasil pengujian.
+- [images/](images/) — screenshot bukti konfigurasi.
+\n\nDokumen Abdi tersedia di [notes/](notes/). Bukti gambar dalam dokumentasi menggunakan tautan attachment GitHub yang ada pada dokumen aslinya.\n

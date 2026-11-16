@@ -26,7 +26,7 @@ scrape_configs:
 
 *Contoh tampilan file konfigurasi:*
 
-![Konfigurasi Prometheus](assets/7-isi-prometheus.yml.PNG)
+![Konfigurasi Prometheus](../images/07-prometheus-configuration.png)
 
 ---
 
@@ -71,7 +71,7 @@ volumes:
 
 *Contoh struktur docker-compose:*
 
-![Docker Compose Konfigurasi](assets/8%20docker%20compose%20grafana%20dan%20prometheus.PNG)
+![Docker Compose Konfigurasi](../images/08-docker-compose-monitoring.png)
 
 ---
 
@@ -83,7 +83,7 @@ sudo docker-compose up -d
 ```
 
 *Tampilan saat container berhasil dijalankan:*
-![Menjalankan Docker Compose](assets/9%20Menjalankan%20docker%20compose%20grafana%20dan%20prometheus.PNG)
+![Menjalankan Docker Compose](../images/09-docker-compose-start.png)
 
 ---
 
@@ -96,7 +96,7 @@ sudo docker-compose up -d
 
 *Contoh pengaturan Datasource:*
 
-![Koneksi Prometheus ke Grafana](assets/10%20koneksi%20prometheus%20ke%20grafana.PNG)
+![Koneksi Prometheus ke Grafana](../images/10-grafana-prometheus-datasource.png)
 
 ---
 
@@ -107,8 +107,8 @@ sudo docker-compose up -d
 
 *Contoh tampilan import dashboard:*
 
-![Import Dashboard Grafana](assets/11%20Import%20template%20Node%20Exporter%20FULL.PNG)
+![Import Dashboard Grafana](../images/11-import-node-exporter-full.png)
 
 *Contoh tampilan Dashboard grafana:*
 
-![Tampilan Dashboard grafana](assets/dashboard-grafana.png)
+![Tampilan Dashboard grafana](../images/dashboard-grafana.png)
