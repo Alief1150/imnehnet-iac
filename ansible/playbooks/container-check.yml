@@ -1,0 +1,26 @@
+---
+- name: Check IMNEHNET Student Containers
+  hosts: student_labs
+  gather_facts: true
+
+  tasks:
+    - name: Test Ansible connectivity
+      ansible.builtin.ping:
+
+    - name: Display container hostname
+      ansible.builtin.debug:
+        var: ansible_hostname
+
+    - name: Display container IP
+      ansible.builtin.debug:
+        var: ansible_default_ipv4.address
+
+    - name: Check uptime
+      ansible.builtin.command:
+        cmd: uptime
+      register: uptime_result
+      changed_when: false
+
+    - name: Display uptime
+      ansible.builtin.debug:
+        var: uptime_result.stdout

@@ -1,0 +1,31 @@
+# ==========================================
+# IMNEHNET Ansible Inventory Template
+# ==========================================
+#
+# Alamat 192.0.2.0/24 adalah TEST-NET-1 dan tidak dirutekan sebagai alamat
+# produksi. Salin file ini ke hosts.ini lalu ganti seluruh nilai contoh setelah
+# alamat, akun, host key, dan public-key authentication diverifikasi.
+
+[controller]
+iaas-mgmt ansible_connection=local
+
+[lab_env]
+lab-env-example ansible_host=192.0.2.20
+
+[lab_atk]
+lab-atk-example ansible_host=192.0.2.30
+
+[student_labs]
+student-example ansible_host=192.0.2.40
+
+[lab_env:vars]
+ansible_user=<REMOTE_USER>
+ansible_ssh_private_key_file=<LOCAL_PRIVATE_KEY_PATH>
+
+[lab_atk:vars]
+ansible_user=<REMOTE_USER>
+ansible_ssh_private_key_file=<LOCAL_PRIVATE_KEY_PATH>
+
+[student_labs:vars]
+ansible_user=<REMOTE_USER>
+ansible_ssh_private_key_file=<LOCAL_PRIVATE_KEY_PATH>

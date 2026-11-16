@@ -1,0 +1,29 @@
+---
+- name: Check LAB-ENV
+  hosts: lab_env
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Test connectivity
+      ansible.builtin.ping:
+
+    - name: Display hostname
+      ansible.builtin.debug:
+        var: ansible_hostname
+
+    - name: Display operating system
+      ansible.builtin.debug:
+        msg: >
+          {{ ansible_distribution }}
+          {{ ansible_distribution_version }}
+
+    - name: Check Incus installation
+      ansible.builtin.command:
+        cmd: incus version
+      register: incus_version
+      changed_when: false
+
+    - name: Display Incus version
+      ansible.builtin.debug:
+        var: incus_version.stdout
