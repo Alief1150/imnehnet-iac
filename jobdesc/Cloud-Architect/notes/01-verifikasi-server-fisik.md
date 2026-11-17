@@ -97,7 +97,7 @@ Perintah berhasil dijalankan dan menampilkan daftar VM yang terdaftar pada libvi
 ## Dokumentasi
 
 1. Hasil pemeriksaan hostname dan sistem operasi server.
-   <img src="jobdesc/Cloud-Architect/images/Instalasi-Komponen-KVM,-QEMU,-&-Libvirt.png">
+   ![Hasil pemeriksaan hostname dan OS server](../images/Instalasi-Komponen-KVM,-QEMU,-&-Libvirt.png)
    
 2. Hasil pemeriksaan spesifikasi CPU dan RAM.
    <img width="1141" height="422" alt="image" src="https://github.com/user-attachments/assets/863b3923-0288-43c4-9f9d-8bd7dbb290f8" />
