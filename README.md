@@ -1,4 +1,4 @@
-# IMNEHNET IaaS
+# IMNEHNET LaaS
 
 Central source of truth for the IMNEHNET PBL infrastructure.
 
