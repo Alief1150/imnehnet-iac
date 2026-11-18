@@ -97,7 +97,7 @@ Perintah berhasil dijalankan dan menampilkan daftar VM yang terdaftar pada libvi
 ## Dokumentasi
 
 1. Hasil pemeriksaan hostname dan sistem operasi server.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
+   ![](../images/Pemeriksaan-Hostname-dan-OS.png)
    
 2. Hasil pemeriksaan spesifikasi CPU dan RAM.
    ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Spesifikasi-CPU.png)
