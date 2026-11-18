@@ -1,4 +1,4 @@
-# Dokumentasi Cloud Architect 02 — Konfigurasi Virtual Machine
+# Dokumentasi 02 — Konfigurasi Virtual Machine
 
 ## Tujuan
 
