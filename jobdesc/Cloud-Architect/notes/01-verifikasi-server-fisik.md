@@ -97,28 +97,27 @@ Perintah berhasil dijalankan dan menampilkan daftar VM yang terdaftar pada libvi
 ## Dokumentasi
 
 1. Hasil pemeriksaan hostname dan sistem operasi server.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Instalasi-Komponen-KVM,-QEMU,-&-Libvirt.png)
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
    
 2. Hasil pemeriksaan spesifikasi CPU dan RAM.
-   <img width="1141" height="422" alt="image" src="https://github.com/user-attachments/assets/863b3923-0288-43c4-9f9d-8bd7dbb290f8" />
-   <img width="986" height="129" alt="image" src="https://github.com/user-attachments/assets/da624a59-0860-42b3-a152-547fe3ece3dc" />
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Spesifikasi-CPU.png)
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Spesifikasi-RAM.png)
 
-3. Hasil pemeriksaan kapasitas penyimpanan.
-   <img width="645" height="262" alt="Screenshot 2026-11-16 122841" src="https://github.com/user-attachments/assets/4de37a2a-3574-4619-ae04-8e0b6669434f" />
-   <img width="784" height="309" alt="Screenshot 2026-11-16 122903" src="https://github.com/user-attachments/assets/29d58876-1015-46d6-b38e-cc090c0a9c77" />
+4. Hasil pemeriksaan kapasitas penyimpanan.
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan=Kapasitas-Penyimpanan.png)
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Kapasitas-Penyimpanan-2.png)
    
-4. Hasil pemeriksaan dukungan virtualisasi.
-   <img width="637" height="83" alt="image" src="https://github.com/user-attachments/assets/d4aae198-c19c-4f23-bed4-c9ba7e425a5d" />
+6. Hasil pemeriksaan dukungan virtualisasi.
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Dukungan-Virtualisasi.png)
    
-5. Proses instalasi komponen KVM, QEMU, dan libvirt.
-   <img width="1365" height="713" alt="Screenshot 2026-09-12 221803" src="https://github.com/user-attachments/assets/fd802b1c-be66-410c-9de9-34d29a881e0e" />
+7. Proses instalasi komponen KVM, QEMU, dan libvirt.
+   ![Hasil pemeriksaan hostname dan OS server](../images/Instalasi-Komponen-KVM,-QEMU,-&-Libvirt.png)
     
-6. Hasil pemeriksaan status layanan libvirt.
-   <img width="1358" height="541" alt="Screenshot 2026-09-12 224525" src="https://github.com/user-attachments/assets/47a263ec-64ff-4ead-a5e3-97b88888bd18" />
+8. Hasil pemeriksaan status layanan libvirt.
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Status-Layanan-Libvirt.png)
     
-7. Hasil verifikasi koneksi menggunakan virsh.
-   
-   <img width="441" height="147" alt="image" src="https://github.com/user-attachments/assets/05532eb0-df41-4970-9d4b-df59f590b19b" />
+9. Hasil verifikasi koneksi menggunakan virsh.
+   ![Hasil pemeriksaan hostname dan OS server](../images/Verifikasi-Koneksi-Libvirt.png)
 
 ## Hasil Tahap
 
