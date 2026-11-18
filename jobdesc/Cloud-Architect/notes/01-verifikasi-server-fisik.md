@@ -117,6 +117,7 @@ Perintah berhasil dijalankan dan menampilkan daftar VM yang terdaftar pada libvi
    ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Status-Layanan-Libvirt.png)
     
 9. Hasil verifikasi koneksi menggunakan virsh.
+   
    ![Hasil pemeriksaan hostname dan OS server](../images/Verifikasi-Koneksi-Libvirt.png)
 
 ## Hasil Tahap
