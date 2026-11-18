@@ -100,25 +100,25 @@ Perintah berhasil dijalankan dan menampilkan daftar VM yang terdaftar pada libvi
    ![](../images/Pemeriksaan-Hostname-dan-OS.png)
    
 2. Hasil pemeriksaan spesifikasi CPU dan RAM.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Spesifikasi-CPU.png)
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Spesifikasi-RAM.png)
+   ![](../images/Pemeriksaan-Spesifikasi-CPU.png)
+   ![](../images/Pemeriksaan-Spesifikasi-RAM.png)
 
 4. Hasil pemeriksaan kapasitas penyimpanan.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan=Kapasitas-Penyimpanan.png)
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Kapasitas-Penyimpanan-2.png)
+   ![](../images/Pemeriksaan=Kapasitas-Penyimpanan.png)
+   ![](../images/Pemeriksaan-Kapasitas-Penyimpanan-2.png)
    
 6. Hasil pemeriksaan dukungan virtualisasi.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Dukungan-Virtualisasi.png)
+   ![](../images/Pemeriksaan-Dukungan-Virtualisasi.png)
    
 7. Proses instalasi komponen KVM, QEMU, dan libvirt.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Instalasi-Komponen-KVM,-QEMU,-&-Libvirt.png)
+   ![](../images/Instalasi-Komponen-KVM,-QEMU,-&-Libvirt.png)
     
 8. Hasil pemeriksaan status layanan libvirt.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Status-Layanan-Libvirt.png)
+   ![](../images/Pemeriksaan-Status-Layanan-Libvirt.png)
     
 9. Hasil verifikasi koneksi menggunakan virsh.
    
-   ![Hasil pemeriksaan hostname dan OS server](../images/Verifikasi-Koneksi-Libvirt.png)
+   ![](../images/Verifikasi-Koneksi-Libvirt.png)
 
 ## Hasil Tahap
 
