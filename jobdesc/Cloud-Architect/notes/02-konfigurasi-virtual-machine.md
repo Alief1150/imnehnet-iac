@@ -79,26 +79,26 @@ Informasi masing-masing VM dapat ditampilkan dan menunjukkan konfigurasi resourc
 
 ## Dokumentasi
 
-### 1. Pembagian Virtual Machine
+1. Pembagian Virtual Machine
 
 
-### 2. Alokasi Resource VM
+2. Alokasi Resource VM
 
 [Masukkan screenshot konfigurasi CPU, RAM, dan kapasitas disk masing-masing VM.]
 
-### 3. Pembuatan dan Konfigurasi VM
+3. Pembuatan dan Konfigurasi VM
 
 [Masukkan screenshot proses pembuatan atau konfigurasi VM melalui KVM/libvirt.]
 
-### 4. Instalasi Sistem Operasi
+4. Instalasi Sistem Operasi
 
 [Masukkan screenshot instalasi atau tampilan sistem operasi pada masing-masing VM.]
 
-### 5. Pemeriksaan Status Virtual Machine
+5. Pemeriksaan Status Virtual Machine
 
 [Masukkan screenshot hasil perintah `virsh list --all`.]
 
-### 6. Verifikasi Konfigurasi Resource VM
+6. Verifikasi Konfigurasi Resource VM
 
 [Masukkan screenshot hasil perintah `virsh dominfo` untuk ketiga VM.]
 
