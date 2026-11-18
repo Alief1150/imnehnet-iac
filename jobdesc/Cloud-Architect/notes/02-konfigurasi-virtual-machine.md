@@ -80,27 +80,22 @@ Informasi masing-masing VM dapat ditampilkan dan menunjukkan konfigurasi resourc
 ## Dokumentasi
 
 1. Pembagian Virtual Machine
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
 
-
-2. Alokasi Resource VM
-
-[Masukkan screenshot konfigurasi CPU, RAM, dan kapasitas disk masing-masing VM.]
+3. Alokasi Resource VM
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
 
 3. Pembuatan dan Konfigurasi VM
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
 
-[Masukkan screenshot proses pembuatan atau konfigurasi VM melalui KVM/libvirt.]
-
-4. Instalasi Sistem Operasi
-
-[Masukkan screenshot instalasi atau tampilan sistem operasi pada masing-masing VM.]
+5. Instalasi Sistem Operasi
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
 
 5. Pemeriksaan Status Virtual Machine
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
 
-[Masukkan screenshot hasil perintah `virsh list --all`.]
-
-6. Verifikasi Konfigurasi Resource VM
-
-[Masukkan screenshot hasil perintah `virsh dominfo` untuk ketiga VM.]
+7. Verifikasi Konfigurasi Resource VM
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
 
 ## Hasil Tahap
 
