@@ -87,14 +87,15 @@ Informasi masing-masing VM dapat ditampilkan dan menunjukkan konfigurasi resourc
    ![Hasil pemeriksaan hostname dan OS server](../images/Pembuatan-&-Konfigurasi-VM-LABENV.png)
    ![Hasil pemeriksaan hostname dan OS server](../images/Pembuatan-&-Konfigurasi-VM-LABATK.png)
 
-4. Instalasi Sistem Operasi
+3. Instalasi Sistem Operasi
    ![Hasil pemeriksaan hostname dan OS server](../images/Installasi-OS-Pada-IAASMGMT.png)
    ![Hasil pemeriksaan hostname dan OS server](../images/Installasi-OS-Pada-LABATK.png)
 
-6. Pemeriksaan Status Virtual Machine
+4. Pemeriksaan Status Virtual Machine
+   
    ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Status-VM.png)
 
-7. Verifikasi Konfigurasi Resource VM
+5. Verifikasi Konfigurasi Resource VM
    ![Hasil pemeriksaan hostname dan OS server](../images/Verifikasi-Resource-VM-1.png)
    ![Hasil pemeriksaan hostname dan OS server](../images/Verifikasi-Resource-VM-2.png)
 
