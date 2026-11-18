@@ -307,6 +307,46 @@
       "received_at": "2026-11-11T12:32:14+07:00",
       "source": "telegram-upload",
       "notes": "Rencana pengujian P1–P7 dan UAT minimal 100 pengguna untuk periode November 2026. Dokumen dipahami sebagai protokol kerja: P2 → P1 → P4 → P3 → P5 → P6 → P7, dengan go/no-go sebelum UAT, pengujian bertahap sesuai kapasitas host, bukti bertimestamp, dan rollback. Target, jadwal, metrik, serta kriteria di dalamnya belum merupakan hasil aktual dan tidak menggantikan docs/status.md."
+    },
+    {
+      "id": "imnehnet-testing-plan-kelompok-5-2026-11-18-byte-revision",
+      "title": "Rencana Pengujian Proyek Lab-as-a-Service IMNEHNET — Byte Revision",
+      "document_type": "testing-plan",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "current-testing-plan-reference-byte-revision",
+      "authority": "testing-plan-not-runtime-result",
+      "path": "documents/testing/2026-11-18-kelompok-5-rencana-pengujian-imnehnet-november-2026-byte-revision.pdf",
+      "original_filename": "Rencana_Pengujian_Kelompok_5_IMNEHNET_November_2026.pdf",
+      "media_type": "application/pdf",
+      "page_count": 14,
+      "size_bytes": 96735,
+      "sha256": "b2ab7d502a40764bf371a63b691058298f4db8f4f98bd392f5973eaf5e26623d",
+      "received_at": "2026-11-18T10:46:25+07:00",
+      "source": "telegram-upload",
+      "notes": "Revisi byte-level dari rencana pengujian November 2026. Teks ternormalisasi identik dengan arsip 11 November 2026, tetapi byte, ukuran, dan checksum berbeda sehingga kedua versi dipertahankan. Dokumen tetap merupakan rencana, bukan bukti hasil pengujian."
+    },
+    {
+      "id": "imnehnet-testing-calendar-infographic-2026-11-18",
+      "title": "Kalender Rencana Pengujian IMNEHNET — November 2026",
+      "document_type": "testing-calendar-infographic",
+      "project": "IMNEHNET",
+      "team": "Kelompok 5 TMJ5A",
+      "year": 2026,
+      "language": "id",
+      "status": "current-testing-plan-reference",
+      "authority": "operator-supplied-planning-visual-not-runtime-result",
+      "path": "documents/testing/2026-11-18-imnehnet-kalender-pengujian-november-2026.jpg",
+      "original_filename": "img_b319931a51ef.jpg",
+      "media_type": "image/jpeg",
+      "dimensions": "1280x853",
+      "size_bytes": 212565,
+      "sha256": "71726b519e34f934461f33d614029ae2986d22b9bff67cca618340666ad8e6f2",
+      "received_at": "2026-11-18T10:46:25+07:00",
+      "source": "telegram-upload",
+      "notes": "Infografik kalender kegiatan pengujian, PIC P1–P7, target UAT 100 pengguna, dan penyusunan laporan November 2026. Jadwal dan target pada gambar tetap diklasifikasikan sebagai rencana, bukan bukti bahwa kegiatan atau target telah tercapai."
     }
   ]
 }

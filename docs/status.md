@@ -237,3 +237,8 @@ Verified on 2026-11-11:
 
 - The 14-page November testing plan is archived intact at `documents/testing/2026-11-11-kelompok-5-rencana-pengujian-imnehnet-november-2026.pdf` and catalogued in `documents/index.json`.
 - The PDF is 122588 bytes with SHA-256 `e86dc459b1d05cb775eca089315ef3ae438d057f632924dd36b4f76205b79a4d`. It defines planned P1–P7 and UAT procedures, sequencing, safety gates, evidence handling, and target metrics; none of those targets or PASS/FAIL outcomes are recorded as runtime results merely by archiving the plan.
+
+Verified on 2026-11-18:
+
+- A byte-distinct 14-page revision of the November testing plan is archived at `documents/testing/2026-11-18-kelompok-5-rencana-pengujian-imnehnet-november-2026-byte-revision.pdf`. It is 96735 bytes with SHA-256 `b2ab7d502a40764bf371a63b691058298f4db8f4f98bd392f5973eaf5e26623d`; normalized extracted text is identical to the 11 November archive, so both byte versions are preserved without presenting either as new runtime evidence.
+- The operator-supplied 1280x853 calendar infographic is archived at `documents/testing/2026-11-18-imnehnet-kalender-pengujian-november-2026.jpg`, size 212565 bytes, SHA-256 `71726b519e34f934461f33d614029ae2986d22b9bff67cca618340666ad8e6f2`. It records the planned November schedule, PIC assignments, UAT target, and reporting period; these remain planning targets rather than execution results.
