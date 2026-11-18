@@ -145,7 +145,7 @@ Pengujian dilakukan untuk memastikan komunikasi antar-VM berjalan sesuai konfigu
 9. Hasil pengujian konektivitas antar-VM.
    ![Hasil pemeriksaan hostname dan OS serve](../images/Pengujian-Konektivitas-IAASMGMT.png)
    ![Hasil pemeriksaan hostname dan OS server](../images/Pengujian-Konektivitas-LABENV.png)
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pengujian-Konektivitas-LABATK.png)
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pengujian-konektivitas-LABATK.png)
 
 ## Hasil Tahap
 
