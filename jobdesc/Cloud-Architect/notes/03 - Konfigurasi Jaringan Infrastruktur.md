@@ -129,23 +129,23 @@ Pengujian dilakukan untuk memastikan komunikasi antar-VM berjalan sesuai konfigu
 ## Dokumentasi
 
 1. Konfigurasi IP address IAAS-MGMT.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Konfigurasi-IP-IAASMGMT.png)
+   ![](../images/Konfigurasi-IP-IAASMGMT.png)
    
-3. Konfigurasi IP address LAB-ENV.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Konfigurasi-IP-LABENV.png)
+2. Konfigurasi IP address LAB-ENV.
+   ![](../images/Konfigurasi-IP-LABENV.png)
    
-5. Konfigurasi IP address LAB-ATK.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Konfigurasi-IP-LABATK.png)
+3. Konfigurasi IP address LAB-ATK.
+   ![](../images/Konfigurasi-IP-LABATK.png)
    
-7. Hasil verifikasi IP address masing-masing VM.
-   ![Hasil pemeriksaan hostname dan OS server](../images/Verifikasi-IP-IAASMGMT.png)
-   ![Hasil pemeriksaan hostname dan OS server](../images/Verifikasi-IP-LABENV.png)
-   ![Hasil pemeriksaan hostname dan OS server](../images/Verifikasi-IP-LABATK.png)
+4. Hasil verifikasi IP address masing-masing VM.
+   ![](../images/Verifikasi-IP-IAASMGMT.png)
+   ![](../images/Verifikasi-IP-LABENV.png)
+   ![](../images/Verifikasi-IP-LABATK.png)
    
-9. Hasil pengujian konektivitas antar-VM.
-   ![Hasil pemeriksaan hostname dan OS serve](../images/Pengujian-Konektivitas-IAASMGMT.png)
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pengujian-Konektivitas-LABENV.png)
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pengujian-konektivitas-LABATK.png)
+5. Hasil pengujian konektivitas antar-VM.
+   ![](../images/Pengujian-Konektivitas-IAASMGMT.png)
+   ![](../images/Pengujian-Konektivitas-LABENV.png)
+   ![](../images/Pengujian-konektivitas-LABATK.png)
 
 ## Hasil Tahap
 
