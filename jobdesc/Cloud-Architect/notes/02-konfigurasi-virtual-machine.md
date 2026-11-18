@@ -80,22 +80,23 @@ Informasi masing-masing VM dapat ditampilkan dan menunjukkan konfigurasi resourc
 ## Dokumentasi
 
 1. Pembagian Virtual Machine
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pembagian-Virtual-Machine.png)
+   
+2. Pembuatan dan Konfigurasi VM
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pembuatan-&-Konfigurasi-VM-IAASMGMT.png)
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pembuatan-&-Konfigurasi-VM-LABENV.png)
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pembuatan-&-Konfigurasi-VM-LABATK.png)
 
-3. Alokasi Resource VM
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
+4. Instalasi Sistem Operasi
+   ![Hasil pemeriksaan hostname dan OS server](../images/Installasi-OS-Pada-IAASMGMT.png)
+   ![Hasil pemeriksaan hostname dan OS server](../images/Installasi-OS-Pada-LABATK.png)
 
-3. Pembuatan dan Konfigurasi VM
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
-
-5. Instalasi Sistem Operasi
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
-
-5. Pemeriksaan Status Virtual Machine
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
+6. Pemeriksaan Status Virtual Machine
+   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Status-VM.png)
 
 7. Verifikasi Konfigurasi Resource VM
-   ![Hasil pemeriksaan hostname dan OS server](../images/Pemeriksaan-Hostname-dan-OS.png)
+   ![Hasil pemeriksaan hostname dan OS server](../images/Verifikasi-Resource-VM-1.png)
+   ![Hasil pemeriksaan hostname dan OS server](../images/Verifikasi-Resource-VM-2.png)
 
 ## Hasil Tahap
 
