@@ -26,13 +26,13 @@ Melakukan konfigurasi IP address statis pada VM IAAS-MGMT menggunakan Netplan.
 
 File konfigurasi:
 
-\`\`\`bash
+```bash
 nano /etc/netplan/50-cloud-init.yaml
-\`\`\`
+```
 
 Konfigurasi:
 
-\`\`\`yaml
+```yaml
 network:
   version: 2
   ethernets:
@@ -47,7 +47,7 @@ network:
         addresses:
           - 8.8.8.8
           - 1.1.1.1
-\`\`\`
+```
 
 ### 3. Konfigurasi IP Address LAB-ENV
 
@@ -55,13 +55,13 @@ Melakukan konfigurasi IP address statis pada VM LAB-ENV menggunakan Netplan.
 
 File konfigurasi:
 
-\`\`\`bash
+```bash
 nano /etc/netplan/50-cloud-init.yaml
-\`\`\`
+```
 
 Konfigurasi:
 
-\`\`\`yaml
+```yaml
 network:
   version: 2
   ethernets:
