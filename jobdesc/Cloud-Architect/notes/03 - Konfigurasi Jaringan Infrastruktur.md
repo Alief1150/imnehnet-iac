@@ -76,7 +76,7 @@ network:
         addresses:
           - 8.8.8.8
           - 1.1.1.1
-\`\`\`
+```
 
 ### 4. Konfigurasi IP Address LAB-ATK
 
@@ -84,13 +84,13 @@ Melakukan konfigurasi IP address statis pada VM LAB-ATK menggunakan systemd-netw
 
 File konfigurasi:
 
-\`\`\`bash
+```bash
 nano /etc/systemd/network/20-eth0.network
-\`\`\`
+```
 
 Konfigurasi:
 
-\`\`\`ini
+```ini
 [Match]
 Name=eth0
 
@@ -98,15 +98,15 @@ Name=eth0
 Address=192.168.100.30/24
 Gateway=192.168.100.1
 DNS=192.168.100.1
-\`\`\`
+```
 
 ### 5. Verifikasi IP Address
 
 Memeriksa IP address yang telah dikonfigurasi pada masing-masing VM menggunakan perintah:
 
-\`\`\`bash
+```bash
 ip addr
-\`\`\`
+```
 
 ### 6. Pengujian Konektivitas Antar-VM
 
@@ -114,15 +114,15 @@ Melakukan pengujian konektivitas antar-VM menggunakan perintah ping.
 
 Contoh pengujian dari IAAS-MGMT menuju LAB-ENV:
 
-\`\`\`bash
+```bash
 ping -c 4 192.168.100.20
-\`\`\`
+```
 
 Pengujian juga dilakukan menuju LAB-ATK:
 
-\`\`\`bash
+```bash
 ping -c 4 192.168.100.30
-\`\`\`
+```
 
 Pengujian dilakukan untuk memastikan komunikasi antar-VM berjalan sesuai konfigurasi jaringan.
 
