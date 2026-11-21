@@ -75,16 +75,17 @@ systemctl status incus
 1. Hasil instalasi Incus pada LAB-ENV.
    ![](../images/Installasi-Incus-LABENV.png)
    
-3. Hasil instalasi Incus pada LAB-ATK.
+2. Hasil instalasi Incus pada LAB-ATK.
    ![](../images/Installasi-Incus-LABATK.png)
    
-5. Proses inisialisasi Incus pada LAB-ENV.
+3. Proses inisialisasi Incus pada LAB-ENV.
    ![](../images/Inisialiasi-Incus-LABENV.png)
    
-7. Proses inisialisasi Incus pada LAB-ATK.
+4. Proses inisialisasi Incus pada LAB-ATK.
    ![](../images/Inisialisasi-Incus-LABATK.png)
    
-9. Hasil verifikasi versi dan status layanan Incus.
+5. Hasil verifikasi versi dan status layanan Incus.
+   
    ![](../images/Verifikasi-Ver-Incus-LABENV.png)
    ![](../images/Verifikasi-Ver-Incus-LABATK.png)
    ![](../images/Verifikasi-Status-Incus-LABENV.png)
