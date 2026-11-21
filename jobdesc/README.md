@@ -7,7 +7,7 @@ Dokumentasi Progress 2 semester 5 dikelompokkan berdasarkan PIC, dengan struktur
 | Alief | DevOps | [DevOps](DevOps/) |
 | Ridho | Security Engineer | [Security-Engineer](Security-Engineer/) |
 | Abdi | Cloud Architect | [Cloud-Architect](Cloud-Architect/) |
-| Malik | Portal Developer | [Portal-Developer](Portal-Developer/) — progres individu belum diserahkan |
+| Malik | Portal Developer | [Portal-Developer](Portal-Developer/) |
 
 Setiap folder berisi:
 
