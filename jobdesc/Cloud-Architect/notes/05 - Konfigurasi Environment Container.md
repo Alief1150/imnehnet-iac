@@ -48,65 +48,73 @@ incus profile list
 
 Kedua host menggunakan profile `default` sebagai konfigurasi dasar container.
 
-### 4. Konfigurasi Resource Container
+### 4. Verifikasi Network Environment Defender
 
-Container dialokasikan resource agar penggunaan CPU dan RAM tetap terkontrol.
+Menyiapkan network bridge pada LAB-ENV untuk menghubungkan container di lingkungan defender.
 
-Alokasi resource yang digunakan:
+Perintah untuk memeriksa network:
 
-| Resource | Alokasi |
+```bash
+incus network list
+```
+
+Environment defender menggunakan network bridge `incusbr0` dengan subnet `10.20.0.0/24`.
+
+Container defender yang digunakan:
+
+| Nama Container | IP Address |
 |---|---|
-| CPU | 2 Core |
-| Memory | 2048 MiB |
-| Profile | default |
-| Storage Pool | default |
+| victim-user-16 | 10.20.0.100 |
+| victim-user-23 | 10.20.0.102 |
 
-Konfigurasi resource diterapkan pada container di lingkungan defender dan attacker.
+### 5. Verifikasi Network Environment Attacker
 
-### 5. Konfigurasi Network Environment Defender
+Menyiapkan network bridge pada LAB-ATK untuk menghubungkan container di lingkungan attacker.
 
-Environment defender berada pada VM LAB-ENV dengan subnet `10.20.0.0/24`.
+Perintah untuk memeriksa network:
 
-Network bridge yang digunakan adalah `incusbr0`.
+```bash
+incus network list
+```
 
-Container defender yang telah dibuat:
+Environment attacker menggunakan network bridge `incusbr0` dengan subnet `10.30.0.0/24`.
 
-| Nama Container | IP Address | Status |
-|---|---|---|
-| victim-user-16 | 10.20.0.100 | RUNNING |
-| victim-user-23 | 10.20.0.102 | RUNNING |
+Container attacker yang digunakan:
 
-### 6. Konfigurasi Network Environment Attacker
+| Nama Container | IP Address |
+|---|---|
+| attacker-user-16 | 10.30.0.100 |
+| attacker-user-23 | 10.30.0.102 |
 
-Environment attacker berada pada VM LAB-ATK dengan subnet `10.30.0.0/24`.
-
-Network bridge yang digunakan adalah `incusbr0`.
-
-Container attacker yang telah dibuat:
-
-| Nama Container | IP Address | Status |
-|---|---|---|
-| attacker-user-16 | 10.30.0.100 | RUNNING |
-| attacker-user-23 | 10.30.0.102 | RUNNING |
-
-### 7. Verifikasi Container
+### 6. Verifikasi Container
 
 Memeriksa daftar container pada masing-masing host Incus untuk memastikan container telah dibuat dan berjalan.
 
-Perintah:
+Perintah pada LAB-ENV:
 
 ```bash
 incus list
 ```
 
-Memeriksa konfigurasi salah satu container secara lebih detail:
+Perintah pada LAB-ATK:
+
+```bash
+incus list
+```
+
+Memastikan container defender dan attacker memiliki status `RUNNING` serta IP address sesuai konfigurasi.
+
+### 7. Verifikasi Alokasi Resource Container
+
+Memeriksa alokasi resource yang telah diterapkan pada container di masing-masing host Incus. Setiap container menggunakan alokasi 2 CPU dan RAM sebesar 2048 MiB untuk mendukung kebutuhan lingkungan praktikum.
+
+Pemeriksaan container defender pada LAB-ENV:
 
 ```bash
 incus config show victim-user-16 --expanded
 ```
 
-Untuk container attacker:
-
+Pemeriksaan container attacker pada LAB-ATK:
 ```bash
 incus config show attacker-user-16 --expanded
 ```
@@ -115,11 +123,13 @@ incus config show attacker-user-16 --expanded
 
 Memastikan container dapat diakses melalui terminal menggunakan perintah:
 
+Container defender:
+
 ```bash
 incus exec victim-user-16 -- bash
 ```
 
-Untuk container attacker:
+Container attacker:
 
 ```bash
 incus exec attacker-user-16 -- bash
@@ -128,19 +138,19 @@ incus exec attacker-user-16 -- bash
 ## Dokumentasi
 
 1. Daftar image container pada LAB-ENV dan LAB-ATK.
-2. Konfigurasi storage pool pada kedua host.
+2. Daftar storage pool pada kedua host.
 3. Daftar profile Incus.
-4. Konfigurasi resource container.
-5. Daftar container defender pada LAB-ENV.
-6. Daftar container attacker pada LAB-ATK.
-7. Hasil pemeriksaan konfigurasi container.
-8. Bukti akses terminal container.
+5. Verifikasi network environment defender.
+6. Verifikasi network environment attacker.
+7. Daftar container pada kedua host.
+8. Konfigurasi alokasi resource container.
+9. Bukti akses terminal container.
 
 ## Hasil Tahap
 
-Environment container berhasil disiapkan pada LAB-ENV dan LAB-ATK. LAB-ENV digunakan untuk lingkungan praktikum defender dengan subnet 10.20.0.0/24, sedangkan LAB-ATK digunakan untuk lingkungan praktikum attacker dengan subnet 10.30.0.0/24.
+Environment container telah disiapkan pada LAB-ENV dan LAB-ATK. LAB-ENV digunakan untuk lingkungan praktikum defender dengan subnet 10.20.0.0/24, sedangkan LAB-ATK digunakan untuk lingkungan praktikum attacker dengan subnet 10.30.0.0/24.
 
-Container telah memiliki alokasi resource CPU dan RAM serta menggunakan profile dan storage pool default.
+Container telah disiapkan dengan alokasi resource CPU dan RAM serta menggunakan profile dan storage pool default.
 
 ## Kesimpulan
 
