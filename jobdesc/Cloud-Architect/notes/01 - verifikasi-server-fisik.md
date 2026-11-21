@@ -104,19 +104,21 @@ Perintah berhasil dijalankan dan menampilkan daftar VM yang terdaftar pada libvi
    ![](../images/Pemeriksaan-Spesifikasi-RAM.png)
 
 4. Hasil pemeriksaan kapasitas penyimpanan.
+   
    ![](../images/Pemeriksaan=Kapasitas-Penyimpanan.png)
    ![](../images/Pemeriksaan-Kapasitas-Penyimpanan-2.png)
    
 6. Hasil pemeriksaan dukungan virtualisasi.
+   
    ![](../images/Pemeriksaan-Dukungan-Virtualisasi.png)
    
-7. Proses instalasi komponen KVM, QEMU, dan libvirt.
+8. Proses instalasi komponen KVM, QEMU, dan libvirt.
    ![](../images/Instalasi-Komponen-KVM,-QEMU,-&-Libvirt.png)
     
-8. Hasil pemeriksaan status layanan libvirt.
+9. Hasil pemeriksaan status layanan libvirt.
    ![](../images/Pemeriksaan-Status-Layanan-Libvirt.png)
     
-9. Hasil verifikasi koneksi menggunakan virsh.
+10. Hasil verifikasi koneksi menggunakan virsh.
    
    ![](../images/Verifikasi-Koneksi-Libvirt.png)
 
