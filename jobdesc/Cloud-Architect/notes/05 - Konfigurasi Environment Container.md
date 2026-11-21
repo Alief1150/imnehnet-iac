@@ -64,8 +64,8 @@ Container defender yang digunakan:
 
 | Nama Container | IP Address |
 |---|---|
-| victim-user-16 | 10.20.0.100 |
-| victim-user-23 | 10.20.0.102 |
+| victim-user-1 | 10.20.0.105 |
+| victim-user-29 | 10.20.0.103 |
 
 ### 5. Verifikasi Network Environment Attacker
 
@@ -83,20 +83,14 @@ Container attacker yang digunakan:
 
 | Nama Container | IP Address |
 |---|---|
-| attacker-user-16 | 10.30.0.100 |
-| attacker-user-23 | 10.30.0.102 |
+| attacker-user-1 | 10.30.0.105 |
+| attacker-user-29 | 10.30.0.103 |
 
 ### 6. Verifikasi Container
 
 Memeriksa daftar container pada masing-masing host Incus untuk memastikan container telah dibuat dan berjalan.
 
-Perintah pada LAB-ENV:
-
-```bash
-incus list
-```
-
-Perintah pada LAB-ATK:
+Perintah pada LAB-ENV dan LAB-ATK:
 
 ```bash
 incus list
@@ -111,12 +105,12 @@ Memeriksa alokasi resource yang telah diterapkan pada container di masing-masing
 Pemeriksaan container defender pada LAB-ENV:
 
 ```bash
-incus config show victim-user-16 --expanded
+incus config show victim-user-29 --expanded
 ```
 
 Pemeriksaan container attacker pada LAB-ATK:
 ```bash
-incus config show attacker-user-16 --expanded
+incus config show attacker-user-29 --expanded
 ```
 
 ### 8. Verifikasi Akses Container
@@ -126,13 +120,13 @@ Memastikan container dapat diakses melalui terminal menggunakan perintah:
 Container defender:
 
 ```bash
-incus exec victim-user-16 -- bash
+incus exec victim-user-29 -- bash
 ```
 
 Container attacker:
 
 ```bash
-incus exec attacker-user-16 -- bash
+incus exec attacker-user-29 -- bash
 ```
 
 ## Dokumentasi
