@@ -138,13 +138,34 @@ incus exec attacker-user-16 -- bash
 ## Dokumentasi
 
 1. Daftar image container pada LAB-ENV dan LAB-ATK.
+   ![](../images/Image-Container-LABENV.png)
+   ![](../images/Image-Container-LABATK.png)
+   
 2. Daftar storage pool pada kedua host.
+   ![](../images/Storage-Container-LABENV.png)
+   ![](../images/Storage-Container-LABATK.png)
+   
 3. Daftar profile Incus.
-5. Verifikasi network environment defender.
-6. Verifikasi network environment attacker.
-7. Daftar container pada kedua host.
-8. Konfigurasi alokasi resource container.
-9. Bukti akses terminal container.
+   ![](../images/Profile-Container-LABENV.png)
+   ![](../images/Profile-Container-LABATK.png)
+   
+4. Verifikasi network environment defender.
+   ![](../images/Network-Container-LABENV.png)
+   
+5. Verifikasi network environment attacker.
+   ![](../images/Network-Container-LABATK.png)
+   
+6. Daftar container pada kedua host.
+   ![](../images/Daftar-Container-LABENV.png)
+   ![](../images/Daftar-Container-LABATK.png)
+    
+7. Konfigurasi alokasi resource container.
+   ![](../images/Verifikasi-Resource-Container-LABENV.png)
+   ![](../images/Verifikasi-Resource-Container-LABATK.png)
+    
+8. Bukti akses terminal container.
+   ![](../images/Akses-Container-LABENV.png)
+   ![](../images/Akses-Container-LABATK.png)
 
 ## Hasil Tahap
 
