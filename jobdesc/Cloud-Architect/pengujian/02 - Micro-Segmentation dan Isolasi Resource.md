@@ -65,9 +65,7 @@ ping -c 3 10.20.0.108
 
 **Bukti Pengujian:**
 
-![P2-01 - Hasil pengujian HTTP](../images/P4-01-Curl-Allow.png)
-
-![P2-01 - Hasil pengujian ping](../images/P4-01-Ping-Allow.png)
+![](../images/atkA-vicA.png)
 
 ---
 
@@ -104,9 +102,7 @@ ping -c 3 10.20.0.110
 
 **Bukti Pengujian:**
 
-![P2-02 - Hasil pengujian HTTP](../images/P4-02-Curl-Deny.png)
-
-![P2-02 - Hasil pengujian ping](../images/P4-02-Ping-Deny.png)
+![](../images/atkA-vicB.png)
 
 ---
 
@@ -143,9 +139,7 @@ ping -c 3 10.30.0.109
 
 **Bukti Pengujian:**
 
-![P2-03 - Hasil pengujian HTTP](../images/P4-03-Curl-Deny.png)
-
-![P2-03 - Hasil pengujian ping](../images/P4-03-Ping-Deny.png)
+![](../images/atkA-atkB.png)
 
 ---
 
@@ -182,9 +176,7 @@ ping -c 3 10.20.0.109
 
 **Bukti Pengujian:**
 
-![P2-04 - Hasil pengujian HTTP](../images/P4-04-Curl-Deny.png)
-
-![P2-04 - Hasil pengujian ping](../images/P4-04-Ping-Deny.png)
+![](../images/vicA-vicB.png)
 
 ---
 
@@ -212,7 +204,7 @@ Hasil pengujian menunjukkan koneksi mengalami timeout sehingga container attacke
 
 **Bukti Pengujian:**
 
-![P2-05 - Hasil pengujian SSH](../images/P4-05-SSH-Deny.png)
+![](../images/Student-Management.png)
 
 ---
 
@@ -241,7 +233,7 @@ ip a
 
 **Hasil Pengujian:**
 
-Mahasiswa berhasil membuka terminal Attacker dan Victim melalui menu Terminal pada portal. Hasil pemeriksaan menunjukkan terminal terhubung ke container yang sesuai, salah satunya `attacker-user-33` dengan IP `10.30.0.108`.
+Mahasiswa berhasil membuka terminal Attacker dan Victim melalui menu Terminal pada portal. Hasil pemeriksaan menunjukkan terminal terhubung ke container yang sesuai, yaitu `attacker-user-33` dengan IP `10.30.0.108` dan `victim-user-33` dengan IP `10.20.0.108`.
 
 Portal juga hanya menampilkan resource yang dimiliki oleh akun mahasiswa tersebut.
 
@@ -249,9 +241,9 @@ Portal juga hanya menampilkan resource yang dimiliki oleh akun mahasiswa tersebu
 
 **Bukti Pengujian:**
 
-![P2-06 - Halaman terminal portal mahasiswa](../images/P4-06-Portal-Terminal.png)
+![](../images/Portal-Attacker.png)
 
-![P2-06 - Identitas dan IP container](../images/P4-06-Container-Identity.png)
+![](../images/Portal-Victim.png)
 
 ---
 
