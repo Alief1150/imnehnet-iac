@@ -371,6 +371,7 @@ Tahap 01 merangkum fondasi pembangunan Webportal IMNEHNET: pengenalan VM IAAS-MG
 
 **Tahap 02 (dokumen terpisah):** penyusunan struktur dan fitur **Admin Panel**, dimulai dari konfigurasi Filament, dashboard, pengelolaan pengguna, pengelolaan environment, CTF Management, dan activity logs. **Student Panel dibahas setelah seri Admin selesai.**
 
+
 ### Referensi internal
 
 - [Status proyek](../../../docs/status.md)
