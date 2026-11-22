@@ -173,7 +173,7 @@ Pengujian ini dilakukan untuk memastikan fitur utama pada portal Lab-as-a-Servic
    
    ![](../images/Ver-Delete-Lab.png)
 
-3. Memeriksa proses penghapusan lab.
+3. Menunggu proses penghapusan lab.
 
    ![](../images/Load-Delete.png)
 
