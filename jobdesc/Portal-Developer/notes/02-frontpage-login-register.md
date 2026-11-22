@@ -62,6 +62,8 @@ Route::view('/login/regist', 'imnehnet.auth.register')
     ->name('register');
 ```
 
+**Kode asli:** [routes/web.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/routes/web.php) — bagian route `/`, `/login`, dan `/login/regist`.
+
 | URL | Tujuan berdasarkan konfigurasi |
 |---|---|
 | `/` | Redirect ke `/student/login` |
@@ -90,6 +92,8 @@ Route::view('/login/regist', 'imnehnet.auth.register')
 ->path('student')        // Prefix URL, termasuk /student/login.
 ->login(Login::class);  // Sama-sama menggunakan class login kustom.
 ```
+
+**Kode asli (dua file):** [AdminPanelProvider.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Providers/Filament/AdminPanelProvider.php) dan [StudentPanelProvider.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Providers/Filament/StudentPanelProvider.php). Cuplikan di atas menggabungkan deklarasi dari kedua file.
 
 Kedua panel memakai handler login yang sama, tetapi alamat, otorisasi, dan fitur setelah autentikasi berbeda. **Klik tab Student/Admin mengubah alamat halaman login, bukan langsung mengubah role sebuah akun.**
 
@@ -121,6 +125,8 @@ Source utamanya adalah `resources/views/imnehnet/auth/login.blade.php`. Class `A
     </a>
 </nav>
 ```
+
+**Kode asli:** [login.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/imnehnet/auth/login.blade.php) — branding dan tab login.
 
 **Penjelasan variabel dan fungsi:**
 
@@ -175,6 +181,8 @@ Tombol **Sign in** adalah aksi untuk mengirim data kredensial pengguna yang diin
 </form>
 ```
 
+**Kode asli:** [login.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/imnehnet/auth/login.blade.php) — form dan tombol Sign in. **Handler autentikasi:** [Login.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Auth/Pages/Login.php) (mewarisi method `authenticate` dari Filament).
+
 Alur yang didukung source:
 
 1. Pengguna memilih tab login Student atau Admin, kemudian mengisi kredensial.
@@ -204,6 +212,8 @@ Alur yang didukung source:
 @endif
 ```
 
+**Kode asli:** [login.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/imnehnet/auth/login.blade.php) — kondisi tampilnya tautan registrasi.
+
 `@if` adalah percabangan Blade. `Route::has('register')` mengecek keberadaan definisi route, **bukan** memastikan file view target bisa dirender. Link registrasi tidak ditampilkan di login Admin karena self-registration memang hanya dirancang untuk akun Student.
 
 ### 4.4 Elemen visual pelengkap
@@ -221,6 +231,8 @@ Login menggunakan branding `components.imnehnet-auth-brand`, teks pengantar, are
      setelah dokumen diparsing sesuai aturan browser. --}}
 <script defer src="/imnehnet-login/carousel-v1.js?v=1"></script>
 ```
+
+**Sumber terkait (cuplikan ilustratif):** [login.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/imnehnet/auth/login.blade.php) dan [imnehnet-login-carousel.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/components/imnehnet-login-carousel.blade.php). Baris dalam contoh tidak seluruhnya berdampingan pada source.
 
 Cuplikan terakhir merupakan **ilustrasi integrasi komponen**, bukan satu blok persis yang berdampingan di file login: carousel dipanggil melalui bagian poster dalam file aslinya. Source `imnehnet-login-carousel.blade.php` juga memuat JavaScript untuk tombol sebelumnya/berikutnya, titik navigasi, dan perpindahan slide otomatis (interval 5 detik pada implementasi yang diaudit). CSS hanya mengatur presentasi; interaksi digerakkan JavaScript.
 
@@ -260,6 +272,8 @@ Form berada pada `resources/views/livewire/register-student.blade.php`, sedangka
 </form>
 ```
 
+**Kode asli:** [register-student.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/livewire/register-student.blade.php) — input dan tombol Create account. **Logika pemrosesan:** [RegisterStudent.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Livewire/RegisterStudent.php).
+
 **Catatan:** ini cuplikan ringkas yang mempertahankan hubungan antar-API; markup asli memiliki class CSS, label aksesibilitas, dan indikator password yang lebih lengkap.
 
 | Property Livewire | Isi dari form | Fungsi |
@@ -287,6 +301,8 @@ Pada source, form password memiliki:
     </button>
 </div>
 ```
+
+**Kode asli:** [register-student.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/livewire/register-student.blade.php) — state Alpine.js dan tombol tampil/sembunyikan password. Contoh di atas dipersingkat.
 
 Checklist visual mengevaluasi panjang minimal delapan karakter, huruf kapital, angka, dan simbol. **Alpine.js hanya memberikan umpan balik instan di browser**, sedangkan validasi yang berwenang tetap dijalankan di PHP. Mengubah JavaScript tidak boleh dianggap cukup untuk melewati validasi backend.
 
@@ -352,6 +368,8 @@ public function register(ActivityLogService $activity): void
 }
 ```
 
+**Kode asli:** [RegisterStudent.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Livewire/RegisterStudent.php) — method `register()` lengkap. Cuplikan di atas adalah penyederhanaan untuk penjelasan, **bukan source siap tempel**.
+
 **Penting:** blok di atas adalah **pseudocode PHP berkomentar untuk pembelajaran**, bukan function siap ditempel. Pemanggilan `$activity->record(/* ... */)` sengaja dipersingkat agar tidak menduplikasi seluruh method asli. Periksa source tertaut jika membutuhkan implementasi persis.
 
 Urutan yang terkonfirmasi dari class asli:
@@ -394,6 +412,8 @@ public function canAccessPanel(Panel $panel): bool
 }
 ```
 
+**Kode asli:** [User.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Models/User.php) — method `canAccessPanel()`.
+
 Class `App\Filament\Auth\Pages\Login` mengembalikan `true` pada `isUserAllowedToAccessPanel()` untuk memungkinkan kredensial valid diproses meskipun pengguna membuka alamat login panel yang berbeda. **Ini bukan berarti semua user bebas mengakses semua halaman.** Sesudah autentikasi, `RedirectToOwnPanel` mengecek `canAccessPanel()` untuk mengirim user ke panel yang diperbolehkan; pengamanan resource dan tindakan sensitif tetap harus dijalankan di backend.
 
 ```php
@@ -415,6 +435,8 @@ if ($user !== null
 // Jika tidak perlu redirect, lanjutkan autentikasi Filament.
 return parent::handle($request, $next);
 ```
+
+**Kode asli:** [RedirectToOwnPanel.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Http/Middleware/RedirectToOwnPanel.php) — method `handle()`.
 
 **Catatan audit untuk role Lecturer:** Model mengizinkan Lecturer pada panel Admin, tetapi middleware memilih tujuan redirect berdasarkan `isAdmin()` saja. Dengan demikian, Lecturer yang mencoba login melalui panel Student perlu diuji: kode tujuan default memilih Student, yang justru ditolak oleh `canAccessPanel()`. Dokumentasi ini tidak mengklaim redirect lintas panel bagi Lecturer sudah benar.
 
@@ -444,6 +466,8 @@ test -f resources/views/imnehnet/auth/register.blade.php \
   && echo "Registration wrapper: present" \
   || echo "Registration wrapper: missing"
 ```
+
+**Referensi file untuk pemeriksaan:** [routes/web.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/routes/web.php), [Login.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Auth/Pages/Login.php), [RegisterStudent.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Livewire/RegisterStudent.php), dan [RedirectToOwnPanel.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Http/Middleware/RedirectToOwnPanel.php). Perintah shell adalah instruksi verifikasi, bukan salinan dari satu file source.
 
 Tidak ada perintah di atas yang membuat akun, menjalankan migration, atau merestart aplikasi. **Hindari mempublikasikan `.env`, password, session cookie, atau secret dalam screenshot.**
 
