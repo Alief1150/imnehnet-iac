@@ -51,54 +51,119 @@ class StudentDashboard extends BaseDashboard
     public function dashboardData(): array
     {
         $uid = auth()->id();
+        $days = collect(range(6, 0))->map(fn ($i) => now()->startOfDay()->subDays($i));
+        $empty = [
+            'total' => 0, 'active' => 0, 'completed' => 0, 'objectives' => 0,
+            'hours' => 0, 'activity' => array_fill(0, 7, 0),
+            'usage' => array_fill(0, 7, 0), 'history' => collect(),
+            'days' => $days->map(fn ($day) => $day->format('D'))->all(),
+            'course_name' => 'Web Server Breach',
+        ];
         if (! $uid) {
-            return ['total' => 0, 'active' => 0, 'completed' => 0, 'objectives' => 0, 'hours' => 0, 'activity' => array_fill(0, 7, 0), 'usage' => array_fill(0, 7, 0), 'history' => collect()];
+            return $empty;
         }
 
-        $sessions = LabSession::query()
-            ->where('user_id', $uid)
-            ->with(['course'])
-            ->orderByDesc('id')
-            ->get();
+        $sessions = LabSession::query()->where('user_id', $uid)
+            ->with('course')->orderByDesc('id')->get();
+        $active = $sessions->filter(fn ($s) => in_array(
+            $s->status?->value ?? $s->status, ['READY', 'RUNNING'], true
+        ))->count();
 
-        $active = $sessions->filter(fn ($s) => in_array($s->status?->value ?? $s->status, ['READY', 'RUNNING'], true))->count();
-        $totalCompleted = 0;
-        $totalObjectives = 0;
-        $totalSeconds = 0;
+        // The course is identified by its persisted slug, not by session count.
+        // Prefer the student's most recent course, otherwise use the MVP course.
+        $course = $sessions->first()?->course
+            ?? \App\Models\Course::webServerBreach();
+        $courseSessions = $course
+            ? $sessions->where('course_id', $course->id)
+            : collect();
+        $latestAttempt = $courseSessions->first();
+        $objectives = $course?->objectives()->count() ?? 0;
+        $completed = $latestAttempt
+            ? min($objectives, $latestAttempt->progress()
+                ->where('status', \App\Enums\ObjectiveStatus::Completed->value)
+                ->count())
+            : 0;
+
+        // Daily session activity counts only actual starts on that date.
         $activity = array_fill(0, 7, 0);
-        $usage = array_fill(0, 7, 0);
-        $days = collect(range(6, 0))->map(fn ($i) => now()->startOfDay()->subDays($i));
-
         foreach ($sessions as $session) {
-            $counts = $session->progressCount();
-            $totalCompleted += $counts['completed'];
-            $totalObjectives += $counts['total'];
-            $duration = $session->durationSeconds();
-            $totalSeconds += $duration ?? 0;
-            if ($session->started_at) {
-                foreach ($days as $index => $day) {
-                    $activity[$index]++;
-                    $start = $session->started_at;
-                    $end = $session->completed_at ?? now();
+            if (! $session->started_at) {
+                continue;
+            }
+            foreach ($days as $i => $day) {
+                if ($session->started_at->isSameDay($day)) {
+                    $activity[$i]++;
+                    break;
+                }
+            }
+        }
+
+        // Terminal activity is the closest existing evidence of active pentesting.
+        // Do not treat a provisioned but idle VM as hours of usage.
+        $usageSeconds = array_fill(0, 7, 0);
+        $totalSeconds = 0;
+        $environmentIds = $sessions->pluck('attacker_environment_id')
+            ->filter()->unique()->values()->all();
+        if ($environmentIds) {
+            $terminals = \App\Models\TerminalSession::query()
+                ->where('user_id', $uid)
+                ->whereIn('lab_environment_id', $environmentIds)
+                ->get(['created_at', 'closed_at', 'expires_at']);
+            foreach ($terminals as $terminal) {
+                $start = $terminal->created_at;
+                if (! $start) {
+                    continue;
+                }
+                $end = $terminal->closed_at ?? $terminal->expires_at;
+                if (! $end) {
+                    continue;
+                }
+                if ($end->isFuture()) {
+                    $end = now();
+                }
+                if ($end->lessThanOrEqualTo($start)) {
+                    continue;
+                }
+                $totalSeconds += $start->diffInSeconds($end);
+                foreach ($days as $i => $day) {
+                    $dayEnd = $day->copy()->addDay();
                     $from = $start->greaterThan($day) ? $start : $day;
-                    $until = $end->lessThan($day->copy()->addDay()) ? $end : $day->copy()->addDay();
+                    $until = $end->lessThan($dayEnd) ? $end : $dayEnd;
                     if ($until->greaterThan($from)) {
-                        $usage[$index] += $from->diffInSeconds($until) / 3600;
+                        $usageSeconds[$i] += $from->diffInSeconds($until);
                     }
                 }
             }
         }
 
-        return [
+                // IMNEHNET_LAB_TIME_V3: authoritative aggregate for dashboard display.
+        // CLOSED sessions without completed_at are excluded (no reliable end time).
+        $labTimeSeconds = 0;
+        $labTimeActiveCount = 0;
+        foreach ($sessions as $timeSession) {
+            if (! $timeSession->started_at) {
+                continue;
+            }
+            $timeStatus = $timeSession->status?->value ?? (string) $timeSession->status;
+            if ($timeSession->completed_at) {
+                $labTimeSeconds += max(0, (int) $timeSession->started_at->diffInSeconds($timeSession->completed_at));
+            } elseif (in_array($timeStatus, ['READY', 'RUNNING'], true)) {
+                $labTimeSeconds += max(0, (int) $timeSession->started_at->diffInSeconds(now()));
+                $labTimeActiveCount++;
+            }
+        }
+
+return [
             'total' => $sessions->count(),
-            'active' => $active,
-            'completed' => $totalCompleted,
-            'objectives' => $totalObjectives,
+            'lab_time_seconds' => $labTimeSeconds,
+            'lab_time_active_count' => $labTimeActiveCount, 'active' => $active,
+            'completed' => $completed, 'objectives' => $objectives,
             'hours' => round($totalSeconds / 3600, 1),
             'activity' => $activity,
-            'usage' => array_map(fn ($v) => round($v, 2), $usage),
+            'usage' => array_map(fn ($seconds) => round($seconds / 3600, 2), $usageSeconds),
             'history' => $sessions->take(10),
-            'days' => $days->map(fn ($d) => $d->format('D'))->all(),
+            'days' => $empty['days'],
+            'course_name' => $course?->title ?? 'Web Server Breach',
         ];
     }
 

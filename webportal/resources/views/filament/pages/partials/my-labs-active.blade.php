@@ -184,12 +184,238 @@
                 <div><span class="la-label">Elapsed Since Start</span><span class="la-value">{{ $duration }}</span></div>
             </div><div>
                 <div class="la-actions-top"><button type="button" class="la-btn" wire:click="openWorkspace" @disabled(! $session->status->allowsTerminal())>⚑ Pentest</button><button type="button" class="la-btn" @click="tab='containers'">⌘ Containers / Terminal</button></div>
-                <h2 class="la-section-title">Container Information</h2>
-                <div class="la-containers">
-                    @foreach ([['LAB-ATK (Attacker)', $attacker, $session->attacker_container], ['LAB-ENV (Victim)', $victim, $session->victim_container]] as [$label, $environment, $containerName])
-                        <div class="la-container"><div class="la-container-head"><strong>{{ $label }}</strong><span class="la-runtime">{{ $environment?->runtime_status?->value ?? 'Unknown' }}</span></div><small>Container: {{ $environment?->container_name ?? $containerName ?? 'Not assigned' }}</small><small>Terminal: {{ $environment?->isTerminalAvailable() ? 'Available' : 'Unavailable' }}</small></div>
-                    @endforeach
+
+<style>
+/* IMNEHNET_FASTFETCH_V1_STYLES */
+#im-v4 .la-sysfetch-list {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+}
+
+#im-v4 .la-sysfetch {
+    min-width: 0;
+    overflow: hidden;
+}
+
+#im-v4 .la-sysfetch-body {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+#im-v4 .la-sysfetch-logo {
+    width: 60px;
+    height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--la-border);
+    border-radius: 12px;
+    background: var(--la-panel);
+    color: var(--la-accent);
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+
+#im-v4 .la-sysfetch-details {
+    display: grid;
+    gap: 9px;
+    min-width: 0;
+    margin: 0;
+    font-size: 13px;
+}
+
+#im-v4 .la-sysfetch-details > div:not(.la-sysfetch-host) {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 10px;
+    min-width: 0;
+}
+
+#im-v4 .la-sysfetch-host {
+    color: var(--la-accent);
+    font-size: 14px;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--la-border);
+}
+
+#im-v4 .la-sysfetch-details dt {
+    color: var(--la-muted);
+    font-weight: 600;
+}
+
+#im-v4 .la-sysfetch-details dd {
+    margin: 0;
+    min-width: 0;
+    color: var(--la-text);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+#im-v4 .la-sysfetch-tools {
+    border-top: 1px solid var(--la-border);
+    margin-top: 18px;
+    padding-top: 14px;
+}
+
+#im-v4 .la-sysfetch-tools-title {
+    color: var(--la-text);
+    font-size: 13px;
+    font-weight: 750;
+    margin-bottom: 10px;
+}
+
+#im-v4 .la-sysfetch-tool-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+#im-v4 .la-sysfetch-tool {
+    background: var(--la-panel);
+    color: var(--la-accent);
+    border: 1px solid var(--la-border);
+    border-radius: 7px;
+    padding: 5px 9px;
+    font-size: 11px;
+    font-weight: 650;
+}
+
+@media (max-width: 520px) {
+    #im-v4 .la-sysfetch {
+        padding: 14px;
+    }
+
+    #im-v4 .la-sysfetch-body {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    #im-v4 .la-sysfetch-logo {
+        width: 52px;
+        height: 52px;
+    }
+
+    #im-v4 .la-sysfetch-details > div:not(.la-sysfetch-host) {
+        grid-template-columns: 88px minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    #im-v4 .la-container-head {
+        flex-wrap: wrap;
+    }
+}
+</style>
+
+<h2 class="la-section-title">Container Information</h2>
+                {{-- IMNEHNET_FASTFETCH_V1 --}}
+<div class="la-containers la-sysfetch-list">
+    @foreach ([
+        [
+            'LAB-ATK',
+            'Attacker',
+            $attacker,
+            $session->attacker_container,
+            $session->attacker_ip,
+            'Kali GNU/Linux Rolling 2026.3',
+            'ATK',
+        ],
+        [
+            'LAB-ENV',
+            'Victim',
+            $victim,
+            $session->victim_container,
+            $session->victim_ip,
+            'Ubuntu 24.04.5 LTS',
+            'ENV',
+        ],
+    ] as [$host, $role, $environment, $containerName, $address, $os, $symbol])
+        @php
+            $displayName = $environment?->container_name
+                ?? $containerName
+                ?? 'Not assigned';
+
+            $cpu = $environment?->cpu_limit;
+            $memory = $environment?->memory_limit_mb;
+        @endphp
+
+        <article class="la-container la-sysfetch">
+            <div class="la-container-head">
+                <strong>{{ $host }} — {{ $role }}</strong>
+                <span class="la-runtime">
+                    {{ $environment?->runtime_status?->value ?? 'Unknown' }}
+                </span>
+            </div>
+
+            <div class="la-sysfetch-body">
+                <div class="la-sysfetch-logo" aria-hidden="true">
+                    @if ($role === 'Attacker')
+                        {{-- Lucide: monitor --}}
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             width="30" height="30" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round"
+                             stroke-linejoin="round">
+                            <rect x="2" y="3" width="20" height="14" rx="2"/>
+                            <path d="M8 21h8"/>
+                            <path d="M12 17v4"/>
+                        </svg>
+                    @else
+                        {{-- Lucide: server --}}
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             width="30" height="30" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round"
+                             stroke-linejoin="round">
+                            <rect width="20" height="8" x="2" y="2" rx="2"/>
+                            <rect width="20" height="8" x="2" y="14" rx="2"/>
+                            <path d="M6 6h.01"/>
+                            <path d="M6 18h.01"/>
+                        </svg>
+                    @endif
                 </div>
+
+                <dl class="la-sysfetch-details">
+                    <div class="la-sysfetch-host">
+                        {{ $displayName }}
+                    </div>
+
+                    <div>
+                        <dt>OS</dt>
+                        <dd>{{ $os }}</dd>
+                    </div>
+                    <div>
+                        <dt>Container</dt>
+                        <dd>{{ $displayName }}</dd>
+                    </div>
+                    <div>
+                        <dt>IPv4</dt>
+                        <dd>{{ $address ?: 'Not assigned' }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            @if ($role === 'Attacker')
+                <div class="la-sysfetch-tools">
+                    <div class="la-sysfetch-tools-title">
+                        Security Tools
+                    </div>
+                    <div class="la-sysfetch-tool-list">
+                        @foreach (['Nmap', 'Gobuster', 'Dirb', 'Curl', 'Ping', 'Python 3'] as $tool)
+                            <span class="la-sysfetch-tool">{{ $tool }}</span>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        </article>
+    @endforeach
+</div>
             </div></div>
         </div>
         {{-- IMNEHNET_DUAL_TERMINAL_V1 --}}
@@ -203,7 +429,7 @@
                 @foreach (['attacker' => ['LAB-ATK (Attacker)', $attacker], 'victim' => ['LAB-ENV (Victim)', $victim]] as $role => [$label, $environment])
                     <div class="la-terminal-card">
                         <div class="la-terminal-head"><div><strong>{{ $label }}</strong><small>{{ $environment?->container_name ?? 'Not assigned' }}</small></div>
-                            
+
                             {{-- IMNEHNET_TERMINAL_TOOLBAR_V2 --}}
                             <div class="la-terminal-tools">
                                 <span class="la-runtime">
@@ -268,7 +494,7 @@
                     </div>
                 @endforeach
             </div>
-            
+
         </div>
         <div x-show="tab === 'progress'" x-cloak>
     @include('filament.pages.partials.imnehnet-progress')

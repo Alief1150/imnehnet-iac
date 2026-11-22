@@ -1,3 +1,117 @@
+
+<style>
+/* IMNEHNET_CONTRAST_FIX_V1 */
+
+/* Progress heading: light mode */
+#im-v4 .pc-progress-head h2 {
+    color: #172b60 !important;
+}
+
+/* Progress heading: dark mode */
+#im-v4[data-theme="dark"] .pc-progress-head h2 {
+    color: #ffffff !important;
+}
+
+/* Objective cards: clean white surface */
+#im-v4 .pc-progress-item {
+    background: #ffffff !important;
+    color: #172b60 !important;
+    border: 1px solid #dce6f5 !important;
+    border-radius: 12px;
+}
+
+#im-v4 .pc-progress-item strong {
+    color: #172b60 !important;
+}
+
+#im-v4 .pc-progress-item small {
+    color: #52688d !important;
+}
+
+/* Active objective */
+#im-v4 .pc-progress-item.is-current {
+    background: #ffffff !important;
+    border-color: #3999ff !important;
+    box-shadow: inset 3px 0 0 #168dff;
+}
+
+/* Status badges */
+#im-v4 .pc-progress-item .pc-progress-tag {
+    background: #eaf2ff !important;
+    color: #1554a0 !important;
+    border-radius: 6px;
+    padding: 6px 9px;
+}
+
+#im-v4 .pc-progress-item.is-current .pc-progress-tag {
+    background: #dcecff !important;
+    color: #075cc2 !important;
+}
+
+/* Completed objective */
+#im-v4 .pc-progress-item:has(
+    .pc-progress-icon:first-child
+) {
+    border-color: #dce6f5;
+}
+
+/* Next objective banner */
+#im-v4 .pc-progress-next {
+    background: #ffffff !important;
+    color: #172b60 !important;
+    border: 1px solid #dce6f5 !important;
+    border-radius: 12px;
+}
+
+#im-v4 .pc-progress-next strong {
+    color: #172b60 !important;
+}
+
+#im-v4 .pc-progress-next small {
+    color: #52688d !important;
+}
+
+/* Keep text legible on light surfaces in dark mode */
+#im-v4[data-theme="dark"] .pc-progress-item,
+#im-v4[data-theme="dark"] .pc-progress-next {
+    background: #ffffff !important;
+    color: #172b60 !important;
+}
+
+#im-v4[data-theme="dark"] .pc-progress-item strong,
+#im-v4[data-theme="dark"] .pc-progress-next strong {
+    color: #172b60 !important;
+}
+
+#im-v4[data-theme="dark"] .pc-progress-item small,
+#im-v4[data-theme="dark"] .pc-progress-next small {
+    color: #52688d !important;
+}
+
+/* Preserve contrast on progress metrics */
+#im-v4[data-theme="dark"] .pc-progress-head p,
+#im-v4[data-theme="dark"] .pc-counters span {
+    color: #aebfdf !important;
+}
+
+/* Mobile: allow text and badges to wrap */
+@media (max-width: 600px) {
+    #im-v4 .pc-progress-item {
+        min-width: 0;
+        gap: 10px;
+    }
+
+    #im-v4 .pc-progress-item > div {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    #im-v4 .pc-progress-next {
+        gap: 12px;
+    }
+}
+</style>
+
 {{-- IMNEHNET_PROGRESS_V1 --}}
 @php
  $rows=$session->course->objectives()->orderBy('sequence')->get();

@@ -1,37 +1,32 @@
 <x-filament-panels::page.simple>
-    <link rel="stylesheet" href="/imnehnet-login/login-v5.css?v=5.2">
+    <link rel="stylesheet" href="/imnehnet-login/login-v5.css?v=mobile-20261118-051342">
 
-    <div class="im-v5" data-im-login>
+    <div class="im-v5" data-im-login data-theme="dark">
         <div id="im-react-bits-ascii" aria-hidden="true"></div>
         @vite('resources/js/imnehnet-login-ascii.jsx')
 
         <div class="im-v5-grid">
             <section class="im-v5-card" aria-label="Sign in to IMNEHNET">
 
-                <div class="im-v5-brand">
-                    <i data-lucide="box" aria-hidden="true"></i>
-                    <div>
-                        <strong>IMNEHNET</strong>
-                        <span>Lab-as-a-Service</span>
-                    </div>
-                </div>
+                @include('components.imnehnet-auth-brand')
 
                 <div class="im-v5-heading">
                     <h1>Sign in</h1>
-                    <p>Continue your cybersecurity learning journey.</p>
+                    <p>{{ filament()->getCurrentPanel()?->getId() === 'admin' ? 'Sign in to the administration panel.' : 'Continue your cybersecurity learning journey.' }}</p>
                 </div>
 
+                {{-- IMNEHNET_AUTH_TABS_V7: tabs navigate to distinct panel login routes. --}}
+                @php($imLoginPanel = filament()->getCurrentPanel()?->getId())
                 <nav class="im-v5-tabs" aria-label="Login role">
-                    <a href="/student/login"
-                       @class(['active' => filament()->getCurrentPanel()?->getId() === 'student'])
-                       @if(filament()->getCurrentPanel()?->getId() === 'student') aria-current="page" @endif>
+                    <a href="{{ route('filament.student.auth.login') }}"
+                       class="{{ $imLoginPanel === 'student' ? 'active' : '' }}"
+                       @if($imLoginPanel === 'student') aria-current="page" @endif>
                         <i data-lucide="user-round" aria-hidden="true"></i>
-                        Login as User
+                        Login as Student
                     </a>
-
-                    <a href="/admin/login"
-                       @class(['active' => filament()->getCurrentPanel()?->getId() === 'admin'])
-                       @if(filament()->getCurrentPanel()?->getId() === 'admin') aria-current="page" @endif>
+                    <a href="{{ route('filament.admin.auth.login') }}"
+                       class="{{ $imLoginPanel === 'admin' ? 'active' : '' }}"
+                       @if($imLoginPanel === 'admin') aria-current="page" @endif>
                         <i data-lucide="shield-check" aria-hidden="true"></i>
                         Login as Admin
                     </a>
@@ -60,7 +55,7 @@
                     Gunakan email dan password akun IMNEHNET Anda.
                 </p>
 
-                @if(\Illuminate\Support\Facades\Route::has('register'))
+                @if(filament()->getCurrentPanel()?->getId() === 'student' && \Illuminate\Support\Facades\Route::has('register'))
                     <p class="im-v5-register">
                         Don't have an account?
                         <a href="{{ route('register') }}">Register as a student</a>
@@ -70,58 +65,46 @@
             </section>
 
             <aside class="im-v5-welcome" aria-label="Welcome to IMNEHNET">
-                <i data-lucide="box" class="im-v5-watermark" aria-hidden="true"></i>
-
-                <div class="im-v5-welcome-content">
-                    <span class="im-v5-kicker">
-                        IMNEHNET / LAB-AS-A-SERVICE
-                    </span>
-
-                    <h2>Your next skill<br>starts in the lab.</h2>
-
-                    <p class="im-v5-description">
-                        Bangun kemampuan keamanan siber melalui praktik
-                        langsung di environment yang aman dan terisolasi.
-                    </p>
-
-                    <div class="im-v5-benefits">
-                        <h3>Learn. Explore. Secure.</h3>
-
-                        <div>
-                            <i data-lucide="boxes" aria-hidden="true"></i>
-                            <span>Lab terisolasi untuk setiap sesi</span>
-                        </div>
-
-                        <div>
-                            <i data-lucide="flag" aria-hidden="true"></i>
-                            <span>Pentest dengan objective terarah</span>
-                        </div>
-
-                        <div>
-                            <i data-lucide="chart-no-axes-column-increasing" aria-hidden="true"></i>
-                            <span>Pantau progres belajar Anda</span>
-                        </div>
-                    </div>
-
-                    <div class="im-v5-carousel">
-                        <div class="im-v5-dots" aria-label="Carousel slide">
-                            <button class="active" type="button"
-                                    aria-label="Slide 1" aria-current="true"></button>
-                        </div>
-                        <button type="button" class="im-v5-next"
-                                aria-label="Next slide">
-                            <i data-lucide="arrow-right" aria-hidden="true"></i>
-                        </button>
-                    </div>
-                </div>
-            </aside>
+  <div class="im-v5-welcome-content im-final-fallback">
+    <span class="im-v5-kicker">IMNEHNET / LAB-AS-A-SERVICE</span>
+    <h2>Your next skill<br>starts in the lab.</h2>
+    <p class="im-v5-description">Bangun kemampuan keamanan siber melalui praktik langsung di environment yang aman dan terisolasi.</p>
+    <div class="im-v5-benefits">
+      <h3>Learn. Explore. Secure.</h3>
+      <div><span>Lab terisolasi untuk setiap sesi</span></div>
+      <div><span>Pentest dengan objective terarah</span></div>
+      <div><span>Pantau progres belajar Anda</span></div>
+    </div>
+  </div>
+  <div class="im-final-poster" hidden>
+    @include('components.imnehnet-login-carousel')
+  </div>
+</aside>
         </div>
 
         <button type="button" class="im-v5-theme"
                 aria-label="Toggle light and dark mode">
-            <i data-lucide="sun-moon" aria-hidden="true"></i>
+
+<svg class="im-icon-sun" viewBox="0 0 24 24"
+     aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="12" cy="12" r="4"/>
+  <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42
+           m11.3 11.3 1.42 1.42M2 12h2m16 0h2
+           M4.93 19.07l1.42-1.42
+           M17.65 6.35l1.42-1.42"/>
+</svg>
+<svg class="im-icon-moon" viewBox="0 0 24 24"
+     aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <path d="M20.9 13A9 9 0 0 1 11 3.1
+           9 9 0 1 0 20.9 13Z"/>
+</svg>
+
         </button>
     </div>
 
-    <script src="/imnehnet-login/login-v5.js?v=5" defer></script>
+    {{-- IMNEHNET poster carousel script --}}
+    <script defer src="/imnehnet-login/carousel-v1.js?v=1"></script>
+    {{-- IMNEHNET_THEME_SAFE_V2 --}}
+    <script defer src="/imnehnet-login/theme-safe.js?v=2"></script>
+    <script defer src="/imnehnet-login/login-poster-final.js?v=20261118b"></script>
 </x-filament-panels::page.simple>

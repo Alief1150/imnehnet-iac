@@ -223,26 +223,9 @@
 </style>
 <div id="im-v4" class="im-v4" data-theme="dark" data-im-v4-root wire:ignore.self>
     <div class="im-v4-ambient" aria-hidden="true"></div>
-    <aside class="im-v4-sidebar" aria-label="Student sidebar">
-        <a class="im-v4-brand" href="{{ url('/student') }}"><span class="im-v4-logo">{!! $svg('box') !!}</span><span><strong>IMNEHNET</strong><small>Lab-as-a-Service</small></span></a>
-        <nav class="im-v4-menu menu" aria-label="Main navigation">
-            @foreach($links as $i => $link)
-                <a class="im-v4-nav-link {{ $i === 2 ? 'is-active' : '' }}" href="{{ $link[1] }}">{!! $svg($link[2]) !!}<span>{{ $link[0] }}</span></a>
-            @endforeach
-        </nav>
-        <div class="im-v4-sidebar-note card"><span class="im-v4-note-icon">{!! $svg('box') !!}</span><strong>Learn. Explore. Secure.</strong><p>“Above all, don't lie to yourself.”<br>— Fyodor Dostoyevsky</p></div>
-    </aside>
+    @include('filament.pages.partials.student-shell-sidebar')
     <div class="im-v4-workspace">
-        <header class="im-v4-topbar">
-            <a class="im-v4-mobile-brand" href="{{ url('/student') }}">{!! $svg('box') !!}<strong>IMNEHNET</strong></a>
-            <button class="im-v4-search-btn btn" type="button" data-im-v4-search aria-label="Open search">{!! $svg('search') !!}<span>Search anything in IMNEHNET...</span><kbd>Ctrl K</kbd></button>
-            <div class="im-v4-top-actions">
-                <button type="button" class="btn btn-square im-v4-icon-btn" data-im-v4-theme aria-label="Toggle light and dark mode">{!! $svg('sun') !!}</button>
-                <a class="btn btn-square im-v4-icon-btn" href="{{ url('/student/my-labs') }}" aria-label="My Labs">{!! $svg('bell') !!}</a>
-                <div class="im-v4-user-avatar" aria-hidden="true">{{ strtoupper(mb_substr($user?->name ?? 'U', 0, 1)) }}</div>
-                <div class="im-v4-user"><strong>{{ $user?->name ?? 'Student' }}</strong><small>User</small></div>
-            </div>
-        </header>
+        @include('filament.pages.partials.student-shell-header')
         <main class="im-v4-content im-v5-content im-student-pentest-content" id="im-v4-main">
             <div class="im-student-pentest" wire:init="pollWorkspace" wire:poll.5s="pollWorkspace">
                 @if ($course === null)
@@ -260,7 +243,14 @@
             {{-- Lab Process hanya ditampilkan pada alur pembuatan lab di My Labs. --}}
         </main>
     </div>
-    <nav class="im-v4-bottom-nav" aria-label="Mobile navigation">@foreach($links as $i => $link)<a href="{{ $link[1] }}" class="{{ $i === 2 ? 'is-active' : '' }}">{!! $svg($link[2]) !!}<span>{{ $i === 0 ? 'Home' : ($i === 4 ? 'Docs' : $link[0]) }}</span></a>@endforeach</nav>
+    <nav class="im-v4-bottom-nav" aria-label="Mobile navigation">
+        @foreach (\App\Support\StudentNavigation::items() as $bottomItem)
+            @if (in_array($bottomItem['key'], ['dashboard', 'labs', 'pentest', 'history', 'documentation'], true))
+                <a href="{{ $bottomItem['url'] }}" @if($bottomItem['active']) aria-current="page" class="is-active" @endif>{!! \App\Support\StudentNavigation::icon($bottomItem['icon']) !!}<span>{{ $bottomItem['label'] }}</span></a>
+            @endif
+        @endforeach
+    </nav>
     <div class="im-v4-search-dialog" data-im-v4-search-dialog hidden role="dialog" aria-modal="true" aria-label="Search IMNEHNET"><div class="im-v4-search-panel card"><div class="im-v4-search-input-row">{!! $svg('search') !!}<input class="input" type="search" placeholder="Search pages..." data-im-v4-search-input><button class="btn btn-square" type="button" data-im-v4-search-close aria-label="Close">{!! $svg('x') !!}</button></div><nav class="im-v4-search-links">@foreach($links as $link)<a href="{{ $link[1] }}" data-im-v4-search-item>{!! $svg($link[2]) !!}{{ $link[0] }}</a>@endforeach</nav><p class="im-v4-search-hint">Quick navigation · Esc to close</p></div></div>
   </div>
+@include('filament.pages.partials.student-shell-global')
 </x-filament-panels::page>

@@ -28,6 +28,11 @@ class UserInfolist
                             ->badge()
                             ->formatStateUsing(fn (mixed $state): string => strtoupper(self::asString($state)))
                             ->color(fn (User $record): string => $record->isActive() ? 'success' : 'danger'),
+                        TextEntry::make('presence')
+                            ->label('Presence')
+                            ->state(fn (User $record): string => \App\Support\UserPresence::online((int)$record->getKey()) ? 'Online' : 'Offline')
+                            ->badge()
+                            ->color(fn (User $record): string => \App\Support\UserPresence::online((int)$record->getKey()) ? 'success' : 'gray'),
                         TextEntry::make('last_login_at')
                             ->label('Last login')
                             ->since()

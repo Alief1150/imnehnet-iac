@@ -6,7 +6,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\User;
-use Filament\Actions\DeleteAction;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\ImageColumn;
@@ -65,6 +65,12 @@ class UsersTable
                     ->color(fn (User $record): string => $record->environments()->count() === 0 ? 'warning' : 'success')
                     ->toggleable(),
 
+                TextColumn::make('presence')
+                    ->label('Presence')
+                    ->state(fn (User $record): string => \App\Support\UserPresence::online((int)$record->getKey()) ? 'Online' : 'Offline')
+                    ->badge()
+                    ->color(fn (User $record): string => \App\Support\UserPresence::online((int)$record->getKey()) ? 'success' : 'gray'),
+
                 TextColumn::make('last_login_at')
                     ->label('Last login')
                     ->since()
@@ -101,10 +107,25 @@ class UsersTable
                 // which runs OpenTofu, verifies the result and logs it. Removing
                 // infrastructure as a side effect of removing a login would be a
                 // quieter and less accountable path to the same outcome.
-                DeleteAction::make()
+                Action::make('delete')
+                    ->label('Delete')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
                     ->visible(fn (User $record): bool => ListUsers::mayDelete($record->getKey()))
-                    ->modalHeading('Delete this account?')
-                    ->modalDescription('The portal account is removed. Any environment it owns stays on the compute plane and has to be deleted separately through the environment itself, so an account can never quietly take a running container with it.'),
+                    ->requiresConfirmation()
+                    ->modalHeading('Delete user and all owned labs?')
+                    ->modalDescription('Account access will be disabled immediately. Attacker/Victim and standalone environments are queued for verified teardown. The account is deleted only after cleanup succeeds. This may take time.')
+                    ->action(function (User $record): void {
+                        try {
+                            app(\App\Services\UserAccountDeletionService::class)->request(auth()->user(), $record);
+                            \Filament\Notifications\Notification::make()->title('Cleanup queued')
+                                ->body('User disabled. Lab teardown and final account removal are processing.')
+                                ->success()->send();
+                        } catch (\Throwable $e) {
+                            \Filament\Notifications\Notification::make()->title('Delete blocked')
+                                ->body($e->getMessage())->danger()->send();
+                        }
+                    }),
             ])
             ->paginated([10, 25, 50]);
     }

@@ -95,7 +95,7 @@ class EnvironmentResource extends Resource
             return $query->whereRaw('1 = 0');
         }
 
-        return $user->isAdmin() ? $query : $query->where('user_id', $user->getKey());
+                return $user->isAdmin() ? $query : $query->where('user_id', $user->getKey());
     }
 
     public static function getGloballySearchableAttributes(): array

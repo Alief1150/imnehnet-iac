@@ -50,6 +50,12 @@ class StudentPanelProvider extends PanelProvider
     {
         return $panel
             ->id('student')
+            // IMNEHNET_STUDENT_NOTIFICATIONS_V12
+            ->renderHook('panels::body.end', fn (): string =>
+                '<script>window.__imnehnetPresenceCsrf='.json_encode(csrf_token()).';</script>'
+                .\App\Support\UserPresence::script()
+            )
+            ->databaseNotifications()
             ->path('student')
             ->brandName('IMNEHNET')
             // The same wordmark on both panels and on the registration form,

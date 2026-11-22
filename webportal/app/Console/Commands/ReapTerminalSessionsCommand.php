@@ -50,11 +50,11 @@ class ReapTerminalSessionsCommand extends Command
             ->whereNull('closed_at')
             ->where('expires_at', '>', now())
             ->where('expires_at', '<=', now()->addMinutes(5))
-            ->with('user')
+            ->whereIn('purpose', ['sandbox', 'guided_ctf'])
             ->get();
 
         foreach ($expiringSoon as $session) {
-            $user = $session->user;
+            $user = \App\Models\User::query()->find($session->user_id);
             if ($user === null) {
                 continue;
             }
@@ -72,6 +72,13 @@ class ReapTerminalSessionsCommand extends Command
         foreach ([
             'student' => fn (): int => $student->reapExpired(),
             'administrative' => fn (): int => $admin->reapExpired(),
+            // IMNEHNET_ADMIN_PAIR_REAPER_V6
+            'admin_pair' => fn (): int =>
+                app(\App\Services\Terminal\AdminEnvironmentPairTerminalService::class)
+                    ->reapExpired(),
+            'admin_lab_pair' => fn (): int =>
+                app(\App\Services\Terminal\AdminStandalonePairTerminalService::class)
+                    ->reapExpired(),
         ] as $label => $reap) {
             try {
                 $results[$label] = $reap();

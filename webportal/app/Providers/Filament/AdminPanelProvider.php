@@ -68,6 +68,10 @@ class AdminPanelProvider extends PanelProvider
             // preferences to live, and it is the control Filament's own markup keeps in
             // step with the theme it renders. See also StudentPanelProvider, which never
             // had the duplicate.
+            ->renderHook('panels::body.end', fn (): string =>
+                '<script>window.__imnehnetPresenceCsrf='.json_encode(csrf_token()).';</script>'
+                .\App\Support\UserPresence::script()
+            )
             ->databaseNotifications()
             ->navigationGroups([
                 'INFRASTRUCTURE',
@@ -76,6 +80,7 @@ class AdminPanelProvider extends PanelProvider
                 'GUIDED CTF',
                 'OPERATIONS',
             ])
+            ->renderHook('panels::head.end', fn (): string => '<link rel="stylesheet" href="/css/imnehnet-admin-responsive.css?rev=20261121" ' . 'data-imnehnet-responsive="1">')
             ->maxContentWidth('full')
 
             ->discoverResources(

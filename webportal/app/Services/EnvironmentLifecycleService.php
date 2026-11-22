@@ -12,6 +12,7 @@ use App\Jobs\ResetEnvironment;
 use App\Jobs\StartEnvironment;
 use App\Jobs\StopEnvironment;
 use App\Models\LabEnvironment;
+use App\Models\AdminEnvironmentPair;
 use App\Models\User;
 use DomainException;
 
@@ -79,6 +80,14 @@ class EnvironmentLifecycleService
      */
     public function allowedActions(LabEnvironment $environment): array
     {
+        // IMNEHNET_ADMIN_PAIR_SAFETY_V1
+        // Managed Admin Pairs must not use individual lifecycle jobs.
+        if (AdminEnvironmentPair::forEnvironment(
+            (int) $environment->getKey()
+        ) !== null) {
+            return ['refresh'];
+        }
+
         if ($environment->isProtected()) {
             // The reference environment exists to be observed, never operated
             // on. It is not even listed as an action.
@@ -167,6 +176,17 @@ class EnvironmentLifecycleService
      */
     public function request(?User $actor, LabEnvironment $environment, string $action): LabEnvironment
     {
+        // IMNEHNET_ADMIN_PAIR_SAFETY_V1
+        // Fail closed even when a caller bypasses Filament.
+        if (AdminEnvironmentPair::forEnvironment(
+            (int) $environment->getKey()
+        ) !== null) {
+            throw new DomainException(
+                'Individual lifecycle is disabled for Admin Pairs. '
+                .'Use coordinated pair operations after recovery.'
+            );
+        }
+
         if ($action === 'refresh') {
             throw new DomainException('Refreshing is a read-only action and is not queued.');
         }
@@ -180,6 +200,45 @@ class EnvironmentLifecycleService
                 '"%s" is the protected reference environment and cannot be changed by the portal.',
                 (string) $environment->container_name
             ));
+        }
+
+        // Never permit single-container reset/delete for a managed Admin Pair.
+        // Reset and delete require coordinated two-container operations.
+        if (in_array($action, ['delete', 'reset'], true)
+            && AdminEnvironmentPair::forEnvironment((int) $environment->getKey()) !== null) {
+            throw new DomainException('This belongs to an Admin Pair; individual reset/delete is prohibited.');
+        }
+
+        // IMNEHNET_PAIRED_LAB_DELETE_GUARD_V7
+        // Never destroy one half of a student's managed paired lab.
+        // Pair deletion must use the coordinated LabSession lifecycle.
+        if ($action === 'delete') {
+            $linkedLabExists = \App\Models\LabSession::query()
+                ->where(function ($query) use ($environment): void {
+                    $query
+                        ->where(
+                            'attacker_environment_id',
+                            $environment->getKey()
+                        )
+                        ->orWhere(
+                            'victim_environment_id',
+                            $environment->getKey()
+                        );
+                })
+                ->where(
+                    'status',
+                    '!=',
+                    \App\Enums\LabSessionStatus::Deleted->value
+                )
+                ->exists();
+
+            if ($linkedLabExists) {
+                throw new DomainException(
+                    'Environment ini masih terhubung ke paired lab mahasiswa. '
+                    .'Gunakan lifecycle penghapusan pasangan lab, '
+                    .'bukan Delete Environment individual.'
+                );
+            }
         }
 
         if (! $this->isActionAllowed($environment, $action)) {

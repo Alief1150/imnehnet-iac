@@ -7,6 +7,7 @@ use App\Models\LabEnvironment;
 use App\Support\EnvironmentWorkspace;
 use DomainException;
 use RuntimeException;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
@@ -149,9 +150,49 @@ class OpenTofuService
         EnvironmentWorkspace::assertValidContainerName((string) $environment->container_name);
         EnvironmentWorkspace::assertUsable($workspace, (string) $environment->container_name);
 
-        return $this->withDirectoryLock(
-            fn (): mixed => $sequence($this)
-        );
+        return $this->withDirectoryLock(function () use ($environment, $workspace, $sequence): mixed {
+            // IMNEHNET_WORKSPACE_SELECTION_FIX_V1
+            // Selecting and validating the workspace must happen inside
+            // the same lock as every subsequent OpenTofu command.
+            $inventory = $this->listWorkspaces();
+
+            if (! $inventory->successful()) {
+                throw new RuntimeException('Cannot inspect workspace inventory.');
+            }
+
+            $exists = in_array(
+                $workspace,
+                $this->parseWorkspaceList($inventory->stdout),
+                true
+            );
+
+            // Never silently recreate a missing workspace belonging
+            // to an environment that has already been provisioned.
+            if (! $exists && $environment->provisioned_at !== null) {
+                throw new RuntimeException(
+                    'Expected provisioned workspace is missing: '.$workspace
+                );
+            }
+
+            $selected = $this->selectOrCreateWorkspace($workspace);
+
+            if (! $selected->successful()) {
+                throw new RuntimeException(
+                    'Failed to select OpenTofu workspace: '.$workspace
+                );
+            }
+
+            $verified = $this->run(['workspace', 'show']);
+
+            if (! $verified->successful()
+                || trim($verified->stdout) !== $workspace) {
+                throw new RuntimeException(
+                    'OpenTofu workspace verification failed: '.$workspace
+                );
+            }
+
+            return $sequence($this);
+        });
     }
 
     /**
@@ -159,16 +200,38 @@ class OpenTofuService
      */
     public function selectOrCreateWorkspace(string $workspace): ProcessResult
     {
-        $existing = $this->listWorkspaces();
-        $result = $existing->successful() && in_array($workspace, $this->parseWorkspaceList($existing->stdout), true)
-            ? $this->run(['workspace', 'select', $workspace])
-            : $this->run(['workspace', 'new', $workspace]);
+        $inventory = $this->listWorkspaces();
 
-        // A workspace that already exists is not an error for the caller; the
-        // select that follows decides whether we really have it.
-        return $result->successful()
-            ? $result
-            : ($this->run(['workspace', 'select', $workspace])->successful() ? $result : $result);
+        if (! $inventory->successful()) {
+            throw new RuntimeException(
+                'Cannot inspect OpenTofu workspace inventory.'
+            );
+        }
+
+        $exists = in_array(
+            $workspace,
+            $this->parseWorkspaceList($inventory->stdout),
+            true
+        );
+
+        if ($exists) {
+            return $this->run([
+                'workspace', 'select', $workspace
+            ]);
+        }
+
+        $created = $this->run([
+            'workspace', 'new', $workspace
+        ]);
+
+        if ($created->successful()) {
+            return $created;
+        }
+
+        // Return the actual fallback result.
+        return $this->run([
+            'workspace', 'select', $workspace
+        ]);
     }
 
     /**
@@ -187,9 +250,9 @@ class OpenTofuService
         return $this->run(['apply', '-auto-approve', '-input=false', '-no-color', ...$this->variableArgs($variables)]);
     }
 
-    public function destroy(): ProcessResult
+    public function destroy(array $variables = []): ProcessResult
     {
-        return $this->run(['destroy', '-auto-approve', '-input=false', '-no-color']);
+        return $this->run(['destroy', '-auto-approve', '-input=false', '-no-color', ...$this->variableArgs($variables)]);
     }
 
     /**
@@ -333,7 +396,7 @@ class OpenTofuService
             (string) $environment->container_name
         );
 
-        $this->withDirectoryLock(function () use ($workspace): void {
+        $this->withDirectoryLock(function () use ($workspace, $environment): void {
             $inventory = $this->listWorkspaces();
 
             if (! $inventory->successful()) {
@@ -360,11 +423,102 @@ class OpenTofuService
                 );
             }
 
-            $destroyed = $this->destroy();
+
+            // Verify state ownership while holding the lock.
+            $pulled = $this->run(['state', 'pull']);
+
+            if (! $pulled->successful()) {
+                throw new RuntimeException(
+                    'Cannot read state; destroy refused.'
+                );
+            }
+
+            $state = json_decode(
+                $pulled->stdout,
+                true,
+                512,
+                JSON_THROW_ON_ERROR
+            );
+
+            if (! is_array($state) || ! isset($state['version'])
+                || ! isset($state['resources'])
+                || ! is_array($state['resources'])) {
+                throw new RuntimeException(
+                    'Invalid state; destroy refused.'
+                );
+            }
+
+            $count = 0;
+
+            foreach ($state['resources'] as $resource) {
+                if (($resource['mode'] ?? '') !== 'managed') {
+                    continue;
+                }
+
+                if (($resource['type'] ?? '') !== 'incus_instance') {
+                    throw new RuntimeException(
+                        'Unexpected managed resource; destroy refused.'
+                    );
+                }
+
+                foreach ($resource['instances'] ?? [] as $instance) {
+                    $a = $instance['attributes'] ?? [];
+
+                    if (
+                        ($a['name'] ?? '') !== (string) $environment->container_name
+                        || rtrim((string) ($a['remote'] ?? ''), ':')
+                            !== rtrim((string) $environment->incus_remote, ':')
+                        || ($a['project'] ?? 'default')
+                            !== ($environment->incus_project ?: 'default')
+                    ) {
+                        throw new RuntimeException(
+                            'State ownership mismatch; destroy refused.'
+                        );
+                    }
+
+                    $count++;
+                }
+            }
+
+            // IMNEHNET_EMPTY_STATE_NOOP_V1
+            // Empty rollback state has nothing to destroy.
+            // The caller must independently verify Incus absence
+            // before it removes this workspace.
+            if ($count === 0 && $state['resources'] === []) {
+                return;
+            }
+
+            if ($count !== 1) {
+                throw new RuntimeException(
+                    'Expected one owned instance; destroy refused.'
+                );
+            }
+
+// OpenTofu requires container_image even during destroy.
+            // Read from the validated environment record, never browser input.
+            $image = trim((string) $environment->image);
+            if ($image === '') {
+                throw new RuntimeException('Cannot destroy: environment image is missing.');
+            }
+            $destroyed = $this->destroy(['container_image' => $image]);
 
             if (! $destroyed->successful()) {
+                // IMNEHNET_TOFU_DIAGNOSTIC_V2
+                $detail = trim((string) $destroyed->stderr);
+
+                if ($detail === '') {
+                    $detail = trim((string) $destroyed->stdout);
+                }
+
+                Log::error('IMNEHNET_TOFU_DESTROY_FAILED', [
+                    'environment_id' => $environment->getKey(),
+                    'workspace' => $workspace,
+                    'exit_code' => $destroyed->exitCode,
+                    'output' => mb_substr($detail, 0, 1200),
+                ]);
+
                 throw new RuntimeException(
-                    'OpenTofu resource destroy failed.'
+                    'OpenTofu resource destroy failed. See server log.'
                 );
             }
         });

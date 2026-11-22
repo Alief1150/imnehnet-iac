@@ -1,0 +1,90 @@
+/* IMNEHNET_ADMIN_RESPONSIVE_FIX_2026
+ * Admin only; avoids affecting Student, Incus, jobs and database.
+ * This stylesheet provides flexible sizing without hiding overflowing controls.
+ */
+
+/* Keep grid children from forcing the page wider than the viewport. */
+.fi-main, .fi-main-ctn, .fi-page, .fi-page-content,
+.fi-widgets, .fi-section, .fi-section-content-ctn,
+.fi-ta, .fi-ta-ctn, .fi-fo, .fi-in, .fi-wi,
+.fi-wi-chart, .fi-wi-stats-overview, .fi-wi-stats-overview-stat,
+.fi-modal, .fi-modal-content, .fi-tabs, .fi-tabs-nav {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Standard flex and grid elements within the content must shrink cleanly. */
+.fi-main .grid > *, .fi-main .flex > *, .fi-main .fi-wi > * {
+    min-width: 0;
+}
+
+/* Charts should adapt to their cards. Do not set fixed chart heights. */
+.fi-main canvas, .fi-main svg:not(.fi-icon) {
+    max-width: 100%;
+}
+.fi-wi-chart, .fi-wi-chart .fi-section-content, .fi-wi-chart canvas {
+    min-width: 0;
+}
+
+/* Wide admin data tables scroll inside their own panel, never get cut off. */
+.fi-ta-content, .fi-ta-table-ctn, .fi-ta-table-container,
+.fi-in-repeatable, .fi-in-repeatable-table {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.fi-ta table, .fi-in table {
+    width: max-content;
+    min-width: 100%;
+}
+
+/* Long values and status labels should not extend detail cards. */
+.fi-main .fi-section-content,
+.fi-main .fi-in-entry,
+.fi-main .fi-fo-field-wrp,
+.fi-main .fi-wi-stats-overview-stat {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* Preserve terminal usability: scroll its own content, not entire dashboard. */
+.fi-main pre, .fi-main code, .fi-main .xterm, .fi-main .xterm-screen {
+    max-width: 100%;
+}
+.fi-main pre { overflow-x: auto; }
+
+/* Tablet / small laptop: allow cards and toolbars to wrap rather than clip. */
+@media (max-width: 1279px) {
+    .fi-main { min-width: 0; }
+    .fi-main .fi-section-header,
+    .fi-main .fi-ta-header,
+    .fi-main .fi-ta-header-toolbar {
+        flex-wrap: wrap;
+        row-gap: .75rem;
+    }
+    .fi-main .fi-header { min-width: 0; }
+}
+
+@media (max-width: 1023px) {
+    /* Filament's native navigation becomes the mobile drawer automatically. */
+    .fi-main-ctn, .fi-main { width: 100%; max-width: 100%; min-width: 0; }
+    .fi-main .fi-header-heading { overflow-wrap: anywhere; }
+    .fi-main .fi-wi-stats-overview { min-width: 0; }
+}
+
+/* Phones: compact spacing and local horizontal scrolling for dense interfaces. */
+@media (max-width: 639px) {
+    .fi-main { padding-left: .75rem; padding-right: .75rem; }
+    .fi-main .fi-section-header,
+    .fi-main .fi-ta-header { gap: .75rem; }
+    .fi-main .fi-header-actions,
+    .fi-main .fi-ta-header-toolbar,
+    .fi-main .fi-ta-header-actions {
+        max-width: 100%;
+        flex-wrap: wrap;
+    }
+    .fi-main .fi-btn { max-width: 100%; }
+    .fi-modal-window { max-width: calc(100vw - 1rem); }
+    .fi-main .fi-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}

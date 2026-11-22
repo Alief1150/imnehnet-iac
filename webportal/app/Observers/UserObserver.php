@@ -77,9 +77,21 @@ final class UserObserver
      */
     public function deleting(User $user): void
     {
-        LabEnvironment::query()
-            ->where('user_id', $user->getKey())
-            ->update(['user_id' => null]);
+        // Fail closed: NEVER unassign and orphan physical containers.
+        if (\App\Models\LabSession::query()->where('user_id', $user->getKey())
+            ->where('status', '!=', \App\Enums\LabSessionStatus::Deleted->value)->exists()
+            || LabEnvironment::query()->where('user_id', $user->getKey())->exists()) {
+            throw new \DomainException('Hapus lab/container melalui cleanup terlebih dahulu.');
+        }
+        foreach ([
+            [config('infrastructure.incus_attacker_remote', 'lab-atk'), 'attacker-user-'.$user->getKey()],
+            [config('infrastructure.incus_remote', 'lab-env'), 'victim-user-'.$user->getKey()],
+        ] as [$remote, $name]) {
+            if (!app(\App\Services\GuidedCtf\ContainerAbsenceVerifier::class)
+                ->isAbsent(rtrim((string)$remote, ':'), $name)) {
+                throw new \DomainException('Masih ada container atau remote Incus tidak bisa diverifikasi.');
+            }
+        }
     }
 
     public function updated(Model $model): void

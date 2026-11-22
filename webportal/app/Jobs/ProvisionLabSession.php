@@ -60,6 +60,16 @@ final class ProvisionLabSession implements ShouldQueue
     {
         LifecycleFailure::record($this->sessionId, 'Provision Lab', $error ?? new RuntimeException('Worker timed out.'));
 
+        // V17: settle stale provisioning rows after worker failure/timeout.
+        try {
+            $failedSession = LabSession::query()->find($this->sessionId);
+            if ($failedSession !== null) {
+                $this->settleFailedEnvironmentRows($failedSession);
+            }
+        } catch (\Throwable $settlementError) {
+            report($settlementError);
+        }
+
         // Notify administrators about the job failure.
         $session = LabSession::query()->find($this->sessionId);
         if ($session !== null) {
@@ -67,7 +77,7 @@ final class ProvisionLabSession implements ShouldQueue
             foreach (User::query()->where('role', UserRole::Admin->value)->where('status', 'active')->get() as $admin) {
                 $admin->notify(new LabProvisionFailed(
                     $session->victim_container ?? $session->container_name ?? 'Lab',
-                    $error->getMessage(),
+                    $error?->getMessage() ?? 'Worker failed or timed out.',
                     $student?->name,
                 ));
             }
@@ -106,12 +116,19 @@ final class ProvisionLabSession implements ShouldQueue
             ProvisioningTimeline::record($this->sessionId, 'session', 'Provisioning worker started.');
 
             $victim = LabEnvironment::query()->find($session->victim_environment_id);
+        $attacker = LabEnvironment::query()->find($session->attacker_environment_id);
 
             if ($victim === null) {
                 $sessions->markFailed($session->refresh(), 'The victim record disappeared before the lab could be built.');
 
                 return;
             }
+
+        if ($attacker === null) {
+            $sessions->markFailed($session->refresh(), 'The attacker record disappeared before the lab could be built.');
+
+        return;
+        }
 
             try {
                 // Both halves are sized from the victim's record. They are the same values
@@ -130,7 +147,8 @@ final class ProvisionLabSession implements ShouldQueue
                     $victim->internal_ip,
                     $cpu,
                     $megabytes,
-                    // No ACL: LAB-ENV runs Incus 6.0.0 and does not support them, and the
+                    (string) $victim->image,
+            // No ACL: LAB-ENV runs Incus 6.0.0 and does not support them, and the
                     // victim is the side being reached rather than the side initiating.
                     '',
                 );
@@ -138,20 +156,17 @@ final class ProvisionLabSession implements ShouldQueue
                 ProvisioningTimeline::record($this->sessionId, 'victim', 'LAB-ENV victim provisioning completed.', 'success');
                 ProvisioningTimeline::record($this->sessionId, 'attacker', 'Starting LAB-ATK attacker provisioning through OpenTofu.');
                 // --- 2. attacker ---------------------------------------------------
-                $this->applyInstance(
-                    $tofu,
-                    LabEnvironment::query()->findOrFail($session->attacker_environment_id)->tofu_workspace,
-                    $session->attacker_container,
-                    $session->attacker_remote,
-                    $session->attacker_ip,
-                    $cpu,
-                    $megabytes,
-                    // The ACL is what puts the restriction on the side that initiates the
-                    // connection. Without it the attacker has no reason to refuse another
-                    // student's victim, and the nftables set alone would be the only guard.
-                    (string) config('infrastructure.attacker_acl', 'ctf-attacker'),
-                );
-
+        $this->applyInstance(
+                $tofu,
+                $attacker->tofu_workspace,
+                $session->attacker_container,
+                $session->attacker_remote,
+                $session->attacker_ip,
+                (int) $attacker->cpu_limit,
+                   (int) $attacker->memory_limit_mb,
+                (string) $attacker->image,
+                (string) config('infrastructure.attacker_acl', 'ctf-attacker'),
+        );
                 // Prepare an unprivileged shell account before LAB READY.
                 // Only the attacker container of this session is modified.
                 ProvisioningTimeline::record(
@@ -167,11 +182,11 @@ final class ProvisionLabSession implements ShouldQueue
                     '--',
                     'sh',
                     '-ec',
-                    'if ! id student >/dev/null 2>&1; then '.
-                        'useradd --create-home --shell /bin/bash --user-group student; '.
+                    'if ! id ctfstudent >/dev/null 2>&1; then '.
+                        'useradd --create-home --shell /bin/bash --user-group ctfstudent; '.
                     'fi; '.
-                    'test "$(id -u student)" -gt 0; '.
-                    'test "$(id -g student)" -gt 0; '.
+                    'test "$(id -u ctfstudent)" -gt 0; '.
+                    'test "$(id -g ctfstudent)" -gt 0; '.
                     'test -x /bin/bash',
                 ]);
 
@@ -216,7 +231,7 @@ final class ProvisionLabSession implements ShouldQueue
                 if ($student !== null) {
                     $student->notify(new LabReady($session->victim_container ?? $session->container_name ?? 'Lab'));
                 }
-            } catch (RuntimeException $exception) {
+            } catch (\Throwable $exception) {
                 ProvisioningTimeline::record($this->sessionId, 'failed', 'Provisioning failed; cleanup is starting.', 'error');
                 // Said plainly. A lab that half exists is worse than one that failed with a
                 // reason, because the student cannot tell which of the two containers is
@@ -244,6 +259,7 @@ final class ProvisionLabSession implements ShouldQueue
                 }
 
                 $this->undo($tofu, $firewall, $session->refresh(), $victim);
+                $this->settleFailedEnvironmentRows($session->refresh());
             }
         });
     }
@@ -275,14 +291,72 @@ final class ProvisionLabSession implements ShouldQueue
 
         $attacker = LabEnvironment::query()->find($session->attacker_environment_id);
 
-        foreach (array_filter([$victim->tofu_workspace, $attacker?->tofu_workspace]) as $workspace) {
-            try {
-                $tofu->selectOrCreateWorkspace($workspace);
-                $tofu->destroy();
-            } catch (\Throwable) {
-                // Same reasoning: a surviving container is recoverable, an abort here
-                // would leave the other one behind too.
+        foreach ([$victim, $attacker] as $environment) {
+            if ($environment === null) {
+                continue;
             }
+
+            try {
+                $tofu->destroyWorkspaceResourcesIfPresent(
+                    $environment
+                );
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+    }
+
+
+    /**
+     * V17: settle a failed pair without deleting infrastructure.
+     * Only update records whose session identity can be verified.
+     */
+    private function settleFailedEnvironmentRows(LabSession $session): void
+    {
+        if (! in_array($session->status, [
+            LabSessionStatus::Failed,
+            LabSessionStatus::Provisioning,
+            LabSessionStatus::Configuring,
+        ], true)) {
+            return;
+        }
+
+        $userId = (int) $session->user_id;
+        if ($userId <= 0) {
+            return;
+        }
+
+        foreach ([
+            [$session->victim_environment_id, 'victim-user-'.$userId, $session->victim_remote],
+            [$session->attacker_environment_id, 'attacker-user-'.$userId, $session->attacker_remote],
+        ] as [$environmentId, $expectedName, $expectedRemote]) {
+            if (! $environmentId) {
+                continue;
+            }
+
+            $environment = LabEnvironment::query()->find($environmentId);
+
+            if (
+                $environment === null
+                || $environment->isProtected()
+                || (string) $environment->container_name !== $expectedName
+                || rtrim((string) $environment->incus_remote, ':') !== rtrim((string) $expectedRemote, ':')
+                || ($environment->incus_project ?: 'default') !== 'default'
+                || ($environment->user_id !== null && (int) $environment->user_id !== $userId)
+            ) {
+                continue;
+            }
+
+            LabEnvironment::query()
+                ->whereKey($environmentId)
+                ->whereIn('status', [
+                    \App\Enums\EnvironmentStatus::Provisioning->value,
+                    \App\Enums\EnvironmentStatus::Configuring->value,
+                ])
+                ->update([
+                    'status' => \App\Enums\EnvironmentStatus::Error->value,
+                    'last_error' => 'Paired provisioning failed. Administrator cleanup available.',
+                ]);
         }
     }
 
@@ -301,12 +375,12 @@ final class ProvisionLabSession implements ShouldQueue
         string $address,
         int $cpu,
         int $megabytes,
+        string $image,
         string $acl,
     ): void {
-        $tofu->selectOrCreateWorkspace($workspace);
-
         $variables = [
             'container_name' => $name,
+        'container_image' => $image,
             'incus_remote' => $remote,
             'static_ipv4' => $address,
             'incus_network' => (string) config('infrastructure.incus_network', 'incusbr0'),
@@ -321,15 +395,32 @@ final class ProvisionLabSession implements ShouldQueue
             $variables['security_acls'] = $acl;
         }
 
-        $applied = $tofu->apply($variables);
+        $tofu->withDirectoryLock(function () use (
+            $tofu,
+            $workspace,
+            $variables,
+            $name,
+            $remote
+        ): void {
+            $selected = $tofu->selectOrCreateWorkspace(
+                $workspace
+            );
 
-        if (! $applied->successful()) {
-            throw new RuntimeException(sprintf(
-                'the %s container "%s" could not be created on %s',
-                $remote === 'lab-env' ? 'victim' : 'attacker',
-                $name,
-                $remote,
-            ));
-        }
+            if (! $selected->successful()) {
+                throw new RuntimeException(
+                    "Cannot select workspace: {$workspace}"
+                );
+            }
+
+            $applied = $tofu->apply($variables);
+
+            if (! $applied->successful()) {
+                throw new RuntimeException(sprintf(
+                    'Provisioning failed for "%s" on %s.',
+                    $name,
+                    $remote
+                ));
+            }
+        });
     }
 }
