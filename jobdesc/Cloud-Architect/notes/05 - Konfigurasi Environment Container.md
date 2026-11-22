@@ -140,6 +140,7 @@ incus exec attacker-user-29 -- bash
    ![](../images/Storage-Container-LABATK.png)
    
 3. Daftar profile Incus.
+   
    ![](../images/Profile-Container-LABENV.png)
    ![](../images/Profile-Container-LABATK.png)
    
@@ -158,6 +159,7 @@ incus exec attacker-user-29 -- bash
    ![](../images/Verifikasi-Resource-Container-LABATK.png)
     
 8. Bukti akses terminal container.
+   
    ![](../images/Akses-Container-LABENV.png)
    ![](../images/Akses-Container-LABATK.png)
 
