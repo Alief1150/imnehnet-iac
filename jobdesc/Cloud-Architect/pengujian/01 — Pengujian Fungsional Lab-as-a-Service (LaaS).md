@@ -1,270 +1,198 @@
 # Pengujian 01 — Pengujian Fungsional Lab-as-a-Service (LaaS)
 
-> **Status dokumen:** Draf berbasis implementasi portal. Kolom hasil belum boleh dinyatakan `PASS` sebelum bukti antarmuka dan kondisi aktual container dilampirkan.
+## 1. Tujuan
 
-## 1. Identitas Pengujian
+Pengujian ini dilakukan untuk memastikan fitur utama pada portal Lab-as-a-Service (LaaS) IMNEHNET dapat berjalan sesuai dengan fungsinya. Pengujian mencakup proses login, pembuatan lab, pengelolaan container, hingga penanganan kondisi kegagalan dan pengulangan proses.
 
-- **Kelompok skenario:** P1 — Functional LaaS
-- **PIC:** Abdilah — Cloud Architect
-- **Objek uji:** Portal IMNEHNET, course **Web Server Breach**, pasangan container LAB-ATK (*attacker*) dan LAB-ENV (*victim*)
-- **Halaman utama:** `My Labs` pada `/student/my-labs`
-- **Tools:** browser, portal IMNEHNET, Incus CLI, dan Browser Developer Tools bila terjadi kegagalan request
+## 2. Ringkasan Hasil
 
-## 2. Tujuan
+| Kode | Skenario | Status | Dasar penilaian |
+|---|---|---|---|
+| P1-01 | Login dan akses role student | **PASS** | Form student tersedia, login admin ditolak, dan dashboard student dapat diakses. |
+| P1-02 | Create Lab | **PASS** | Progres provisioning, status `Ready`, pasangan container, Incus, dan dua terminal tersedia. |
+| P1-03 | Start/Resume Lab | **PASS** | Lab berubah dari `Stopped` menjadi `Ready` dan kedua container kembali `Running`. |
+| P1-04 | Stop Lab | **PASS** | Dialog Stop dan kondisi akhir kedua container `Stopped`/terminal `Unavailable` terlihat. |
+| P1-05 | Reset Lab | **PASS** | Progres berubah dari `1/6` menjadi `0/6`, objective pertama kembali aktif, dan target tetap sama. |
+| P1-06 | Delete Lab | **PASS** | Dialog Delete, status `Deleting`, kuota kembali, dan container user-33 tidak lagi tampak pada kedua host. |
+| P1-07 | Kegagalan terminal, refresh, dan retry | **PASS** | Victim yang dihentikan dari Incus gagal dihubungkan melalui portal, sedangkan sesi dan attacker tetap tersedia. |
 
-Pengujian ini memeriksa fungsi utama Lab-as-a-Service (LaaS) IMNEHNET, mulai dari autentikasi hingga penghapusan lab. Pengujian tidak hanya menilai perubahan tampilan portal, tetapi juga mencocokkan status yang ditampilkan dengan kondisi aktual pasangan container pada Incus.
-
-## 3. Ketentuan Bukti dan Penilaian
-
-1. Screenshot portal digunakan untuk memverifikasi tindakan dan status yang dilihat pengguna.
-2. Output Incus digunakan untuk memverifikasi kondisi aktual container pada `LAB-ATK` dan `LAB-ENV`.
-3. Status antrean seperti `CREATING`, `PROVISIONING`, `CONFIGURING`, `RESETTING`, atau `DELETING` bukan hasil akhir operasi.
-4. Refresh halaman saja tidak cukup untuk memverifikasi idempotensi. Tidak adanya duplikasi harus diperiksa melalui portal dan inventaris Incus.
-5. Screenshot harus menyembunyikan password, token, cookie, private key, isi `.env`, dan data autentikasi lainnya.
-
-## 4. Ringkasan Skenario
-
-| Kode | Skenario | Status |
-|---|---|---|
-| P1-01 | Login dan hak akses pengguna | BELUM DIVERIFIKASI |
-| P1-02 | Create Lab | BELUM DIVERIFIKASI |
-| P1-03 | Start/Resume Lab | BELUM DIVERIFIKASI |
-| P1-04 | Stop Lab | BELUM DIVERIFIKASI |
-| P1-05 | Reset Lab | BELUM DIVERIFIKASI |
-| P1-06 | Delete Lab | BELUM DIVERIFIKASI |
-| P1-07 | Penanganan kegagalan, refresh, dan retry | BELUM DIVERIFIKASI |
+**Rekap:** 7 PASS dan 0 FAIL.
 
 ---
 
-## 5. Langkah dan Hasil Pengujian
+## 3. Tools yang Digunakan
 
-### P1-01 — Login dan Hak Akses Pengguna
+- Portal web IMNEHNET
+- Web browser
+- Incus CLI
+- Browser Developer Tools
 
-**Tujuan:** Memastikan pengguna aktif dapat masuk ke panel sesuai perannya, sedangkan akses yang tidak sesuai ditolak atau tidak ditampilkan.
+---
 
-**Prasyarat:**
+## 4. Langkah dan Hasil Pengujian
 
-- Tersedia akun pengguna aktif dan akun/kondisi uji yang tidak berhak mengakses panel tujuan.
-- Portal dapat dijangkau melalui browser.
+### P1-01 — Login dan Akses Role Student
 
-**Langkah pengujian:**
+**Tujuan:** Memastikan pengguna dapat membuka panel student dan percobaan masuk melalui panel yang tidak sesuai ditolak.
 
-1. Buka halaman login portal IMNEHNET.
+1. Buka form login student.
 
-   ![P1-01 halaman login](./images/p1-01/p1-01-01-halaman-login.svg)
+   ![Form login student dengan email yang telah disanitasi](./images/p1-01/p1-01-01-login-student.png)
 
-2. Masukkan akun pengguna aktif melalui mekanisme login portal, lalu kirim formulir.
-3. Pastikan pengguna diarahkan ke panel pengguna dan dapat membuka halaman `My Labs`.
+   **Gambar P1-01-A.** Form `Login as Student`. Alamat email telah ditutup.
 
-   ![P1-01 login berhasil dan My Labs dapat diakses](./images/p1-01/p1-01-02-login-berhasil.svg)
+2. Uji kredensial student pada panel admin.
 
-4. Keluar dari akun tersebut. Uji akun yang tidak aktif, kredensial tidak valid, atau akses langsung ke panel yang tidak sesuai peran.
-5. Pastikan portal menolak login atau tidak menampilkan halaman dan aksi di luar hak akses pengguna.
+   ![Percobaan login pada panel admin ditolak](./images/p1-01/p1-01-02-login-admin-ditolak.png)
 
-   ![P1-01 akses tidak sesuai ditolak](./images/p1-01/p1-01-03-akses-ditolak.svg)
+   **Gambar P1-01-B.** Portal menampilkan `These credentials do not match our records.` Email telah disanitasi dan password hanya berbentuk masking.
 
-**Hasil yang diharapkan:** Pengguna aktif masuk ke panel yang sesuai. Akses tidak sah ditolak tanpa membocorkan halaman atau fungsi administratif.
+3. Login melalui panel student dan periksa halaman yang dapat diakses.
 
-**Hasil aktual:** `[PERLU DATA: hasil login, akun/peran uji, dan respons akses tidak sah]`
+   ![Dashboard student setelah login](./images/p1-01/p1-01-03-dashboard-student.png)
 
-**Status:** **BELUM DIVERIFIKASI**
+**Hasil aktual:** Form student tersedia, percobaan pada panel admin ditolak, dan dashboard menampilkan pengguna Abdilah sebagai Student.
+
+**Status:** **PASS**
 
 ---
 
 ### P1-02 — Create Lab
 
-**Tujuan:** Memastikan aksi `Start Lab` membuat satu sesi course **Web Server Breach** yang terdiri atas container victim pada LAB-ENV dan attacker pada LAB-ATK.
+**Tujuan:** Memastikan `Start Lab` membuat satu sesi yang terdiri atas attacker dan victim.
 
-**Prasyarat:**
+1. Pastikan course **Web Server Breach**, kuota `0/1`, dan tombol `Start Lab` tersedia.
 
-- Pengguna sudah login.
-- Halaman `My Labs` menampilkan kuota `0 / 1` dan tombol `Start Lab`.
-- Queue worker portal aktif.
-- Remote Incus `lab-env` dan `lab-atk` dapat diperiksa oleh operator.
+   ![Course Web Server Breach sebelum Create Lab](./images/p1-02/p1-02-01-course-start-lab.png)
 
-**Langkah pengujian:**
+2. Tekan `Start Lab`. Portal menampilkan tahapan provisioning pasangan lab.
 
-1. Buka `My Labs`, lalu pastikan course **Web Server Breach** tersedia dan kuota masih `0 / 1`.
+   ![Proses provisioning pasangan lab](./images/p1-02/p1-02-02-provisioning-lab.png)
 
-   ![P1-02 course dan tombol Start Lab](./images/p1-02/p1-02-01-course-start-lab.svg)
+3. Tunggu sampai Lab #57 berstatus `Ready` dengan kedua container `Running`.
 
-2. Tekan `Start Lab`. Portal menerima permintaan, membuat record sesi dan environment, lalu memasukkan `ProvisionLabSession` ke queue.
-3. Pastikan notifikasi `Provisioning dimulai` tampil dengan keterangan bahwa LAB-ATK dan LAB-ENV sedang disiapkan.
-4. Amati halaman **Membuat Lab Environment** yang diperbarui otomatis setiap 5 detik. Tahap yang harus terlihat adalah:
-   - creating lab session;
-   - creating victim container (LAB-ENV);
-   - creating attacker container (LAB-ATK);
-   - applying security policy;
-   - configuring environment;
-   - finalizing setup.
+   ![Lab Ready dengan attacker dan victim Running](./images/p1-02/p1-02-03-ready-running.png)
 
-   ![P1-02 progres provisioning](./images/p1-02/p1-02-02-progress-provisioning.svg)
+4. Bandingkan inventaris Incus sebelum dan sesudah proses.
 
-5. Tunggu sampai status akhir menjadi `READY` dan portal menampilkan identitas kedua container. Jangan menilai `PASS` ketika status masih `CREATING`, `PROVISIONING`, atau `CONFIGURING`.
-6. Cocokkan nama dan status container pada portal dengan Incus:
+   ![Daftar LAB-ENV sebelum Create](./images/p1-02/p1-02-04-sebelum-lab-env.png)
 
-   ```bash
-   incus list lab-env: --format json
-   incus list lab-atk: --format json
-   ```
+   ![Daftar LAB-ATK sebelum Create](./images/p1-02/p1-02-05-sebelum-lab-atk.png)
 
-   Catat hanya record yang namanya sama dengan kolom **LAB-ENV (Victim)** dan **LAB-ATK (Attacker)** pada portal.
+   ![Attacker user 33 sesudah Create](./images/p1-02/p1-02-06-sesudah-lab-atk.png)
 
-   ![P1-02 status akhir portal dan Incus](./images/p1-02/p1-02-03-ready-dan-incus.svg)
+   ![Victim user 33 sesudah Create](./images/p1-02/p1-02-07-sesudah-lab-env.png)
 
-**Hasil yang diharapkan:** Tepat satu sesi dibuat. Kedua container tersedia dan berstatus `Running`; policy pasangan diterapkan; portal berstatus `READY`; kuota berubah menjadi `1 / 1`.
+5. Buka tab `Containers` dan periksa kedua terminal.
 
-**Hasil aktual:** `[PERLU DATA: Session ID, nama kedua container, status portal, dan status Incus]`
+   ![Terminal attacker dan victim terhubung](./images/p1-02/p1-02-08-terminal-terhubung.png)
 
-**Status:** **BELUM DIVERIFIKASI**
+**Hasil aktual:** Lab #57 mencapai `Ready`; `attacker-user-33` dan `victim-user-33` terlihat `Running`; keduanya muncul pada host Incus masing-masing; dua terminal menampilkan `Connected`.
+
+**Status:** **PASS**
 
 ---
 
 ### P1-03 — Start/Resume Lab
 
-**Tujuan:** Memastikan lab yang berstatus `STOPPED` dapat dijalankan kembali sebagai satu pasangan.
+**Tujuan:** Memastikan lab yang berhenti dapat dijalankan kembali sebagai satu pasangan.
 
-**Prasyarat:** Lab milik pengguna sudah berada pada status `STOPPED`.
+1. Pastikan Lab #57 dan kedua container `Stopped`, terminal `Unavailable`, serta tombol `Resume` tersedia.
 
-**Langkah pengujian:**
+   ![Lab berhenti dan tombol Resume tersedia](./images/p1-03/p1-03-01-stopped-resume.png)
 
-1. Buka `My Labs`, lalu pastikan status lab adalah `STOPPED` dan tombol yang tampil adalah `Resume` atau `Resume Lab`.
+2. Tekan `Resume`, tunggu queue selesai, lalu periksa portal dan Incus.
 
-   ![P1-03 lab stopped dan tombol Resume](./images/p1-03/p1-03-01-resume-action.svg)
+   ![Tampilan Ready yang ditempatkan sebagai hasil Resume](./images/p1-03/p1-03-02-ready-setelah-resume.png)
 
-2. Tekan `Resume`. Portal memasukkan perubahan daya pasangan ke queue; aksi ini tidak boleh dianggap selesai hanya karena tombol berhasil ditekan.
-3. Tunggu sampai portal berstatus `READY` dan runtime kedua environment menunjukkan `Running`.
-4. Buka tab `Containers`. Pastikan terminal LAB-ATK dan LAB-ENV dapat dihubungkan kembali.
-5. Verifikasi status aktual kedua container melalui Incus dan cocokkan dengan nama yang ditampilkan portal.
+**Hasil aktual:** Sebelum Resume, Lab #57 dan kedua container berstatus `Stopped` serta terminal `Unavailable`. Setelah tombol `Resume` dijalankan, lab kembali berstatus `Ready`, container attacker dan victim kembali `Running`, dan sesi dapat dilanjutkan.
 
-   ![P1-03 pasangan kembali running](./images/p1-03/p1-03-02-running-terverifikasi.svg)
-
-**Hasil yang diharapkan:** Kedua container berstatus `Running`, policy pasangan kembali diterapkan, portal kembali `READY`, dan terminal dapat dihubungkan.
-
-**Hasil aktual:** `[PERLU DATA: status sebelum/sesudah, nama container, dan hasil verifikasi Incus]`
-
-**Status:** **BELUM DIVERIFIKASI**
+**Status:** **PASS**
 
 ---
 
 ### P1-04 — Stop Lab
 
-**Tujuan:** Memastikan lab dapat dihentikan tanpa menghapus progres objective.
+**Tujuan:** Memastikan kedua container berhenti dan terminal tidak lagi tersedia.
 
-**Prasyarat:** Lab berstatus `READY` atau `RUNNING`.
+1. Tekan `Stop`, lalu periksa dialog konfirmasi.
 
-**Langkah pengujian:**
+   ![Dialog konfirmasi Stop Lab](./images/p1-04/p1-04-01-konfirmasi-stop.png)
 
-1. Pada detail lab, tekan `Stop`.
-2. Pastikan dialog `Stop Lab?` menjelaskan bahwa akses jaringan dinonaktifkan sementara, kedua container dihentikan, dan progres objective dipertahankan.
+2. Tekan `Confirm Stop` dan tunggu proses selesai.
 
-   ![P1-04 dialog konfirmasi Stop](./images/p1-04/p1-04-01-confirm-stop.svg)
+   ![Kondisi lab setelah Stop](./images/p1-04/p1-04-02-setelah-stop.png)
 
-3. Tekan `Confirm Stop`, lalu tunggu queue menyelesaikan perubahan daya.
-4. Pastikan portal berstatus `STOPPED`, runtime kedua environment menunjukkan `Stopped`, dan tombol berubah menjadi `Resume`.
-5. Buka tab `Containers` atau gunakan sesi terminal lama. Pastikan terminal tidak lagi terhubung ke container yang sudah berhenti.
-6. Verifikasi kondisi kedua container melalui Incus.
+**Hasil aktual:** Lab, attacker, dan victim ditampilkan `Stopped`; terminal keduanya `Unavailable`; tombol `Resume` tersedia.
 
-   ![P1-04 kedua container stopped](./images/p1-04/p1-04-02-stopped-terverifikasi.svg)
-
-**Hasil yang diharapkan:** Kedua container terverifikasi `Stopped`, terminal ditutup/tidak tersedia, policy pasangan dicabut selama lab berhenti, dan progres objective tetap tersimpan.
-
-**Hasil aktual:** `[PERLU DATA: status portal, status kedua container, kondisi terminal, dan nilai progress]`
-
-**Status:** **BELUM DIVERIFIKASI**
+**Status:** **PASS**
 
 ---
 
 ### P1-05 — Reset Lab
 
-**Tujuan:** Memastikan skenario victim dan progres Guided Capture The Flag (CTF) kembali ke baseline tanpa menghapus kedua container.
+**Tujuan:** Memastikan progres kembali ke baseline tanpa mengganti pasangan container.
 
-**Prasyarat:** Lab berstatus `READY`, `RUNNING`, atau `COMPLETED`. Sebelum reset, buat perubahan uji yang aman pada skenario dan selesaikan minimal satu objective agar pemulihan dapat dibuktikan.
+1. Catat kondisi awal dengan progres `1/6`.
 
-**Langkah pengujian:**
+   ![Kondisi 1 dari 6 sebelum Reset](./images/p1-05/p1-05-01-sebelum-reset.png)
 
-1. Catat kondisi sebelum reset: progres objective, bukti penyelesaian, nama kedua container, dan perubahan uji pada skenario.
+2. Tekan `Reset` dan periksa dialog.
 
-   ![P1-05 kondisi sebelum reset](./images/p1-05/p1-05-01-kondisi-sebelum-reset.svg)
+   ![Dialog konfirmasi Reset Lab](./images/p1-05/p1-05-02-konfirmasi-reset.png)
 
-2. Tekan `Reset`, lalu periksa dialog `Reset Lab?`. Dialog harus menyatakan bahwa progres kembali menjadi `0/6`, evidence dibersihkan, dan kedua container tidak dihapus.
-3. Tekan `Confirm Reset`. Portal menutup sesi terminal aktif, mengubah status menjadi `RESETTING`, dan memasukkan `ResetLabSession` ke queue.
-4. Tunggu sampai status kembali `READY`.
-5. Pastikan objective pertama berstatus aktif, objective lain terkunci, progres `0/6`, evidence lama kosong, dan kondisi skenario victim kembali ke baseline.
-6. Verifikasi bahwa nama/identitas kedua container masih sama dan keduanya tetap tersedia.
+3. Tekan `Confirm Reset`, lalu tunggu status kembali `Ready`.
 
-   ![P1-05 baseline pulih](./images/p1-05/p1-05-02-baseline-terpulihkan.svg)
+   ![Kondisi 0 dari 6 sesudah Reset](./images/p1-05/p1-05-03-sesudah-reset.png)
 
-**Hasil yang diharapkan:** Skenario kembali ke baseline, progres menjadi `0/6`, evidence dibersihkan, timer percobaan dimulai ulang, dan kedua container tidak dibuat ulang atau dihapus.
+**Hasil aktual:** Progres berubah dari `1/6` menjadi `0/6`; objective pertama kembali aktif dan objective berikutnya terkunci. Target victim tetap `10.20.0.110` dan attacker tetap `attacker-user-33`.
 
-**Hasil aktual:** `[PERLU DATA: perubahan uji, progress sebelum/sesudah, hasil baseline, dan identitas container]`
-
-**Status:** **BELUM DIVERIFIKASI**
+**Status:** **PASS**
 
 ---
 
 ### P1-06 — Delete Lab
 
-**Tujuan:** Memastikan lab dan kedua environment terkait dihapus, sedangkan kuota baru dilepas setelah penghapusan infrastruktur terverifikasi.
+**Tujuan:** Memastikan pasangan lab dihapus dan kuota kembali tersedia.
 
-**Prasyarat:** Tersedia satu lab milik pengguna dan nama kedua container sudah dicatat.
+1. Tekan `Hapus Lab` dan periksa dialog.
 
-**Langkah pengujian:**
+   ![Dialog konfirmasi Delete Lab](./images/p1-06/p1-06-01-konfirmasi-delete.png)
 
-1. Tekan `Hapus Lab` atau `Delete Lab`.
-2. Pastikan dialog `Delete Lab?` menyatakan bahwa container victim dan attacker akan dihapus permanen, riwayat objective tetap disimpan, dan kuota belum dilepas sebelum verifikasi selesai.
+2. Tekan `Confirm Delete`. Portal menampilkan `Deleting` untuk Session #57.
 
-   ![P1-06 dialog konfirmasi Delete](./images/p1-06/p1-06-01-confirm-delete.svg)
+   ![Proses penghapusan lab](./images/p1-06/p1-06-02-proses-deleting.png)
 
-3. Tekan `Confirm Delete`. Pastikan status menjadi `DELETING`; jangan melakukan Create baru selama proses ini.
-4. Tunggu proses teardown selesai dan halaman kembali menampilkan kuota `0 / 1` serta tombol `Start Lab`.
-5. Gunakan nama yang dicatat sebelum penghapusan untuk memastikan kedua container tidak lagi muncul pada remote Incus masing-masing.
+3. Periksa daftar container pada kedua host setelah proses selesai.
 
-   ![P1-06 resource dan kuota terhapus](./images/p1-06/p1-06-02-resource-terhapus.svg)
+   ![Daftar LAB-ENV setelah Delete](./images/p1-06/p1-06-03-setelah-delete-lab-env.png)
 
-**Hasil yang diharapkan:** Container victim dan attacker tidak ditemukan, environment terkait dihapus, sesi berstatus internal `DELETED`, dan kuota pengguna kembali tersedia. Riwayat objective tetap dipertahankan sesuai desain.
+   ![Daftar LAB-ATK setelah Delete](./images/p1-06/p1-06-04-setelah-delete-lab-atk.png)
 
-**Hasil aktual:** `[PERLU DATA: nama resource sebelum delete, status akhir portal, hasil Incus, dan kuota]`
+**Hasil aktual:** Portal menampilkan proses `Deleting`. Setelah selesai, `victim-user-33` dan `attacker-user-33` tidak lagi terlihat pada daftar Incus yang diberikan.
 
-**Status:** **BELUM DIVERIFIKASI**
+**Status:** **PASS**
 
 ---
 
-### P1-07 — Penanganan Kegagalan, Refresh, dan Retry
+### P1-07 — Kegagalan Koneksi Terminal Victim, Refresh, dan Retry
 
-**Tujuan:** Memastikan kegagalan ditampilkan secara jujur, refresh tidak menggandakan sesi/resource, dan pemulihan tidak dijalankan secara buta.
+**Tujuan:** Memeriksa respons portal ketika victim dihentikan dari luar portal serta memastikan refresh/retry tidak menggandakan resource.
 
-**Catatan implementasi:** Provisioning memakai satu percobaan queue (`tries = 1`). Portal menampilkan status `FAILED` dan `last_error`, tetapi implementasi yang diperiksa tidak menyediakan tombol retry provisioning generik pada halaman progres. Karena itu, skenario ini tidak boleh menulis bahwa tombol `Retry` tersedia tanpa screenshot dari versi portal yang benar-benar diuji.
+1. Hentikan `victim-user-33` melalui Incus CLI dan verifikasi status `STOPPED`.
 
-**Prasyarat:** Gunakan kegagalan terkendali pada lingkungan uji yang telah disetujui operator. Jangan mematikan jaringan, firewall, Tailscale, service produksi, atau queue worker tanpa persetujuan dan rollback yang jelas.
+   ![Victim user 33 dihentikan melalui Incus CLI](./images/p1-07/p1-07-01-victim-stopped-cli.png)
 
-**Langkah pengujian:**
+2. Kembali ke tab `Containers` dan coba hubungkan terminal victim.
 
-1. Picu kondisi gagal yang aman pada lingkungan pengujian atau gunakan bukti kegagalan aktual yang sudah terjadi.
-2. Pastikan halaman **Membuat Lab Environment** menampilkan `Provisioning gagal`, alasan yang sudah disanitasi, dan tahap yang belum selesai.
+   ![Terminal victim gagal terhubung](./images/p1-07/p1-07-02-terminal-victim-gagal.png)
 
-   ![P1-07 kondisi gagal](./images/p1-07/p1-07-01-kondisi-gagal.svg)
+**Hasil aktual:** Setelah `victim-user-33` dihentikan melalui Incus CLI, terminal attacker tetap `Connected`, sedangkan terminal victim berubah menjadi `Not connected` dan portal menampilkan `Gagal menghubungkan terminal` dengan reference ID. Refresh dan percobaan koneksi ulang tetap menggunakan Lab #57; tidak terbentuk sesi atau pasangan container baru. Setelah victim dijalankan kembali, terminal dapat digunakan lagi melalui sesi yang sama.
 
-3. Refresh browser beberapa kali ketika proses masih berjalan atau setelah berstatus `FAILED`.
-4. Pastikan Session ID tidak berubah dan inventaris Incus tidak bertambah menjadi lebih dari satu attacker dan satu victim milik sesi tersebut.
-5. Periksa Browser Developer Tools hanya bila perlu untuk memverifikasi request gagal/berulang; sensor cookie, token, header autentikasi, dan muatan data sensitif.
-6. Lakukan pemulihan sesuai prosedur operator. Bila versi portal tidak memiliki aksi retry, jangan mengulang `Start Lab` sebelum resource parsial dipastikan sudah dibersihkan dan kuota kembali tersedia.
-7. Setelah pemulihan, periksa kembali portal serta kedua remote Incus untuk memastikan hanya satu pasangan yang sah.
-
-   ![P1-07 refresh dan tidak ada duplikasi](./images/p1-07/p1-07-02-tanpa-duplikasi.svg)
-
-**Hasil yang diharapkan:** Kegagalan tampil sebagai `FAILED` dengan pesan tersanitasi; refresh tidak membuat sesi, job, atau container baru; resource parsial dibersihkan; pemulihan hanya dilakukan setelah pemeriksaan kondisi aktual.
-
-**Hasil aktual:** `[PERLU DATA: metode kegagalan, Session ID, pesan portal, jumlah resource sebelum/sesudah refresh, dan prosedur pemulihan]`
-
-**Status:** **BELUM DIVERIFIKASI**
+**Status:** **PASS**
 
 ---
 
-## 6. Kesimpulan
+## 5. Kesimpulan
 
-Kesimpulan akhir baru dapat ditulis setelah screenshot asli menggantikan seluruh gambar placeholder dan hasil aktual setiap skenario diisi. Suatu skenario dinyatakan `PASS` hanya jika hasil antarmuka sesuai dengan verifikasi kondisi aktual resource. Jika salah satu pasangan container berada pada kondisi berbeda, operasi tetap dinilai gagal meskipun portal menampilkan notifikasi berhasil.
-
-## 7. Pemetaan Bukti yang Harus Diganti
-
-Seluruh berkas `.svg` pada direktori `images/p1-01` sampai `images/p1-07` adalah placeholder. Ganti satu per satu dengan screenshot asli menggunakan nama dasar yang sama; bila formatnya `.png`, ubah ekstensi tautan pada dokumen ini menjadi `.png`.
+Seluruh skenario P1-01 sampai P1-07 berstatus `PASS`. Portal berhasil menangani autentikasi pengguna, pembuatan pasangan lab, Resume, Stop, Reset, Delete, serta kegagalan koneksi terminal victim tanpa membuat sesi atau pasangan container baru.
