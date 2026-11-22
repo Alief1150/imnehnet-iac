@@ -1,386 +1,349 @@
-# 01 — Persiapan Server dan Instalasi Fondasi Webportal IMNEHNET
+# 01 — Persiapan Resource dan Instalasi Webportal IMNEHNET
 
-**Jobdesk:** Portal Developer (PIC: Malik)  
-**Proyek:** IMNEHNET — *Rancang Bangun Model IaaS Berbasis Micro-segmentation untuk Meningkatkan Keamanan dan Skalabilitas Praktikum Keamanan Siber*  
-**Tahap:** 01 — pembangunan awal dan penyiapan kebutuhan Webportal (sebelum implementasi fitur Admin dan Student)  
-**Node aplikasi:** `IAAS-MGMT` (`iaas-mgmt`)  
-**Workspace aplikasi:** `/home/iaas/projects/webportal-iaas`  
-**Status dokumen:** dokumentasi retrospektif berbasis bukti repository dan audit, bukan catatan eksekusi installer saat pertama kali dijalankan  
-**Rujukan source:** [webportal/](../../../webportal/) dan commit [658b8cd](https://github.com/Alief1150/imnehnet-iac/commit/658b8cd2e82375f015450250f87b1a1158aee66f)
-
-> **Penting — provenance.** Audit bertanggal **25 September 2026** menyatakan PHP 8.3, PHP-FPM, Apache, MySQL, dan Git telah tersedia di IAAS-MGMT, tetapi folder aplikasi masih kosong dan Composer/Node.js belum tersedia di `PATH` pada pemeriksaan tersebut. Audit **26 September 2026** selanjutnya memverifikasi aplikasi Laravel 13.33.0/Filament 5.8.4, asset build, dan pengujian. Maka tanggal yang pasti adalah **rentang verifikasi 25–26 September 2026**, bukan tanggal pasti instalasi tiap paket. Contoh perintah instalasi di bawah adalah **prosedur reproduksi**, bukan bukti perintah identik dijalankan Malik pada saat itu. Jangan menjalankannya ulang pada server yang sudah aktif tanpa change plan dan backup.
+**Proyek:** IMNEHNET — Webportal IaaS untuk Praktikum Keamanan Siber  
+**Bidang:** Portal Developer  
+**Penanggung jawab:** Malik  
+**Tahap:** 01 — Persiapan lingkungan dan dependency aplikasi  
+**Lokasi source aplikasi:** `/home/iaas/projects/webportal-iaas`  
+**Repository:** [`imnehnet-iac/webportal`](../../../webportal/)  
 
 ---
 
-## A. Tujuan dan batas pekerjaan
+## 1. Deskripsi Pekerjaan
 
-Tahap ini menyiapkan **management-plane web application** di VM `IAAS-MGMT`: runtime PHP, dependency Laravel, database, panel admin Filament, pipeline frontend, HTTP service, dan background queue. Portal menjadi antarmuka pengelolaan; ia **tidak menggantikan** OpenTofu, Ansible, maupun Incus yang berada pada lapisan orkestrasi/infrastruktur.
+Tahap awal pengembangan Webportal IMNEHNET adalah mempersiapkan perangkat lunak dan dependency untuk membangun aplikasi berbasis **Laravel** dan **Filament**. Fondasi ini mendukung autentikasi, administrasi pengguna, pengelolaan data laboratorium, penyajian antarmuka, serta pemrosesan tugas backend secara asynchronous.
 
-**Cakupan Notes 01:** lingkungan pengembangan/deployment, instalasi dan dependensi, pembuatan proyek Laravel, koneksi MySQL, persiapan Filament, frontend assets, queue, verifikasi dasar, serta bukti visual. Pembuatan fitur **Admin Panel** dan **Student Panel** dirinci pada Notes berikutnya.
+Dokumentasi ini **khusus komponen Webportal**: PHP, Composer, Laravel, Filament, MySQL, Node.js, npm, Vite, Tailwind CSS, Apache, PHP-FPM, Laravel Queue, Git, dan keterkaitan akses web dengan Cloudflare. Konfigurasi VM, hypervisor, OpenTofu, Incus, dan Ansible tidak dibahas sebagai pekerjaan instalasi Portal Developer.
 
-## B. Konteks infrastruktur dan arsitektur
+**Tujuan pekerjaan:**
 
-| Komponen | Peran dalam implementasi | Dasar verifikasi |
-| --- | --- | --- |
-| `IAAS-MGMT` | VM tempat Laravel, PHP, MySQL, automation controller | [docs/status.md](../../../docs/status.md) |
-| Ubuntu Server | Sistem operasi VM pengelola (audit proyek menyebut Ubuntu Server 24.04 LTS) | [Dokumen verifikasi IAAS-MGMT](../../../docs/Alief-DEVOPS-01-Verifikasi-IAAS-MGMT-Ansible-Controller.md) |
-| PHP 8.3 & PHP-FPM | Runtime backend dan pemrosesan PHP melalui web server | Audit 25 September; [composer.json](../../../webportal/composer.json) meminta `php:^8.3` |
-| Apache HTTP Server | HTTP server/vhost, PHP-FPM dan proxy terminal | [deploy/](../../../webportal/deploy/) |
-| MySQL | Database aplikasi dan database inventaris infrastruktur | [config/database.php](../../../webportal/config/database.php) |
-| Composer | Dependency manager untuk Laravel/Filament/Pest | [composer.json](../../../webportal/composer.json) |
-| Laravel 13 | Framework backend, migrations, Artisan, Eloquent, jobs, routing | [composer.json](../../../webportal/composer.json) |
-| Filament 5 | Panel administrasi Laravel | [composer.json](../../../webportal/composer.json), [AdminPanelProvider](../../../webportal/app/Providers/Filament/AdminPanelProvider.php) |
-| Node.js + npm | Toolchain kompilasi asset | [package.json](../../../webportal/package.json) |
-| Vite 8 + Tailwind CSS 4 | Build asset frontend dan styling | [package.json](../../../webportal/package.json) |
-| Database queue worker | Pekerjaan asynchronous untuk lifecycle lab | [config/queue.php](../../../webportal/config/queue.php), [queue supervisor](../../../webportal/scripts/queue-supervisor.sh) |
-| Git/GitHub | Version control dan kolaborasi kelompok | repository `imnehnet-iac`, folder `webportal/` |
+1. Menyiapkan runtime backend dan package manager PHP.
+2. Menyiapkan source Laravel dan kerangka panel Filament.
+3. Menyiapkan koneksi database aplikasi dan sistem migrasi.
+4. Menyiapkan toolchain build antarmuka.
+5. Memastikan layanan web dan queue siap menunjang fitur aplikasi.
+6. Memeriksa komponen yang terpasang sebelum pengembangan halaman Login, Admin, dan Student.
 
-**Versi harus dibaca sesuai bukti:** `composer.json` menyatakan batas dependensi Laravel `^13.17` dan Filament `^5.0` (bukan angka versi terpasang saat ini); audit 26 September mencatat **Laravel 13.33.0 dan Filament 5.8.4** pada saat verifikasi. `package.json` meminta **Node >=24** pada konfigurasi saat ini; audit September sebelumnya mengamati Node user-local 22.23.3 untuk build, sedangkan [script build terkini](../../../webportal/scripts/build-assets.sh) menggunakan Node **24** melalui nvm. Ini adalah evolusi konfigurasi, bukan kontradiksi yang perlu ditutup-tutupi.
+> **Dasar dokumentasi:** ini merupakan dokumentasi retrospektif dari source repository dan audit proyek, bukan rekaman layar proses instalasi pertama. Audit [25–26 September 2026](../../../docs/status.md) menunjukkan perubahan dari workspace portal kosong menjadi aplikasi Laravel/Filament yang telah berjalan. Perintah pemasangan ditulis sebagai **contoh prosedur reproduksi pada lingkungan baru**, sedangkan perintah pemeriksaan dipakai untuk memvalidasi instalasi yang sudah ada. Jangan mengulang instalasi atau migrasi pada server aktif hanya demi dokumentasi.
 
-### Topologi konseptual
+## 2. Resource dan Teknologi Webportal
 
-```text
-Pengguna (Admin / Student)
-           |
-           v
-     Web / HTTP(S)
-           |
-           v
-  IAAS-MGMT: Apache + PHP-FPM
-           |
-           v
-     Laravel + Filament
-       |          |
-       |          +--> Queue jobs (background worker)
-       |                        |
-       v                        +--> OpenTofu / Ansible / Incus integration
- MySQL application
- + inventory connection
-```
+| No. | Komponen | Kegunaan pada Webportal | Acuan konfigurasi |
+|:--:|---|---|---|
+| 1 | PHP 8.3 | Runtime backend Laravel | `composer.json` → `php: ^8.3` |
+| 2 | Composer | Instalasi dan manajemen package PHP | `composer.json`, `composer.lock` |
+| 3 | Laravel 13 | Routing, controller, Eloquent, migration, jobs, autentikasi | `composer.json` → `laravel/framework: ^13.17` |
+| 4 | Filament 5 | Komponen panel berbasis Laravel | `composer.json` → `filament/filament: ^5.0` |
+| 5 | MySQL | Penyimpanan data aplikasi dan koneksi data inventaris | `config/database.php` |
+| 6 | Apache HTTP Server | Pelayanan request HTTP, routing dan reverse proxy | `deploy/apache/` |
+| 7 | PHP-FPM | Pemrosesan PHP untuk Apache | `deploy/` |
+| 8 | Node.js dan npm | Runtime dan dependency manager frontend | `package.json` → Node `>=24` |
+| 9 | Vite 8 | Bundling dan build asset frontend | `package.json`, `scripts/build-assets.sh` |
+| 10 | Tailwind CSS 4 | Styling antarmuka | `package.json` |
+| 11 | Laravel Queue (database) | Pemrosesan job aplikasi secara asynchronous | `config/queue.php` |
+| 12 | Git dan GitHub | Pengelolaan versi source Webportal | Repository `imnehnet-iac` |
+| 13 | Cloudflare | Layanan jaringan yang relevansinya perlu dipisahkan dari hosting portal | `docs/networking.md`, `docs/status.md` |
 
-## C. Tahapan persiapan dan instalasi
+**Catatan versi:** angka `^` pada `composer.json` menyatakan rentang versi dependency, bukan versi pasti yang terpasang. Audit 26 September 2026 mencatat **Laravel 13.33.0** dan **Filament 5.8.4** pada saat itu. Runtime Node pernah tercatat pada versi 22 ketika audit lama dilakukan; konfigurasi frontend saat ini mensyaratkan **Node.js >=24** dan script build menggunakan Node 24. Versi aktual ditentukan dari hasil pemeriksaan terbaru.
 
-### 1. Verifikasi VM dan tool dasar
+## 3. Persiapan Backend: PHP dan Composer
 
-Masuk ke `IAAS-MGMT` dengan SSH melalui jalur akses pengelolaan yang sah. Validasi hostname, OS, versi runtime dan service sebelum mengubah apa pun:
+### 3.1 PHP dan ekstensi pendukung
 
-```bash
-hostnamectl
-php -v | head -n 2
-php -m | grep -Ei 'pdo_mysql|mysqli|mbstring|xml|curl|zip|bcmath|intl' || true
-composer --version
-git --version
-apache2 -v
-mysql --version
-systemctl is-active apache2 mysql
-```
+PHP menjadi bahasa backend utama. Untuk proyek ini, persyaratan aplikasi adalah PHP 8.3 beserta ekstensi yang diperlukan oleh Laravel dan driver MySQL.
 
-Jika `composer` belum terpasang atau tidak ditemukan, catat sebagai **belum tersedia**; jangan langsung menginstal di server produksi hanya untuk bukti screenshot.
-
-**Contoh perintah paket sistem untuk pembangunan ulang VM Ubuntu baru** (belum dijalankan sebagai bagian dari dokumentasi ini):
+**Contoh pemasangan dependency sistem pada Ubuntu baru:**
 
 ```bash
 sudo apt update
 sudo apt install -y git curl unzip ca-certificates \
-  apache2 mysql-server php8.3 php8.3-cli php8.3-fpm \
+  apache2 mysql-server \
+  php8.3 php8.3-cli php8.3-fpm \
   php8.3-mysql php8.3-mbstring php8.3-xml \
   php8.3-curl php8.3-zip php8.3-bcmath php8.3-intl
 ```
 
-Versi minor dan nama paket harus disesuaikan dengan repositori Ubuntu/OS aktual serta kebutuhan `composer check-platform-reqs`. PHP-FPM, Apache, atau MySQL yang sudah berjalan **tidak perlu dipasang ulang**.
+Kompatibilitas paket disesuaikan dengan repositori sistem operasi. Pemasangan di atas **bukan perintah untuk dijalankan ulang** pada Webportal aktif.
 
-### 2. Memasang Composer dan menyiapkan Laravel
-
-**Alur rekonstruksi pada lingkungan baru**:
-
-1. Instal Composer dari sumber resmi menggunakan installer yang diverifikasi checksum/signature sesuai prosedur resmi Composer; jangan menyalin skrip pemasangan dari sumber tidak dikenal.
-2. Siapkan direktori proyek untuk aplikasi.
-3. Instal dependency berdasarkan `composer.lock`, sehingga versi ter-resolve sesuai source repository.
+**Verifikasi instalasi:**
 
 ```bash
-cd /home/iaas/projects/webportal-iaas
-composer --version
-composer validate --no-check-publish
-composer check-platform-reqs
-php artisan --version
+php -v
+php -m | grep -Ei 'pdo_mysql|mysqli|mbstring|xml|curl|zip|bcmath|intl'
 ```
 
-Untuk deployment/clone baru, lazimnya gunakan `composer install --no-dev --optimize-autoloader`, **bukan** `composer update` acak pada produksi. Perintah `composer install` adalah mutasi dan **tidak perlu dijalankan untuk pengambilan bukti**. Di tahap awal pengembangan, dependency dev seperti Pint/Pest dapat disertakan pada lingkungan development.
+![Gambar 1 — Verifikasi PHP dan ekstensi](../images/01-instalasi-webportal/01-php-ekstensi.png)
 
-Source utama: [composer.json](../../../webportal/composer.json), [artisan](../../../webportal/artisan), [bootstrap/providers.php](../../../webportal/bootstrap/providers.php).
+*Gambar 1. Hasil verifikasi versi PHP serta ekstensi utama yang dibutuhkan Webportal IMNEHNET.*
 
-### 3. Pembuatan proyek Laravel dan struktur aplikasi
+### 3.2 Composer
 
-Workspace kanonik Laravel berada di:
+Composer digunakan untuk mengelola package PHP berdasarkan `composer.json` dan menginstal versi dependency yang tersimpan pada `composer.lock`.
+
+Pada mesin pengembangan baru, Composer dipasang mengikuti [panduan instalasi resmi Composer](https://getcomposer.org/download/) dengan verifikasi installer dari sumber resminya. Setelah tersedia, pengecekan dilakukan melalui:
+
+```bash
+composer --version
+composer validate --no-check-publish
+```
+
+![Gambar 2 — Verifikasi Composer](../images/01-instalasi-webportal/02-composer.png)
+
+*Gambar 2. Composer tersedia dan dapat membaca konfigurasi dependency aplikasi.*
+
+## 4. Persiapan Framework Laravel
+
+### 4.1 Direktori dan struktur project
+
+Source aplikasi Webportal yang digunakan tim berada pada:
 
 ```text
 /home/iaas/projects/webportal-iaas/
-├── app/               # Models, Services, Jobs, Filament
-├── bootstrap/         # bootstrap Laravel dan providers
-├── config/            # database, queue, infrastructure, dst.
-├── database/          # migrations, seeders
-├── public/            # document root dan asset publik
-├── resources/         # Blade, CSS, JS, SVG
-├── routes/            # web dan API
-├── storage/           # runtime/logs (tidak dipublikasikan ke Git)
-├── tests/             # pengujian otomatis
-├── artisan
-├── composer.json
-└── package.json
+├── app/            # Controller, Model, Service, Job, Filament
+├── bootstrap/      # Bootstrap dan registrasi provider
+├── config/         # Konfigurasi aplikasi
+├── database/       # Migration dan seeders
+├── public/         # Entry point HTTP dan asset publik
+├── resources/      # Blade, CSS, JavaScript, SVG
+├── routes/         # Definisi endpoint
+├── storage/        # Cache, session, dan log runtime
+├── tests/          # Pengujian
+├── artisan         # Laravel CLI
+├── composer.json   # Dependency PHP
+└── package.json    # Dependency frontend
 ```
 
-Pada sistem yang sudah aktif, cek keberadaan struktur **tanpa membuat/mengubah apa pun**:
+Struktur tersebut menunjukkan pemisahan logika backend, konfigurasi, database, antarmuka, dan pengujian.
+
+**Pemeriksaan pada aplikasi yang sudah tersedia:**
 
 ```bash
 cd /home/iaas/projects/webportal-iaas
 pwd
-ls -ld app bootstrap config database public resources routes storage tests
 php artisan --version
+ls -d app bootstrap config database public resources routes storage tests
 ```
 
-**Keterangan dokumentasi:** audit 25 September membuktikan workspace masih kosong; audit 26 September membuktikan struktur aplikasi sudah dibangun. Ini adalah bukti progres fondasi, bukan klaim bahwa seluruhnya dibuat dengan satu perintah `composer create-project`.
+![Gambar 3 — Versi dan struktur Laravel](../images/01-instalasi-webportal/03-laravel-struktur.png)
 
-### 4. Menyiapkan MySQL dan koneksi database
+*Gambar 3. Verifikasi framework Laravel dan keberadaan direktori utama source Webportal.*
 
-Implementasi mengonfigurasi dua koneksi dengan fungsi berbeda:
+### 4.2 Instalasi dependency Laravel
 
-| Database/koneksi | Kegunaan |
-| --- | --- |
-| Database aplikasi Laravel (dalam audit disebut `iaas_portal`) | Users, autentikasi, sessions, queue jobs, activity log, migrations |
-| Koneksi `imnehnet` | Membaca inventory dan data infrastruktur melalui koneksi terpisah |
+Pada deployment **baru** yang telah memiliki source repository dan file lock, dependency dipasang melalui:
 
-File rujukan: [config/database.php](../../../webportal/config/database.php). Koneksi utama dapat diatur sebagai MySQL melalui `DB_CONNECTION=mysql`, sedangkan koneksi kedua menggunakan variabel `IMNEHNET_DB_*`. File contoh [.env.example](../../../webportal/.env.example) **masih memiliki default `DB_CONNECTION=sqlite`**; jangan menyamakannya dengan konfigurasi produksi yang sudah diverifikasi menggunakan MySQL.
+```bash
+composer install --no-dev --optimize-autoloader
+```
 
-**Contoh nama variabel konfigurasi saja — bukan kredensial produksi:**
+Perintah tersebut merupakan referensi reproduksi, **bukan langkah verifikasi** dan tidak perlu diulang pada server aktif. Untuk pengembangan dan testing, dependency dev diperlukan dan opsi `--no-dev` tidak digunakan.
+
+Konfigurasi aplikasi Laravel disimpan pada environment lokal (`.env`), sedangkan template variabel dasar terdapat di [`.env.example`](../../../webportal/.env.example). File `.env` produksi, application key, dan credential database tidak boleh dipublikasikan.
+
+## 5. Persiapan Filament
+
+Filament merupakan framework UI di atas Laravel yang digunakan untuk mengembangkan panel administrasi. Dependency-nya dideklarasikan pada [`composer.json`](../../../webportal/composer.json).
+
+**Pemeriksaan package terpasang:**
+
+```bash
+cd /home/iaas/projects/webportal-iaas
+composer show filament/filament
+```
+
+Registrasi provider panel dapat dilihat pada:
+
+- [`app/Providers/Filament/AdminPanelProvider.php`](../../../webportal/app/Providers/Filament/AdminPanelProvider.php)
+- [`app/Providers/Filament/StudentPanelProvider.php`](../../../webportal/app/Providers/Filament/StudentPanelProvider.php)
+- [`bootstrap/providers.php`](../../../webportal/bootstrap/providers.php)
+
+Di tahap ini, Filament dibahas sebatas **persiapan framework dan registrasi panel**. Desain serta pengembangan modul Admin dijelaskan dalam dokumen tersendiri, begitu pula modul Student.
+
+![Gambar 4 — Verifikasi Filament](../images/01-instalasi-webportal/04-filament.png)
+
+*Gambar 4. Verifikasi dependency Filament pada aplikasi Webportal IMNEHNET.*
+
+## 6. Persiapan MySQL dan Database Laravel
+
+### 6.1 Database aplikasi
+
+Konfigurasi MySQL dilakukan melalui [`config/database.php`](../../../webportal/config/database.php). Dalam audit proyek, database aplikasi disebut **`iaas_portal`**. Aplikasi juga memiliki koneksi terpisah bernama **`imnehnet`** untuk membaca data inventaris infrastruktur.
+
+| Koneksi | Fungsi |
+|---|---|
+| Database utama Laravel | Data pengguna, sesi, queue, migrasi, dan kebutuhan internal aplikasi |
+| `imnehnet` | Pembacaan informasi inventaris infrastruktur melalui konfigurasi koneksi terpisah |
+
+Parameter konfigurasi yang relevan adalah nama koneksi, host, port, nama database, username, dan password. Contoh **nama parameter** tanpa kredensial:
 
 ```dotenv
 DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
 DB_DATABASE=iaas_portal
-DB_USERNAME=<user-aplikasi>
-DB_PASSWORD=<isi-secara-lokal>
 
 IMNEHNET_DB_CONNECTION=mysql
-IMNEHNET_DB_HOST=127.0.0.1
-IMNEHNET_DB_PORT=3306
 IMNEHNET_DB_DATABASE=imnehnet
-IMNEHNET_DB_USERNAME=<user-inventaris>
-IMNEHNET_DB_PASSWORD=<isi-secara-lokal>
 ```
 
-File `.env` asli **tidak boleh diunggah, dipotret, atau ditempel dalam dokumentasi**. Jangan menampilkan hasil `php artisan config:show database` mentah jika berpotensi menampilkan detail koneksi. Jangan mengambil screenshot tabel berisi data mahasiswa, IP personal, token, atau password.
+> Template `.env.example` pada repository masih menggunakan default `DB_CONNECTION=sqlite`; nilai ini **bukan bukti database utama pada deployment aktif**. Jangan mengunggah file `.env`, password, atau dump database untuk dokumentasi.
 
-Pemeriksaan aman:
+### 6.2 Verifikasi MySQL dan migrasi
+
+**Pemeriksaan service MySQL:**
 
 ```bash
-systemctl is-active mysql
 mysql --version
+systemctl is-active mysql
+```
+
+![Gambar 5 — Verifikasi MySQL](../images/01-instalasi-webportal/05-mysql.png)
+
+*Gambar 5. Hasil pemeriksaan versi dan status service MySQL.*
+
+**Pemeriksaan status migration Laravel:**
+
+```bash
 cd /home/iaas/projects/webportal-iaas
 php artisan migrate:status --no-interaction
 ```
 
-`migrate:status` hanya menampilkan status migrasi; **jangan menjalankan `migrate`, `migrate:fresh`, `db:wipe` atau SQL penghapusan** untuk keperluan screenshot. Audit 26 September telah mencatat migrasi awal selesai dan **0 pending migrations** pada waktu verifikasi tersebut.
+![Gambar 6 — Status migration](../images/01-instalasi-webportal/06-migration.png)
 
-### 5. Menyiapkan Filament Admin Panel
+*Gambar 6. Status migration Laravel pada database aplikasi yang telah dikonfigurasi.*
 
-Filament terdaftar sebagai dependency aplikasi. Provider yang dipakai sekarang:
+Penggunaan Laravel Migration memudahkan pelacakan perubahan skema database. Perintah pemeriksaan di atas tidak sama dengan menjalankan migrasi. Perintah `migrate`, `migrate:fresh`, dan `db:wipe` **tidak dilakukan untuk pengumpulan bukti**.
 
-- [AdminPanelProvider.php](../../../webportal/app/Providers/Filament/AdminPanelProvider.php)
-- [StudentPanelProvider.php](../../../webportal/app/Providers/Filament/StudentPanelProvider.php)
-- [bootstrap/providers.php](../../../webportal/bootstrap/providers.php)
+## 7. Persiapan Frontend: Node.js, npm, Vite, dan Tailwind CSS
 
-Tahap 01 hanya membuktikan **fondasi panel terpasang dan dapat diakses**, belum membahas fitur CRUD Environments, Users, CTF Management, Activity Logs, atau halaman Student. Fitur itu memiliki dokumentasi lanjutan.
+### 7.1 Node.js dan npm
 
-Perintah baca-saja untuk bukti:
+Frontend Webportal memanfaatkan Node.js dan npm untuk mengelola dependency JavaScript yang ditentukan pada [`package.json`](../../../webportal/package.json). Konfigurasi saat ini mensyaratkan **Node.js minimal versi 24**.
+
+Pengelolaan versi Node pada server menggunakan pendekatan **nvm**, sebagaimana diterapkan pada [`scripts/build-assets.sh`](../../../webportal/scripts/build-assets.sh). Pendekatan ini mencegah kegagalan build akibat Node sistem yang lebih lama.
 
 ```bash
-cd /home/iaas/projects/webportal-iaas
-composer show filament/filament | sed -n '1,9p'
-php artisan route:list --path=admin --except-vendor | head -n 25
+node --version
+npm --version
 ```
 
-Jika route vendor tidak tampil karena filter `--except-vendor`, gunakan `php artisan route:list --path=admin | head -n 25`. Jangan menjalankan `filament:install` ulang pada aplikasi existing hanya untuk bukti.
+![Gambar 7 — Node.js dan npm](../images/01-instalasi-webportal/07-node-npm.png)
 
-### 6. Node.js, npm, Vite, Tailwind, dan frontend assets
+*Gambar 7. Pemeriksaan toolchain Node.js dan npm yang digunakan untuk frontend Webportal.*
 
-Berdasarkan [package.json](../../../webportal/package.json), stack frontend saat ini mencakup Vite, Tailwind CSS, plugin Laravel Vite, React, Lucide, ApexCharts dan komponen terkait. **Dependency terpasang tidak otomatis membuktikan semua library telah digunakan pada semua halaman.**
+### 7.2 Dependency frontend dan proses build
 
-`Node >=24` adalah persyaratan package saat ini; [scripts/build-assets.sh](../../../webportal/scripts/build-assets.sh) menggunakan nvm untuk memilih **Node 24**, karena Node sistem lama tidak cocok dengan build terkini.
+Berdasarkan `package.json`, frontend memanfaatkan **Vite 8**, **Tailwind CSS 4**, plugin Vite Laravel, serta dependency lain seperti Lucide, ApexCharts, React, dan library pendukung. Tidak semua package otomatis berarti digunakan pada setiap halaman.
 
-Verifikasi tanpa build ulang:
+Contoh penyiapan dependency pada workspace **baru** menggunakan file lock:
+
+```bash
+npm ci
+```
+
+Proses build frontend yang telah disediakan source proyek:
+
+```bash
+bash scripts/build-assets.sh
+```
+
+Script tersebut memuat runtime Node yang sesuai lalu menjalankan build Vite. Kedua perintah di atas mengubah file/dependency; keduanya **bukan perintah pengambilan bukti pada server aktif**.
+
+**Pemeriksaan hasil build yang sudah ada:**
 
 ```bash
 cd /home/iaas/projects/webportal-iaas
 node --version
 npm --version
-test -f package.json && echo "package.json: FOUND"
-test -f public/build/manifest.json && echo "Vite manifest: FOUND"
-sed -n '1,60p' scripts/build-assets.sh
+test -f public/build/manifest.json && echo 'Vite build manifest: tersedia'
 ```
 
-**Prosedur build saat perubahan frontend memang hendak diterapkan**:
+![Gambar 8 — Verifikasi asset frontend](../images/01-instalasi-webportal/08-vite-assets.png)
 
-```bash
-cd /home/iaas/projects/webportal-iaas
-bash scripts/build-assets.sh
-```
+*Gambar 8. Toolchain frontend dan bukti keberadaan hasil build Vite.*
 
-Perintah terakhir **mengubah output asset**, sehingga **bukan** bagian dari audit read-only dan tidak perlu dijalankan lagi sekarang. Audit September 2026 sudah mengamati build Vite berhasil; versinya pada waktu itu dapat berbeda dari keadaan sekarang.
+## 8. Persiapan Apache dan PHP-FPM
 
-### 7. Web server Apache, PHP-FPM, dan routing Laravel
+Apache digunakan sebagai web server, sedangkan PHP-FPM menjadi komponen pemrosesan PHP. Konfigurasi deployment aplikasi disediakan dalam [`webportal/deploy/`](../../../webportal/deploy/) dan mengarahkan akses melalui direktori publik Laravel.
 
-Apache tersedia pada audit awal, tetapi pada **25 September** masih melayani halaman default Ubuntu dan **belum** menjadi public entrypoint portal. Pada **26 September**, bukti yang dicatat adalah akses aplikasi melalui development listener `php artisan serve` di port 8000. Pada iterasi berikutnya repository menyediakan konfigurasi deployment Apache:
+Untuk mendukung routing Laravel dan integrasi terminal web, konfigurasi Apache terkait mencakup modul `rewrite`, `proxy_fcgi`, `proxy`, dan dukungan WebSocket (`proxy_wstunnel`). Pengaktifan modul dan VirtualHost merupakan proses deployment terkontrol, bukan langkah screenshot.
 
-- [deploy/README.md](../../../webportal/deploy/README.md)
-- [deploy/install-apache-vhost.sh](../../../webportal/deploy/install-apache-vhost.sh)
-- [deploy/apache/imnehnet-portal.conf](../../../webportal/deploy/apache/imnehnet-portal.conf)
-
-Konfigurasi Apache membutuhkan routing `public/index.php`, modul PHP-FPM (`proxy_fcgi`), `rewrite`, dan dukungan proxy/WebSocket untuk terminal. **Keberadaan file deployment tidak sendirinya membuktikan kapan konfigurasi itu diaktifkan**, jadi verifikasi kondisi hidup sebelum menulis klaim HTTP production.
-
-Pemeriksaan baca-saja:
+**Verifikasi layanan:**
 
 ```bash
 apache2 -v
-sudo apache2ctl -S
-sudo apache2ctl -M | grep -Ei 'rewrite|proxy|fcgi|ssl|headers' || true
 systemctl is-active apache2 php8.3-fpm
-curl -sS -o /dev/null -w 'Local /up: HTTP %{http_code}\n' http://127.0.0.1/up
-curl -sS -o /dev/null -w 'Local /admin/login: HTTP %{http_code}\n' http://127.0.0.1/admin/login
 ```
 
-Tidak menjalankan `deploy/install-apache-vhost.sh`, `a2ensite`, restart Apache, atau mengubah permission untuk sekadar memotret bukti.
-
-### 8. Queue worker dan persiapan background processing
-
-Laravel menggunakan **database queue** yang diatur di [config/queue.php](../../../webportal/config/queue.php). Queue menyelesaikan operasi asynchronous seperti provisioning, penghentian, penghapusan, atau reset lab tanpa memblokir request browser.
-
-Berkas operasional terkait:
-
-- [scripts/queue-worker.sh](../../../webportal/scripts/queue-worker.sh)
-- [scripts/queue-supervisor.sh](../../../webportal/scripts/queue-supervisor.sh)
-- [scripts/reload-app.sh](../../../webportal/scripts/reload-app.sh)
-
-Pemeriksaan baca-saja:
+**Verifikasi endpoint lokal jika konfigurasi portal sudah aktif pada port 80:**
 
 ```bash
-cd /home/iaas/projects/webportal-iaas
-pgrep -af '[q]ueue:work|[q]ueue-supervisor' || true
-php artisan queue:failed --no-interaction
+curl -sS -o /dev/null -w 'Health: HTTP %{http_code}\n' http://127.0.0.1/up
+curl -sS -o /dev/null -w 'Admin login: HTTP %{http_code}\n' http://127.0.0.1/admin/login
 ```
 
-Jangan menjalankan `queue:restart`, `queue:clear`, atau menjalankan supervisor kedua untuk sekadar membuat screenshot. Pekerjaan lifecycle yang sedang berlangsung harus tetap aman.
+Kode HTTP yang diperoleh perlu dicatat sesuai kondisi aktual. Audit awal menunjukkan portal semula menggunakan development server di port 8000; keberadaan template Apache tidak membuktikan bahwa VirtualHost sudah diaktifkan pada setiap periode.
 
-### 9. Kontrol awal keamanan dan validasi
+![Gambar 9 — Apache dan PHP-FPM](../images/01-instalasi-webportal/09-apache-phpfpm.png)
 
-Pada tahap fondasi, aturan minimal:
+*Gambar 9. Pemeriksaan web server Apache dan layanan PHP-FPM.*
 
-1. Simpan credential hanya pada environment file yang tidak ter-commit.
-2. Jangan memasukkan `vendor/`, `node_modules/`, `storage/logs/`, dump SQL, key, serta state OpenTofu ke Git.
-3. Hindari operasi database destruktif pada sistem aktif.
-4. Pisahkan database aplikasi dengan inventaris infrastruktur.
-5. Gunakan `php artisan` read-only dan pengecekan endpoint untuk bukti.
-6. Uji perubahan lewat test suite terarah; pengecekan `php -l` saja tidak mencakup class loading dan fungsionalitas.
+## 9. Persiapan Laravel Queue
 
-Berkas pengujian aplikasi: [scripts/verify.sh](../../../webportal/scripts/verify.sh). **Tidak diklaim bahwa test suite terakhir sudah dijalankan pada saat penyusunan Notes ini.**
+Webportal menggunakan **database queue** sebagai mekanisme pemrosesan pekerjaan yang berlangsung di background. Konfigurasi berada pada [`config/queue.php`](../../../webportal/config/queue.php), dan source menyediakan script worker/supervisor di direktori [`scripts/`](../../../webportal/scripts/).
 
-## D. Checklist dokumentasi screenshot (bukti visual)
+Queue dipakai untuk memisahkan pekerjaan backend yang membutuhkan waktu lebih lama dari request antarmuka pengguna. Dengan demikian, proses aplikasi dapat dikelola secara asynchronous.
 
-**Folder target dalam GitHub:** `jobdesc/Portal-Developer/images/01-instalasi-webportal/`. Simpan screenshot **dari terminal/browser milik operator** kemudian unggah file PNG/JPG yang sudah disanitasi; *jangan* memotret data rahasia. Di bawah ini adalah daftar bukti yang perlu dikumpulkan, **bukan klaim bahwa file screenshot sudah tersedia**.
-
-| Kode | Nama file yang disarankan | Layar/perintah yang difoto | Caption siap pakai |
-| --- | --- | --- | --- |
-| SS-01 | `01-hostname-os.png` | `hostnamectl` | Identifikasi VM IAAS-MGMT sebagai server aplikasi Webportal IMNEHNET. |
-| SS-02 | `02-php-extensions.png` | `php -v` dan `php -m` yang difilter | Verifikasi runtime PHP dan ekstensi yang diperlukan Laravel/MySQL. |
-| SS-03 | `03-composer-laravel.png` | `composer --version` dan `php artisan --version` | Verifikasi Composer dan framework Laravel di workspace aplikasi. |
-| SS-04 | `04-mysql-service.png` | `mysql --version`, `systemctl is-active mysql` | Verifikasi layanan MySQL pada management VM. |
-| SS-05 | `05-struktur-laravel.png` | `pwd` dan `ls -ld app bootstrap config database public resources routes` | Struktur direktori proyek Laravel sebagai fondasi pengembangan portal. |
-| SS-06 | `06-migrasi-database.png` | `php artisan migrate:status --no-interaction` | Status migration Laravel yang telah tersedia pada database aplikasi. |
-| SS-07 | `07-filament-package.png` | `composer show filament/filament` | Verifikasi package Filament sebagai framework panel administrasi. |
-| SS-08 | `08-node-npm-vite.png` | `node -v`, `npm -v`, dan keberadaan `public/build/manifest.json` | Verifikasi toolchain dan hasil build aset frontend. |
-| SS-09 | `09-apache-phpfpm.png` | `apache2 -v`, `systemctl is-active apache2 php8.3-fpm` | Status Apache dan PHP-FPM sebagai komponen penyajian aplikasi. |
-| SS-10 | `10-admin-login.png` | Browser pada halaman login admin, **tanpa memasukkan password** | Tampilan akses awal panel administrasi IMNEHNET. |
-| SS-11 | `11-queue-worker.png` | `pgrep -af '[q]ueue:work|[q]ueue-supervisor'` | Keberadaan worker untuk proses asynchronous backend. |
-
-**Cara mengambil screenshot:**
-
-1. Masuk ke server lewat SSH, gunakan perintah yang sesuai pada tabel; ambil screenshot **di laptop/PC tempat terminal SSH dibuka**, bukan dengan memasang utilitas screenshot pada server tanpa GUI.
-2. Pastikan prompt, perintah, dan output yang relevan terlihat; hindari password/token, isi `.env`, sesi terminal mahasiswa, IP publik pribadi, atau identitas yang tidak diperlukan.
-3. Simpan sebagai PNG dengan nama yang direkomendasikan; crop hanya untuk membuang informasi sensitif/tidak relevan tanpa mengubah isi output teknis.
-4. Untuk SS-10, ambil gambar browser yang membuka login panel; tidak perlu mengunggah screenshot setelah login jika menampilkan informasi privat.
-5. Unggah gambar yang sudah diperiksa ke `jobdesc/Portal-Developer/images/01-instalasi-webportal/` lewat GitHub **Add file → Upload files** (atau proses Git yang disepakati tim). Jangan membuat file gambar kosong untuk mengklaim bukti.
-6. Setelah gambar tersedia, tambahkan tautan Markdown relatif seperti contoh:
-
-```markdown
-![SS-03 — Verifikasi Composer dan Laravel](../images/01-instalasi-webportal/03-composer-laravel.png)
-```
-
-**Bundel command read-only untuk mengumpulkan SS-01 s.d. SS-09 dan SS-11 (jalankan satu blok per screenshot, bukan semuanya untuk satu gambar):**
+**Pemeriksaan worker yang sedang berjalan:**
 
 ```bash
-cd /home/iaas/projects/webportal-iaas || exit 1
-# SS-01
-hostnamectl
-# SS-02
-php -v | head -n 2
-php -m | grep -Ei 'pdo_mysql|mysqli|mbstring|xml|curl|zip|bcmath|intl' || true
-# SS-03
-composer --version
-php artisan --version
-# SS-04
-mysql --version
-systemctl is-active mysql
-# SS-05
-pwd
-ls -ld app bootstrap config database public resources routes
-# SS-06
-php artisan migrate:status --no-interaction
-# SS-07
-composer show filament/filament | sed -n '1,12p'
-# SS-08
-node -v
-npm -v
-test -f public/build/manifest.json && echo 'Vite manifest: FOUND'
-# SS-09
-apache2 -v
-systemctl is-active apache2 php8.3-fpm
-# SS-11
 pgrep -af '[q]ueue:work|[q]ueue-supervisor' || true
 ```
 
-> Sebelum menjalankan `php artisan migrate:status` dan `queue:failed`, pastikan terminal menggunakan aplikasi dan environment yang benar. Perintah tersebut tidak memigrasikan atau menghapus data, tetapi tetap membaca kondisi database aktual. Jika versi/perintah tertentu tidak tersedia, catat apa adanya.
+![Gambar 10 — Queue worker](../images/01-instalasi-webportal/10-queue-worker.png)
 
-## E. Hasil yang dapat dinyatakan dan keterbatasan
+*Gambar 10. Pemeriksaan proses Laravel Queue Worker pada lingkungan Webportal.*
 
-### Hasil terverifikasi dari audit lama
+## 10. Akses Webportal dan Kaitan Cloudflare
 
-- **25 September 2026:** tersedia PHP 8.3, PHP-FPM, Apache, MySQL, Git pada IAAS-MGMT; folder Webportal belum berisi project Laravel.
-- **26 September 2026:** aplikasi Laravel/Filament telah tersedia pada workspace kanonik; audit mencatat Laravel 13.33.0/Filament 5.8.4, aset frontend yang berhasil dibangun, pengujian **42 tests / 154 assertions**, migrasi awal dengan **0 pending** pada saat verifikasi, serta endpoint pengembangan berjalan.
-- **22 November 2026:** source perkembangan Webportal sebanyak **74 file** tercatat dalam commit [658b8cd](https://github.com/Alief1150/imnehnet-iac/commit/658b8cd2e82375f015450250f87b1a1158aee66f) di branch `main`. Ini **bukti sinkronisasi source**, bukan bukti bahwa seluruh langkah instalasi dilakukan ulang pada tanggal tersebut.
+Cloudflare perlu dibedakan berdasarkan **layanan yang benar-benar digunakan**:
 
-### Batasan
+- **Cloudflare WARP** tercatat dalam audit dan [`docs/networking.md`](../../../docs/networking.md) sebagai dukungan **konektivitas keluar pada host fisik**, bukan sebagai bukti publikasi Webportal.
+- **Cloudflare Tunnel**, **Cloudflare DNS**, **Cloudflare Proxy**, dan **Cloudflare Access** adalah layanan berbeda. Dari source dan audit yang diperiksa untuk dokumen ini, **belum ada bukti yang cukup** untuk menyatakan bahwa Webportal diterbitkan melalui Tunnel, domain tertentu, atau bahwa proteksi Cloudflare Access telah aktif.
+- Karena itu, konfigurasi Cloudflare untuk **akses Webportal** perlu diverifikasi dari dashboard Cloudflare atau konfigurasi layanan terkait **sebelum** dicatat sebagai implementasi yang selesai.
 
-- Tidak ada rekaman instalasi awal setiap paket yang membuktikan **perintah dan jam instalasi persis**; instruksi `apt` dan instalasi dependency di dokumen ini bersifat rekonstruksi untuk keperluan reproducibility.
-- Status Apache, Node, database, queue, serta versi Filament **saat ini** harus dibuktikan ulang dengan screenshot read-only; tidak otomatis sama dengan keadaan September.
-- Screenshot SS-01 s.d. SS-11 **belum dilampirkan** sampai operator mengambil dan mengunggahnya.
-- Notes 01 **belum menyatakan** Admin CRUD, CTF Management, micro-segmentation, atau fitur Student telah lulus pengujian menyeluruh.
+Apabila publikasi melalui domain/Cloudflare telah terverifikasi, dokumentasi berikutnya dapat memuat nama host publik, metode routing ke aplikasi, status HTTPS/TLS, dan kontrol akses **tanpa mencantumkan token tunnel, credential, atau private key**.
 
-## F. Kesimpulan dan kelanjutan
+![Gambar 11 — Bukti akses web dan Cloudflare, jika terverifikasi](../images/01-instalasi-webportal/11-cloudflare-akses.png)
 
-Tahap 01 merangkum fondasi pembangunan Webportal IMNEHNET: pengenalan VM IAAS-MGMT, runtime PHP dan Composer, aplikasi Laravel, penyimpanan MySQL, panel Filament, toolchain Node/Vite/Tailwind, mekanisme HTTP Apache/PHP-FPM, serta queue worker untuk lifecycle asynchronous. Audit proyek menunjukkan adanya peralihan dari server dengan workspace kosong menuju kontrol-plane Laravel/Filament yang telah dapat diuji pada akhir September 2026.
+*Gambar 11. Bukti konfigurasi domain atau layanan Cloudflare yang benar-benar digunakan untuk mengakses Webportal (diisi setelah diverifikasi).* 
 
-**Tahap 02 (dokumen terpisah):** penyusunan struktur dan fitur **Admin Panel**, dimulai dari konfigurasi Filament, dashboard, pengelolaan pengguna, pengelolaan environment, CTF Management, dan activity logs. **Student Panel dibahas setelah seri Admin selesai.**
+## 11. Hasil dan Evaluasi Tahap Awal
 
+Berdasarkan audit proyek yang tersedia:
 
-### Referensi internal
+- **25 September 2026:** PHP 8.3, PHP-FPM, Apache, MySQL, dan Git tersedia pada lingkungan IAAS-MGMT; direktori project Webportal saat itu masih kosong.
+- **26 September 2026:** source Laravel/Filament sudah tersedia di direktori aplikasi. Audit mencatat Laravel **13.33.0**, Filament **5.8.4**, build frontend berhasil, pengujian **42 tests / 154 assertions**, dan migrasi awal selesai pada saat tersebut.
+- **22 November 2026:** perubahan source Webportal sebanyak **74 file** tercatat dalam [commit `658b8cd`](https://github.com/Alief1150/imnehnet-iac/commit/658b8cd2e82375f015450250f87b1a1158aee66f) pada branch `main`. Commit ini adalah bukti sinkronisasi pengembangan, bukan bukti instalasi pertama setiap package.
 
-- [Status proyek](../../../docs/status.md)
-- [Verifikasi IAAS-MGMT](../../../docs/Alief-DEVOPS-01-Verifikasi-IAAS-MGMT-Ansible-Controller.md)
+Secara teknis, resource yang disiapkan menjadi fondasi bagi backend Laravel, panel Filament, database MySQL, build aset frontend, HTTP server, dan sistem pekerjaan asynchronous. Hasil audit historis tidak menggantikan pemeriksaan versi dan status layanan pada lingkungan saat ini.
+
+## 12. Kesimpulan
+
+Tahap persiapan resource Webportal IMNEHNET mencakup penyediaan runtime dan dependency aplikasi, penyusunan project Laravel, integrasi awal Filament, koneksi MySQL, toolchain frontend, web server, dan queue worker. Fondasi ini mendukung pengembangan modul aplikasi secara terstruktur dan memungkinkan pengelolaan source melalui Git.
+
+Tahap lanjutan dalam dokumentasi **Portal Developer** adalah **02 — Pembuatan Tampilan Depan, Login, dan Registrasi**. Setelah itu, pengembangan **Admin Panel** dijelaskan per halaman, diikuti dokumentasi **Student Panel**.
+
+---
+
+## Referensi Source
+
 - [Source Webportal](../../../webportal/)
-- [Dependency PHP](../../../webportal/composer.json)
-- [Dependency Node](../../../webportal/package.json)
-- [Koneksi database](../../../webportal/config/database.php)
-- [Pengaturan queue](../../../webportal/config/queue.php)
-- [Prosedur deployment Apache](../../../webportal/deploy/README.md)
-- [Build frontend](../../../webportal/scripts/build-assets.sh)
-- [Commit source 22 November](https://github.com/Alief1150/imnehnet-iac/commit/658b8cd2e82375f015450250f87b1a1158aee66f)
+- [PHP dan Laravel — `composer.json`](../../../webportal/composer.json)
+- [Frontend — `package.json`](../../../webportal/package.json)
+- [Contoh environment — `.env.example`](../../../webportal/.env.example)
+- [Database — `config/database.php`](../../../webportal/config/database.php)
+- [Queue — `config/queue.php`](../../../webportal/config/queue.php)
+- [Provider panel Filament](../../../webportal/bootstrap/providers.php)
+- [Build asset — `scripts/build-assets.sh`](../../../webportal/scripts/build-assets.sh)
+- [Konfigurasi Apache — `deploy/`](../../../webportal/deploy/)
+- [Catatan jaringan dan Cloudflare WARP](../../../docs/networking.md)
+- [Audit implementasi proyek](../../../docs/status.md)
