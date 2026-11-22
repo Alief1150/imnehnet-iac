@@ -267,23 +267,23 @@ Pencatatan terpisah ini sengaja dilakukan agar dokumentasi tidak menggambarkan f
 
 Unggah screenshot ke folder `jobdesc/Portal-Developer/images/03-admin/01-dashboard/`. Lokasi gambar di bawah adalah placeholder dan akan tampil setelah file diunggah.
 
-![Gambar 1 — Dashboard Admin keseluruhan](../../../images/03-admin/01-dashboard/01-dashboard-overview.png)
+![Gambar 1 — Dashboard Admin keseluruhan](../../images/03-admin/01-dashboard/01-dashboard-overview.png)
 
 *Gambar 1. Tampilan Admin Dashboard yang memperlihatkan ringkasan statistik dan tata letak halaman.*
 
-![Gambar 2 — Kartu KPI](../../../images/03-admin/01-dashboard/02-kpi-cards.png)
+![Gambar 2 — Kartu KPI](../../images/03-admin/01-dashboard/02-kpi-cards.png)
 
 *Gambar 2. Kartu Running Containers, Total Users, dan System Health.*
 
-![Gambar 3 — Grafik aktivitas lab](../../../images/03-admin/01-dashboard/03-lab-activity.png)
+![Gambar 3 — Grafik aktivitas lab](../../images/03-admin/01-dashboard/03-lab-activity.png)
 
 *Gambar 3. Grafik Lab Activity dan filter pilihan periode 7, 30, atau 90 hari.*
 
-![Gambar 4 — Course Status](../../../images/03-admin/01-dashboard/04-course-status.png)
+![Gambar 4 — Course Status](../../images/03-admin/01-dashboard/04-course-status.png)
 
 *Gambar 4. Grafik progres Student pada course.*
 
-![Gambar 5 — Recent Activity](../../../images/03-admin/01-dashboard/05-recent-activity.png)
+![Gambar 5 — Recent Activity](../../images/03-admin/01-dashboard/05-recent-activity.png)
 
 *Gambar 5. Tabel aktivitas terbaru beserta badge event, deskripsi, pelaku, dan waktu.*
 
