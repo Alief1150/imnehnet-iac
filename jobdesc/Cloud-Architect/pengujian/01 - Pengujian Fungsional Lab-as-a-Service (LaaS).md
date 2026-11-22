@@ -173,7 +173,11 @@ Pengujian ini dilakukan untuk memastikan fitur utama pada portal Lab-as-a-Servic
    
    ![](../images/Ver-Delete-Lab.png)
 
-3. Periksa daftar container pada kedua host setelah proses selesai.
+3. Memeriksa proses penghapusan lab.
+
+   ![](../images/Load-Delete.png)
+
+4. Periksa daftar container pada kedua host setelah proses selesai.
 
    ![](../images/Sebelum-Create-Lab(1).png)
    ![](../images/Sebelum-Create-Lab(2).png)
