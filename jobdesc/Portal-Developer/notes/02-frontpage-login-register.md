@@ -4,7 +4,7 @@
 **Bidang:** Portal Developer  
 **PIC:** Malik  
 **Tahap:** 02 — Antarmuka awal dan autentikasi  
-**Basis audit:** source repository \`Alief1150/imnehnet-iac\`, branch \`main\`, 22 November 2026  
+**Basis audit:** source repository `Alief1150/imnehnet-iac`, branch `main`, 22 November 2026  
 **Status:** Audit source selesai; screenshot dan pengujian end-to-end masih perlu dilampirkan
 
 > **Ruang lingkup:** pembahasan ini mendokumentasikan kode yang benar-benar teramati di repository, bukan menyalin seluruh source. Komentar pada contoh di bawah **ditambahkan untuk menjelaskan kode**, bukan berarti sudah ditempel pada source aplikasi. Implementasi produksi tidak diubah oleh dokumen ini.
@@ -13,26 +13,26 @@
 
 Tahap ini mencakup akses awal Webportal IMNEHNET, antarmuka login untuk Student dan Admin, form registrasi akun Student, validasi data, serta pengarahan pengguna ke panel yang sesuai dengan perannya (*role-based navigation*). Antarmuka memakai **Laravel Blade** sebagai template, **Filament** untuk panel dan proses login, **Livewire** untuk interaksi dan penyimpanan registrasi, **Alpine.js** untuk interaksi lokal pada form, serta CSS dan JavaScript untuk presentasi visual.
 
-Perlu dibedakan: **Blade menampilkan elemen dan memanggil aksi**, sementara **class PHP, autentikasi Filament, middleware, dan model pengguna menentukan apa yang benar-benar terjadi**. Oleh sebab itu, penjelasan tombol *Sign in* tidak cukup apabila hanya mencantumkan file \`.blade.php\`.
+Perlu dibedakan: **Blade menampilkan elemen dan memanggil aksi**, sementara **class PHP, autentikasi Filament, middleware, dan model pengguna menentukan apa yang benar-benar terjadi**. Oleh sebab itu, penjelasan tombol *Sign in* tidak cukup apabila hanya mencantumkan file `.blade.php`.
 
 ## 2. Pemetaan Source dan Tanggung Jawab
 
 | Komponen | File source | Fungsi |
 |---|---|---|
-| Route awal | [\`routes/web.php\`](../../../webportal/routes/web.php) | Redirect \`/\`, alias login, dan URL registrasi |
-| Tampilan login | [\`resources/views/imnehnet/auth/login.blade.php\`](../../../webportal/resources/views/imnehnet/auth/login.blade.php) | UI login, pilihan Student/Admin, tombol Sign in, branding, carousel, theme |
-| Handler login | [\`app/Filament/Auth/Pages/Login.php\`](../../../webportal/app/Filament/Auth/Pages/Login.php) | Menghubungkan Blade kustom dengan proses autentikasi Filament |
-| Panel Admin | [\`AdminPanelProvider.php\`](../../../webportal/app/Providers/Filament/AdminPanelProvider.php) | Registrasi panel dan login \`/admin\` |
-| Panel Student | [\`StudentPanelProvider.php\`](../../../webportal/app/Providers/Filament/StudentPanelProvider.php) | Registrasi panel dan login \`/student\` |
-| Form registrasi | [\`resources/views/livewire/register-student.blade.php\`](../../../webportal/resources/views/livewire/register-student.blade.php) | Input nama, email, password, konfirmasi, tombol Create account |
-| Proses registrasi | [\`app/Livewire/RegisterStudent.php\`](../../../webportal/app/Livewire/RegisterStudent.php) | Validasi, pembatasan percobaan, pembuatan akun Student, login, redirect |
-| Autorisasi panel | [\`app/Models/User.php\`](../../../webportal/app/Models/User.php) | Menentukan peran dan izin memasuki panel |
-| Redirect panel | [\`RedirectToOwnPanel.php\`](../../../webportal/app/Http/Middleware/RedirectToOwnPanel.php) | Memindahkan user yang salah membuka panel ke panel yang sesuai |
-| Branding | [\`imnehnet-auth-brand.blade.php\`](../../../webportal/resources/views/components/imnehnet-auth-brand.blade.php) | Logo dan pengaturan visual branding |
-| Carousel | [\`imnehnet-login-carousel.blade.php\`](../../../webportal/resources/views/components/imnehnet-login-carousel.blade.php) | Gambar poster dan navigasi carousel |
-| CSS login | [\`public/imnehnet-login/login-v5.css\`](../../../webportal/public/imnehnet-login/login-v5.css) | Tata letak dan gaya login |
+| Route awal | [`routes/web.php`](../../../webportal/routes/web.php) | Redirect `/`, alias login, dan URL registrasi |
+| Tampilan login | [`resources/views/imnehnet/auth/login.blade.php`](../../../webportal/resources/views/imnehnet/auth/login.blade.php) | UI login, pilihan Student/Admin, tombol Sign in, branding, carousel, theme |
+| Handler login | [`app/Filament/Auth/Pages/Login.php`](../../../webportal/app/Filament/Auth/Pages/Login.php) | Menghubungkan Blade kustom dengan proses autentikasi Filament |
+| Panel Admin | [`AdminPanelProvider.php`](../../../webportal/app/Providers/Filament/AdminPanelProvider.php) | Registrasi panel dan login `/admin` |
+| Panel Student | [`StudentPanelProvider.php`](../../../webportal/app/Providers/Filament/StudentPanelProvider.php) | Registrasi panel dan login `/student` |
+| Form registrasi | [`resources/views/livewire/register-student.blade.php`](../../../webportal/resources/views/livewire/register-student.blade.php) | Input nama, email, password, konfirmasi, tombol Create account |
+| Proses registrasi | [`app/Livewire/RegisterStudent.php`](../../../webportal/app/Livewire/RegisterStudent.php) | Validasi, pembatasan percobaan, pembuatan akun Student, login, redirect |
+| Autorisasi panel | [`app/Models/User.php`](../../../webportal/app/Models/User.php) | Menentukan peran dan izin memasuki panel |
+| Redirect panel | [`RedirectToOwnPanel.php`](../../../webportal/app/Http/Middleware/RedirectToOwnPanel.php) | Memindahkan user yang salah membuka panel ke panel yang sesuai |
+| Branding | [`imnehnet-auth-brand.blade.php`](../../../webportal/resources/views/components/imnehnet-auth-brand.blade.php) | Logo dan pengaturan visual branding |
+| Carousel | [`imnehnet-login-carousel.blade.php`](../../../webportal/resources/views/components/imnehnet-login-carousel.blade.php) | Gambar poster dan navigasi carousel |
+| CSS login | [`public/imnehnet-login/login-v5.css`](../../../webportal/public/imnehnet-login/login-v5.css) | Tata letak dan gaya login |
 
-**Temuan audit:** route \`/login/regist\` menggunakan \`Route::view(..., 'imnehnet.auth.register')\`, tetapi file \`resources/views/imnehnet/auth/register.blade.php\` **tidak ditemukan pada repository \`main\` saat audit**. Komponen form Livewire ditemukan, tetapi *view pembungkus* yang dipanggil route tidak tersedia pada snapshot GitHub. Kondisi deployment aktif harus diverifikasi terpisah; jangan menyimpulkan registrasi gagal ataupun sudah berhasil hanya dari pemeriksaan ini.
+**Temuan audit:** route `/login/regist` menggunakan `Route::view(..., 'imnehnet.auth.register')`, tetapi file `resources/views/imnehnet/auth/register.blade.php` **tidak ditemukan pada repository `main` saat audit**. Komponen form Livewire ditemukan, tetapi *view pembungkus* yang dipanggil route tidak tersedia pada snapshot GitHub. Kondisi deployment aktif harus diverifikasi terpisah; jangan menyimpulkan registrasi gagal ataupun sudah berhasil hanya dari pemeriksaan ini.
 
 ## 3. Akses Awal dan Navigasi Login
 
@@ -40,7 +40,7 @@ Perlu dibedakan: **Blade menampilkan elemen dan memanggil aksi**, sementara **cl
 
 Pada source, halaman root **bukan landing page publik tersendiri**. Pengunjung diarahkan ke login Student. Karena itu, istilah *frontpage* pada tahap ini merujuk ke **halaman masuk/authentication gateway**.
 
-\`\`\`php
+```php
 // routes/web.php — cuplikan sesuai alur source, diberi komentar penjelas.
 
 // URL "/" adalah alamat awal webportal.
@@ -60,15 +60,15 @@ Route::get('/login', function () {
 // Route::view() menampilkan sebuah view Blade, bukan memproses akun secara langsung.
 Route::view('/login/regist', 'imnehnet.auth.register')
     ->name('register');
-\`\`\`
+```
 
 | URL | Tujuan berdasarkan konfigurasi |
 |---|---|
-| \`/\` | Redirect ke \`/student/login\` |
-| \`/login\` | Redirect ke route login Student milik Filament |
-| \`/student/login\` | Form login Student |
-| \`/admin/login\` | Form login Admin |
-| \`/login/regist\` | View pembungkus registrasi (file target belum ditemukan dalam snapshot GitHub) |
+| `/` | Redirect ke `/student/login` |
+| `/login` | Redirect ke route login Student milik Filament |
+| `/student/login` | Form login Student |
+| `/admin/login` | Form login Admin |
+| `/login/regist` | View pembungkus registrasi (file target belum ditemukan dalam snapshot GitHub) |
 
 ![Gambar 1 — Halaman awal Webportal](../images/02-frontpage-auth/01-frontpage.png)
 
@@ -76,7 +76,7 @@ Route::view('/login/regist', 'imnehnet.auth.register')
 
 ### 3.2 Peran panel Filament
 
-\`\`\`php
+```php
 // Contoh ringkas deklarasi dari dua PanelProvider; kode berikut
 // disusun untuk menjelaskan bagian relevan, bukan file lengkap.
 
@@ -89,17 +89,17 @@ Route::view('/login/regist', 'imnehnet.auth.register')
 ->id('student')          // ID panel Student.
 ->path('student')        // Prefix URL, termasuk /student/login.
 ->login(Login::class);  // Sama-sama menggunakan class login kustom.
-\`\`\`
+```
 
 Kedua panel memakai handler login yang sama, tetapi alamat, otorisasi, dan fitur setelah autentikasi berbeda. **Klik tab Student/Admin mengubah alamat halaman login, bukan langsung mengubah role sebuah akun.**
 
 ## 4. Implementasi Tampilan Login Menggunakan Blade
 
-Source utamanya adalah \`resources/views/imnehnet/auth/login.blade.php\`. Class \`App\Filament\Auth\Pages\Login\` mengatur properti \`$view = 'imnehnet.auth.login'\`, sedangkan autentikasi dasarnya diwarisi dari \`Filament\Auth\Pages\Login\`.
+Source utamanya adalah `resources/views/imnehnet/auth/login.blade.php`. Class `App\Filament\Auth\Pages\Login` mengatur properti `$view = 'imnehnet.auth.login'`, sedangkan autentikasi dasarnya diwarisi dari `Filament\Auth\Pages\Login`.
 
 ### 4.1 Elemen branding, judul, dan tab role
 
-\`\`\`blade
+```blade
 {{-- @include memuat logo/branding dari komponen Blade terpisah. --}}
 @include('components.imnehnet-auth-brand')
 
@@ -120,20 +120,20 @@ Source utamanya adalah \`resources/views/imnehnet/auth/login.blade.php\`. Class 
         Login as Admin
     </a>
 </nav>
-\`\`\`
+```
 
 **Penjelasan variabel dan fungsi:**
 
 | Elemen | Jenis | Fungsi |
 |---|---|---|
-| \`$imLoginPanel\` | Variabel Blade/PHP | Menyimpan ID panel aktif agar tab yang benar diberi kelas \`active\` |
-| \`filament()\` | Helper Filament | Mengakses konteks Filament yang sedang melayani request |
-| \`getCurrentPanel()?->getId()\` | Pemanggilan method, null-safe | Mengambil ID panel tanpa melempar error ketika tidak ada panel |
-| \`route('filament.*.auth.login')\` | Helper Laravel | Menghasilkan alamat login berdasarkan nama route |
-| \`@include(...)\` | Direktif Blade | Menyisipkan komponen branding yang dapat digunakan ulang |
-| \`{{ ... }}\` | Output Blade | Mencetak nilai ke HTML secara escaped |
+| `$imLoginPanel` | Variabel Blade/PHP | Menyimpan ID panel aktif agar tab yang benar diberi kelas `active` |
+| `filament()` | Helper Filament | Mengakses konteks Filament yang sedang melayani request |
+| `getCurrentPanel()?->getId()` | Pemanggilan method, null-safe | Mengambil ID panel tanpa melempar error ketika tidak ada panel |
+| `route('filament.*.auth.login')` | Helper Laravel | Menghasilkan alamat login berdasarkan nama route |
+| `@include(...)` | Direktif Blade | Menyisipkan komponen branding yang dapat digunakan ulang |
+| `{{ ... }}` | Output Blade | Mencetak nilai ke HTML secara escaped |
 
-Pada source lengkap, tab juga memuat ikon Lucide dan atribut \`aria-current\` untuk menunjukkan halaman aktif kepada teknologi bantu.
+Pada source lengkap, tab juga memuat ikon Lucide dan atribut `aria-current` untuk menunjukkan halaman aktif kepada teknologi bantu.
 
 ![Gambar 2 — Login Student](../images/02-frontpage-auth/02-login-student.png)
 
@@ -147,7 +147,7 @@ Pada source lengkap, tab juga memuat ikon Lucide dan atribut \`aria-current\` un
 
 Tombol **Sign in** adalah aksi untuk mengirim data kredensial pengguna yang diinput melalui **form Filament**. Tombol ini bukan sekadar perpindahan halaman; aksi autentikasi dipanggil melalui Livewire.
 
-\`\`\`blade
+```blade
 {{-- wire:submit memanggil method authenticate pada komponen Livewire login. --}}
 <form wire:submit="authenticate" class="im-v5-form">
 
@@ -173,22 +173,22 @@ Tombol **Sign in** adalah aksi untuk mengirim data kredensial pengguna yang diin
         </span>
     </button>
 </form>
-\`\`\`
+```
 
 Alur yang didukung source:
 
 1. Pengguna memilih tab login Student atau Admin, kemudian mengisi kredensial.
-2. \`{{ $this->form }}\` menampilkan form autentikasi Filament pada halaman.
-3. Klik tombol \`Sign in\` memicu \`wire:submit="authenticate"\`.
-4. Method \`authenticate\` berasal dari kelas login Filament yang diwarisi oleh \`App\Filament\Auth\Pages\Login\`; isi internal method tersebut berada pada dependency vendor dan tidak ditulis ulang di Blade.
-5. Selama request, label berganti ke \`Signing in...\` dan tombol dinonaktifkan untuk mengurangi pengiriman berulang.
+2. `{{ $this->form }}` menampilkan form autentikasi Filament pada halaman.
+3. Klik tombol `Sign in` memicu `wire:submit="authenticate"`.
+4. Method `authenticate` berasal dari kelas login Filament yang diwarisi oleh `App\Filament\Auth\Pages\Login`; isi internal method tersebut berada pada dependency vendor dan tidak ditulis ulang di Blade.
+5. Selama request, label berganti ke `Signing in...` dan tombol dinonaktifkan untuk mengurangi pengiriman berulang.
 6. Akses ke panel berikutnya ditentukan oleh autentikasi dan pemeriksaan role, bukan oleh teks atau pilihan tab semata.
 
 **Mengapa tidak membuat handler password sendiri di Blade?** Karena Filament menangani alur autentikasi, session, dan validasi login pada lapisan yang sesuai. Template Blade bertanggung jawab mempresentasikan form dan menghubungkan event UI ke handler tersebut.
 
 ### 4.3 Link pendaftaran dan kondisi tampilnya
 
-\`\`\`blade
+```blade
 {{-- Link registrasi hanya ditampilkan pada halaman login Student,
      serta jika route bernama "register" telah terdaftar. --}}
 @if (
@@ -202,15 +202,15 @@ Alur yang didukung source:
         </a>
     </p>
 @endif
-\`\`\`
+```
 
-\`@if\` adalah percabangan Blade. \`Route::has('register')\` mengecek keberadaan definisi route, **bukan** memastikan file view target bisa dirender. Link registrasi tidak ditampilkan di login Admin karena self-registration memang hanya dirancang untuk akun Student.
+`@if` adalah percabangan Blade. `Route::has('register')` mengecek keberadaan definisi route, **bukan** memastikan file view target bisa dirender. Link registrasi tidak ditampilkan di login Admin karena self-registration memang hanya dirancang untuk akun Student.
 
 ### 4.4 Elemen visual pelengkap
 
-Login menggunakan branding \`components.imnehnet-auth-brand\`, teks pengantar, area poster/carousel \`components.imnehnet-login-carousel\`, serta tombol pergantian mode terang/gelap. Source menautkan \`login-v5.css\`, file JS carousel, theme-safe, dan poster; animasi/visual interaktif juga melibatkan \`@vite('resources/js/imnehnet-login-ascii.jsx')\`.
+Login menggunakan branding `components.imnehnet-auth-brand`, teks pengantar, area poster/carousel `components.imnehnet-login-carousel`, serta tombol pergantian mode terang/gelap. Source menautkan `login-v5.css`, file JS carousel, theme-safe, dan poster; animasi/visual interaktif juga melibatkan `@vite('resources/js/imnehnet-login-ascii.jsx')`.
 
-\`\`\`blade
+```blade
 {{-- @vite memuat aset frontend yang dibundel oleh pipeline Vite. --}}
 @vite('resources/js/imnehnet-login-ascii.jsx')
 
@@ -220,17 +220,17 @@ Login menggunakan branding \`components.imnehnet-auth-brand\`, teks pengantar, a
 {{-- defer mengunduh skrip tanpa memblokir parsing HTML; dieksekusi
      setelah dokumen diparsing sesuai aturan browser. --}}
 <script defer src="/imnehnet-login/carousel-v1.js?v=1"></script>
-\`\`\`
+```
 
-Cuplikan terakhir merupakan **ilustrasi integrasi komponen**, bukan satu blok persis yang berdampingan di file login: carousel dipanggil melalui bagian poster dalam file aslinya. Source \`imnehnet-login-carousel.blade.php\` juga memuat JavaScript untuk tombol sebelumnya/berikutnya, titik navigasi, dan perpindahan slide otomatis (interval 5 detik pada implementasi yang diaudit). CSS hanya mengatur presentasi; interaksi digerakkan JavaScript.
+Cuplikan terakhir merupakan **ilustrasi integrasi komponen**, bukan satu blok persis yang berdampingan di file login: carousel dipanggil melalui bagian poster dalam file aslinya. Source `imnehnet-login-carousel.blade.php` juga memuat JavaScript untuk tombol sebelumnya/berikutnya, titik navigasi, dan perpindahan slide otomatis (interval 5 detik pada implementasi yang diaudit). CSS hanya mengatur presentasi; interaksi digerakkan JavaScript.
 
 ## 5. Implementasi Registrasi Student
 
 ### 5.1 Koneksi form Blade dengan class Livewire
 
-Form berada pada \`resources/views/livewire/register-student.blade.php\`, sedangkan pemrosesan dilakukan oleh \`app/Livewire/RegisterStudent.php\`.
+Form berada pada `resources/views/livewire/register-student.blade.php`, sedangkan pemrosesan dilakukan oleh `app/Livewire/RegisterStudent.php`.
 
-\`\`\`blade
+```blade
 {{-- wire:submit memanggil public function register() pada RegisterStudent.php. --}}
 <form wire:submit="register">
 
@@ -258,22 +258,22 @@ Form berada pada \`resources/views/livewire/register-student.blade.php\`, sedang
         <span wire:loading wire:target="register">Creating...</span>
     </button>
 </form>
-\`\`\`
+```
 
 **Catatan:** ini cuplikan ringkas yang mempertahankan hubungan antar-API; markup asli memiliki class CSS, label aksesibilitas, dan indikator password yang lebih lengkap.
 
 | Property Livewire | Isi dari form | Fungsi |
 |---|---|---|
-| \`$name\` | Input Name | Nama yang ditampilkan pada akun |
-| \`$email\` | Input Email | Identitas unik akun; dinormalisasi ke huruf kecil |
-| \`$password\` | Input Password | Kata sandi yang divalidasi dan di-hash |
-| \`$password_confirmation\` | Input Confirm password | Dipakai aturan \`confirmed\` untuk mencocokkan password |
+| `$name` | Input Name | Nama yang ditampilkan pada akun |
+| `$email` | Input Email | Identitas unik akun; dinormalisasi ke huruf kecil |
+| `$password` | Input Password | Kata sandi yang divalidasi dan di-hash |
+| `$password_confirmation` | Input Confirm password | Dipakai aturan `confirmed` untuk mencocokkan password |
 
 ### 5.2 Checklist password dan Alpine.js
 
 Pada source, form password memiliki:
 
-\`\`\`html
+```html
 <!-- x-data membuat state lokal di browser.
      value menyimpan input saat mengetik; show mengendalikan visibilitas. -->
 <div x-data="{ value: '', show: false }">
@@ -286,15 +286,15 @@ Pada source, form password memiliki:
         Show / hide password
     </button>
 </div>
-\`\`\`
+```
 
 Checklist visual mengevaluasi panjang minimal delapan karakter, huruf kapital, angka, dan simbol. **Alpine.js hanya memberikan umpan balik instan di browser**, sedangkan validasi yang berwenang tetap dijalankan di PHP. Mengubah JavaScript tidak boleh dianggap cukup untuk melewati validasi backend.
 
 ### 5.3 Proses register() di backend
 
-Cuplikan alur berikut menyederhanakan method \`register()\` asli, dengan komentar edukatif dan tanpa menggantikan algoritme implementasi lengkap.
+Cuplikan alur berikut menyederhanakan method `register()` asli, dengan komentar edukatif dan tanpa menggantikan algoritme implementasi lengkap.
 
-\`\`\`php
+```php
 // RegisterStudent.php — ekstrak yang disusun ulang untuk dokumentasi.
 // Signature asli menerima ActivityLogService $activity.
 public function register(ActivityLogService $activity): void
@@ -350,17 +350,17 @@ public function register(ActivityLogService $activity): void
         navigate: false
     );
 }
-\`\`\`
+```
 
-**Penting:** blok di atas adalah **pseudocode PHP berkomentar untuk pembelajaran**, bukan function siap ditempel. Pemanggilan \`$activity->record(/* ... */)\` sengaja dipersingkat agar tidak menduplikasi seluruh method asli. Periksa source tertaut jika membutuhkan implementasi persis.
+**Penting:** blok di atas adalah **pseudocode PHP berkomentar untuk pembelajaran**, bukan function siap ditempel. Pemanggilan `$activity->record(/* ... */)` sengaja dipersingkat agar tidak menduplikasi seluruh method asli. Periksa source tertaut jika membutuhkan implementasi persis.
 
 Urutan yang terkonfirmasi dari class asli:
 
 1. Normalisasi email dan cek rate limit sebelum validasi.
 2. Validasi field, termasuk keunikan email serta aturan kekuatan dan konfirmasi password.
-3. Buat pengguna dengan role \`Student\` dan status \`Active\` **di sisi server**.
-4. Hash password menggunakan \`Hash::make\`; jangan menyimpan password plaintext.
-5. Catat aktivitas registrasi dan login pengguna baru dengan \`Auth::login\`.
+3. Buat pengguna dengan role `Student` dan status `Active` **di sisi server**.
+4. Hash password menggunakan `Hash::make`; jangan menyimpan password plaintext.
+5. Catat aktivitas registrasi dan login pengguna baru dengan `Auth::login`.
 6. Kirim notifikasi kepada administrator aktif.
 7. Redirect ke dashboard Student.
 
@@ -374,9 +374,9 @@ Urutan yang terkonfirmasi dari class asli:
 
 ## 6. Otorisasi dan Redirect Berdasarkan Role
 
-**Tab login bukan mekanisme keamanan.** Pemeriksaan role dilakukan melalui model \`User\` dan middleware Filament.
+**Tab login bukan mekanisme keamanan.** Pemeriksaan role dilakukan melalui model `User` dan middleware Filament.
 
-\`\`\`php
+```php
 // app/Models/User.php — inti pemeriksaan akses panel.
 public function canAccessPanel(Panel $panel): bool
 {
@@ -392,11 +392,11 @@ public function canAccessPanel(Panel $panel): bool
         default => false,
     };
 }
-\`\`\`
+```
 
-Class \`App\Filament\Auth\Pages\Login\` mengembalikan \`true\` pada \`isUserAllowedToAccessPanel()\` untuk memungkinkan kredensial valid diproses meskipun pengguna membuka alamat login panel yang berbeda. **Ini bukan berarti semua user bebas mengakses semua halaman.** Sesudah autentikasi, \`RedirectToOwnPanel\` mengecek \`canAccessPanel()\` untuk mengirim user ke panel yang diperbolehkan; pengamanan resource dan tindakan sensitif tetap harus dijalankan di backend.
+Class `App\Filament\Auth\Pages\Login` mengembalikan `true` pada `isUserAllowedToAccessPanel()` untuk memungkinkan kredensial valid diproses meskipun pengguna membuka alamat login panel yang berbeda. **Ini bukan berarti semua user bebas mengakses semua halaman.** Sesudah autentikasi, `RedirectToOwnPanel` mengecek `canAccessPanel()` untuk mengirim user ke panel yang diperbolehkan; pengamanan resource dan tindakan sensitif tetap harus dijalankan di backend.
 
-\`\`\`php
+```php
 // RedirectToOwnPanel.php — logika ringkas berdasarkan source.
 $user = $request->user();
 
@@ -414,9 +414,9 @@ if ($user !== null
 
 // Jika tidak perlu redirect, lanjutkan autentikasi Filament.
 return parent::handle($request, $next);
-\`\`\`
+```
 
-**Catatan audit untuk role Lecturer:** Model mengizinkan Lecturer pada panel Admin, tetapi middleware memilih tujuan redirect berdasarkan \`isAdmin()\` saja. Dengan demikian, Lecturer yang mencoba login melalui panel Student perlu diuji: kode tujuan default memilih Student, yang justru ditolak oleh \`canAccessPanel()\`. Dokumentasi ini tidak mengklaim redirect lintas panel bagi Lecturer sudah benar.
+**Catatan audit untuk role Lecturer:** Model mengizinkan Lecturer pada panel Admin, tetapi middleware memilih tujuan redirect berdasarkan `isAdmin()` saja. Dengan demikian, Lecturer yang mencoba login melalui panel Student perlu diuji: kode tujuan default memilih Student, yang justru ditolak oleh `canAccessPanel()`. Dokumentasi ini tidak mengklaim redirect lintas panel bagi Lecturer sudah benar.
 
 ![Gambar 6 — Dashboard setelah login sesuai role](../images/02-frontpage-auth/06-redirect-role.png)
 
@@ -426,7 +426,7 @@ return parent::handle($request, $next);
 
 ### 7.1 Pemeriksaan source dan route (tanpa mengubah data)
 
-\`\`\`bash
+```bash
 cd /home/iaas/projects/webportal-iaas
 
 # Pastikan route penting terdaftar; hanya menampilkan informasi.
@@ -443,15 +443,15 @@ php -l app/Http/Middleware/RedirectToOwnPanel.php
 test -f resources/views/imnehnet/auth/register.blade.php \
   && echo "Registration wrapper: present" \
   || echo "Registration wrapper: missing"
-\`\`\`
+```
 
-Tidak ada perintah di atas yang membuat akun, menjalankan migration, atau merestart aplikasi. **Hindari mempublikasikan \`.env\`, password, session cookie, atau secret dalam screenshot.**
+Tidak ada perintah di atas yang membuat akun, menjalankan migration, atau merestart aplikasi. **Hindari mempublikasikan `.env`, password, session cookie, atau secret dalam screenshot.**
 
 ### 7.2 Matriks pengujian fungsional (belum dinyatakan PASS)
 
 | ID | Skenario | Hasil yang diharapkan | Status bukti |
 |---|---|---|---|
-| AUTH-01 | Akses \`/\` | Redirect ke login Student | Belum diverifikasi pada deployment aktif |
+| AUTH-01 | Akses `/` | Redirect ke login Student | Belum diverifikasi pada deployment aktif |
 | AUTH-02 | Klik tab Admin/Student | URL login berpindah, tab aktif sesuai panel | Belum diverifikasi |
 | AUTH-03 | Submit login valid Student | Autentikasi dan akses panel Student | Belum diverifikasi |
 | AUTH-04 | Submit login valid Admin | Autentikasi dan akses panel Admin | Belum diverifikasi |
@@ -468,16 +468,16 @@ Matriks di atas adalah **rencana verifikasi**, bukan laporan hasil pengujian yan
 
 ## 8. Rencana Screenshot dan Penamaan File
 
-Simpan gambar pada folder [\`jobdesc/Portal-Developer/images/02-frontpage-auth/\`](../images/02-frontpage-auth/). Nama file harus **identik** dengan referensi Markdown.
+Simpan gambar pada folder [`jobdesc/Portal-Developer/images/02-frontpage-auth/`](../images/02-frontpage-auth/). Nama file harus **identik** dengan referensi Markdown.
 
 | Gambar | Nama file | Bukti yang harus terlihat |
 |---|---|---|
-| 1 | \`01-frontpage.png\` | Halaman awal/redirect login Student |
-| 2 | \`02-login-student.png\` | Login as Student dan tombol Sign in |
-| 3 | \`03-login-admin.png\` | Login as Admin dan tombol Sign in |
-| 4 | \`04-register-student.png\` | Form registrasi Student |
-| 5 | \`05-validasi-register.png\` | Validasi form atau checklist password tanpa secret |
-| 6 | \`06-redirect-role.png\` | Dashboard tujuan setelah login dengan role yang diizinkan |
+| 1 | `01-frontpage.png` | Halaman awal/redirect login Student |
+| 2 | `02-login-student.png` | Login as Student dan tombol Sign in |
+| 3 | `03-login-admin.png` | Login as Admin dan tombol Sign in |
+| 4 | `04-register-student.png` | Form registrasi Student |
+| 5 | `05-validasi-register.png` | Validasi form atau checklist password tanpa secret |
+| 6 | `06-redirect-role.png` | Dashboard tujuan setelah login dengan role yang diizinkan |
 
 Semua screenshot di atas masih perlu diunggah. Pilih resolusi yang membuat elemen dan URL terbaca; jika user/email terlihat, gunakan akun dummy atau sensor data pribadi.
 
@@ -485,16 +485,16 @@ Semua screenshot di atas masih perlu diunggah. Pilih resolusi yang membuat eleme
 
 **Yang terverifikasi dari source:**
 
-- Root \`/\` mengalihkan pengguna ke login Student, bukan halaman landing publik yang berdiri sendiri.
-- Login Student dan Admin menggunakan Blade kustom dan handler Filament yang sama; tombol \`Sign in\` memicu method \`authenticate\`.
+- Root `/` mengalihkan pengguna ke login Student, bukan halaman landing publik yang berdiri sendiri.
+- Login Student dan Admin menggunakan Blade kustom dan handler Filament yang sama; tombol `Sign in` memicu method `authenticate`.
 - Navigasi Student/Admin menggunakan named route; pilihan tab hanya mengganti antarmuka/URL, bukan role.
-- Registrasi menggunakan komponen Livewire \`RegisterStudent\` dengan validasi backend, rate limiting, penetapan role Student di server, hash password, Activity Log, notifikasi admin, dan redirect Student.
+- Registrasi menggunakan komponen Livewire `RegisterStudent` dengan validasi backend, rate limiting, penetapan role Student di server, hash password, Activity Log, notifikasi admin, dan redirect Student.
 - Ada pemisahan akses panel melalui model User dan middleware.
 
 **Temuan yang memerlukan tindak lanjut:**
 
-1. \`resources/views/imnehnet/auth/register.blade.php\` tidak ditemukan pada snapshot GitHub \`main\`, padahal dipanggil oleh route registrasi. Periksa file pada deployment aktif lalu sinkronkan ke repository bila memang diperlukan dan telah lolos audit.
-2. Redirect lintas panel untuk role Lecturer berpotensi tidak sesuai harapan karena cabang \`$user->isAdmin() ? 'admin' : 'student'\` tidak mempertimbangkan \`isLecturer()\`.
+1. `resources/views/imnehnet/auth/register.blade.php` tidak ditemukan pada snapshot GitHub `main`, padahal dipanggil oleh route registrasi. Periksa file pada deployment aktif lalu sinkronkan ke repository bila memang diperlukan dan telah lolos audit.
+2. Redirect lintas panel untuk role Lecturer berpotensi tidak sesuai harapan karena cabang `$user->isAdmin() ? 'admin' : 'student'` tidak mempertimbangkan `isLecturer()`.
 3. Screenshot dan hasil pengujian end-to-end belum tersedia; dokumentasi implementasi tidak otomatis menjadi bukti bahwa semua skenario berjalan.
 
 ## 10. Kesimpulan
