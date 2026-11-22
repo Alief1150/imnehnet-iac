@@ -14,3 +14,11 @@
 - [Status dan audit proyek](../../../docs/status.md)
 
 Dokumen Notes 01 membedakan **hasil audit historis**, **konfigurasi repository**, dan **contoh prosedur instalasi**. Screenshot belum dianggap tersedia sampai diunggah ke `../images/01-instalasi-webportal/`. Catatan lanjutan untuk fitur Admin, pengujian, dan Student disusun terpisah.
+
+## Roadmap dokumentasi berikutnya
+
+- [02 — Frontpage, Login & Registration](02-frontpage-login-register.md) — kerangka, menunggu dokumentasi dan screenshot.
+- [03 — Admin Panel](03-admin/README.md) — 10 modul, seluruhnya kerangka.
+- [04 — Student Panel](04-student/README.md) — 6 modul, seluruhnya kerangka.
+
+Semua dokumen baru adalah placeholder yang belum menjadi bukti penyelesaian implementasi atau pengujian.
