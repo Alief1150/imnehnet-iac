@@ -179,6 +179,22 @@ Kode di bawah menangani bagian blade — @include. Perhatikan argumen, validasi,
 
 **[Lihat source `resources/views/filament/pages/student-profile.blade.php` (L48–L69)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/student-profile.blade.php#L48-L69)**
 
+
+## Interaksi dan Alur Backend
+
+### Pemetaan tombol, aksi, dan handler
+
+| Kontrol | Handler / state | Proses, validasi, dan hasil |
+|---|---|---|
+| **Save Profile** | `saveProfile` | Memvalidasi nama/email dan memproses perubahan pengguna yang sedang login. |
+| **Avatar upload** | `avatarUpload / saveAvatar` | Upload terjadi pada input Livewire, penyimpanan diselesaikan oleh handler; cek format, ukuran dan penyimpanan. |
+| **Remove Avatar** | `removeAvatar` | Menghapus avatar sesuai aturan dan state profil. |
+| **Change Password** | `changePassword` | Memvalidasi password saat ini serta konfirmasi password baru sebelum pembaruan kredensial. |
+| **Email confirmation** | `emailPassword` | Field password konfirmasi untuk perubahan email sesuai handler backend; tidak boleh hanya validasi sisi klien. |
+
+
+**Penjelasan:** Blade menyajikan form, tombol, dan indikator loading; method PHP/Livewire menjalankan otorisasi, query, notifikasi, validasi, serta memanggil service atau queue ketika diperlukan. **Pengujian UI dan runtime dipisahkan** agar status keberhasilan tidak dilebihkan tanpa bukti kasus uji.
+
 ## 4. Matriks Pengujian
 
 | Aspek | Verifikasi yang diperlukan | Status |
@@ -210,73 +226,3 @@ Modul ini telah dikaitkan dengan implementasi PHP/Blade pada commit final. Penil
 
 - [PHP](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Student/Pages/StudentProfile.php)
 - [Blade](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/student-profile.blade.php)
-
-
-## Audit Final Implementasi — Commit b3370b5
-
-### Penyimpanan profil dan validasi input
-
-Cuplikan PHP dari repository final, dengan komentar penjelasan yang ditambahkan hanya dalam dokumentasi.
-
-```php
-// KOMENTAR DOKUMENTASI: perhatikan route, guard, validasi, dan batas pengolahan PHP versus tampilan Blade.
-    public function saveProfile(): void
-    {
-        $user = auth()->user();
-        abort_unless($user, 403);
-        $this->name = trim($this->name);
-        $this->email = trim($this->email);
-        $this->validate([
-            'name' => ['required','string','min:2','max:255'],
-            'email' => ['required','email','max:255',Rule::unique('users','email')->ignore($user->getKey())],
-            'emailPassword' => [Rule::requiredIf(fn () => $this->email !== $user->email)],
-        ]);
-        if ($this->email !== $user->email && ! Hash::check($this->emailPassword, $user->password)) {
-            $this->addError('emailPassword', 'Password saat ini tidak sesuai.');
-            return;
-        }
-        $user->name = $this->name;
-        if ($this->email !== $user->email) {
-            $user->email = $this->email;
-            $user->email_verified_at = null;
-        }
-        $user->save();
-        $this->reset('emailPassword');
-        session()->flash('profile_success', 'Profil berhasil diperbarui.');
-        $this->profileToast('Profil berhasil diperbarui.');
-    }
-
-    // IMNEHNET_AVATAR_SECURE_FLYON_V2
-    // IMNEHNET_STUDENT_PROFILE_V3: upload completes -> server validates and saves immediately.
-    public function updatedAvatarUpload(): void
-    {
-        if ($this->avatarUpload !== null) {
-            $this->saveAvatar();
-        }
-    }
-
-    private function profileToast(string $message, string $type = 'success'): void
-```
-
-**[Buka kode asli — app/Filament/Student/Pages/StudentProfile.php (L46–L81)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Student/Pages/StudentProfile.php#L46-L81)**
-
-**Logika fitur:** `saveProfile()` memvalidasi data profil dan memperbarui akun terautentikasi. Avatar serta perubahan password memiliki handler berbeda sehingga tidak boleh disatukan sebagai satu aksi generik.
-
-**Pengujian:** Source tersedia di GitHub. Keberhasilan buka halaman dapat dilaporkan sebagai verifikasi akses hanya apabila telah dicoba, sedangkan keberhasilan simpan/edit/otorisasi/validasi memerlukan bukti pengujian per aksi. Jangan menandai fitur otomatis PASS karena aplikasi secara umum berjalan.
-
-
-## Peta Kontrol UI → PHP/Livewire (Audit Final)
-
-| Kontrol | Handler / state | Proses, validasi, dan hasil |
-|---|---|---|
-| **Save Profile** | `saveProfile` | Memvalidasi nama/email dan memproses perubahan pengguna yang sedang login. |
-| **Avatar upload** | `avatarUpload / saveAvatar` | Upload terjadi pada input Livewire, penyimpanan diselesaikan oleh handler; cek format, ukuran dan penyimpanan. |
-| **Remove Avatar** | `removeAvatar` | Menghapus avatar sesuai aturan dan state profil. |
-| **Change Password** | `changePassword` | Memvalidasi password saat ini serta konfirmasi password baru sebelum pembaruan kredensial. |
-| **Email confirmation** | `emailPassword` | Field password konfirmasi untuk perubahan email sesuai handler backend; tidak boleh hanya validasi sisi klien. |
-
-**[Buka kode tampilan Blade — resources/views/filament/pages/student-profile.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-profile.blade.php)**
-
-**[Buka kode handler PHP — app/Filament/Student/Pages/StudentProfile.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Student/Pages/StudentProfile.php)**
-
-**Penjelasan:** Blade menyajikan form, tombol, dan indikator loading; method PHP/Livewire menjalankan otorisasi, query, notifikasi, validasi, serta memanggil service atau queue ketika diperlukan. **Pengujian UI dan runtime dipisahkan** agar status keberhasilan tidak dilebihkan tanpa bukti kasus uji.
