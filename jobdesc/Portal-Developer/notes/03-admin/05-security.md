@@ -161,6 +161,23 @@ Filament Resource/Page mendefinisikan data dan action di PHP; Blade (untuk halam
 - **Filter/state:** input atau select mengganti nilai state yang diproses pada query/method backend.
 - **Hasil:** keberhasilan proses harus diperiksa pada status dan catatan sebenarnya; bukan hanya perubahan warna badge.
 
+
+## Interaksi dan Alur Backend
+
+### Pemetaan tombol, aksi, dan handler
+
+| Kontrol pada halaman | Handler atau state | Penjelasan alur dan hasil |
+|---|---|---|
+| **Detail KPI** | `toggleDetail` | Membuka/menutup rincian KPI pada state Livewire. |
+| **Filter severity grafik** | `toggleSev` | Memilih severity untuk membatasi data dan grafik yang disajikan. |
+| **Daftar alerts** | `openAlerts` | Membuka browser alert/modal dengan data telemetri yang tersedia. |
+| **Filter severity alert** | `setSev` | Memperbarui filter severity pada tampilan alert. |
+| **Tutup alert** | `closeAlerts` | Menutup panel alert; sumber data tidak dihapus. |
+| **Pagination alert** | `setAlertsPage` | Mengubah halaman data alert, tidak mengubah log sumber. |
+
+
+**Cara membaca interaksi:** atribut `wire:click` menjalankan method komponen Livewire melalui request server; `wire:model` mengikat input dan properti; `wire:loading` hanya mencerminkan request masih diproses. Jika terjadi error, status aktual harus mengikuti respons backend, bukan hanya perubahan tampilan.
+
 ## 5. Screenshot dokumentasi
 
 Upload ke `jobdesc/Portal-Developer/images/03-admin/05-security/`. Nama file di bawah harus sama persis:
@@ -198,129 +215,3 @@ Source Security telah diaudit dan dapat ditelusuri melalui 6 tautan langsung. Ha
 
 
 ---
-
-## Pembaruan Audit Source Final — 23 November 2026
-
-**Basis versi:** commit [`b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf) (`feat(portal): joh nggateli`). Contoh berikut adalah cuplikan source terbaru; penjelasan ditempatkan di luar kode agar tidak disalahartikan sebagai baris asli.
-
-### Implementasi yang diverifikasi melalui source
-
-Collector memproses telemetri keamanan; angka alert bergantung sumber, waktu koleksi, dan normalisasi event.
-
-```php
-<?php
-
-namespace App\Services;
-
-use App\Infrastructure\Health\CommandRunner;
-use App\Models\ActivityLog;
-use App\Models\LabSession;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
-
-/**
- * What the SIEM and the packet filter report, read by the host account.
- *
- * ── Why this runs as iaas, not as the web ────────────────────────────────────
- *
- * The alert log lives under a root-owned docker volume the web server may not
-```
-
-**[Buka kode asli — app/Services/SecurityTelemetryCollector.php, baris 1–17](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Services/SecurityTelemetryCollector.php#L1-L17)**
-
-**Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
-
-
-## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
-
-### Modal alert, filter severity dan pagination
-
-```php
-// KOMENTAR DOKUMENTASI: perhatikan hak akses, data dari service, state Livewire, dan fallback error.
-    public function openAlerts(): void
-
-    {
-
-        $this->showAlerts = true;
-
-        $this->alertsPage = 1;
-
-    }
-
-
-
-    public function closeAlerts(): void
-
-    {
-
-        $this->showAlerts = false;
-
-    }
-
-
-
-    public function setAlertsPage(int $page): void
-
-    {
-
-        $this->alertsPage = max(1, $page);
-
-    }
-
-
-
-    public function alertBrowser(): array
-
-    {
-
-        $rows = Cache::get("security.alert_rows.v1", []);
-
-        $rows = is_array($rows) ? $rows : [];
-
-        $cutoff = time() - 86400;
-
-        $severity = $this->alertsSeverity;
-
-        $search = mb_strtolower(trim($this->alertsSearch));
-
-
-
-        $rows = array_values(array_filter($rows, static fn ($r): bool => is_array($r) && ($r["ts"] ?? 0) >= $cutoff));
-
-        $retained = count($rows);
-
-
-
-        $rows = array_values(array_filter($rows, static function ($r) use ($severity, $search): bool {
-
-            if ($severity !== "all" && ($r["severity"] ?? "") !== $severity) return false;
-
-            $haystack = mb_strtolower(implode(" ", [$r["agent"] ?? "", $r["description"] ?? "", $r["rule"] ?? "", $r["ip"] ?? ""]));
-```
-
-**[Buka kode asli — app/Filament/Pages/Security.php (L46–L104)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/Security.php#L46-L104)**
-
-**Analisis implementasi:** State modal alert dikendalikan PHP/Livewire (`openAlerts`, `closeAlerts`, filter, pagination), bukan sekadar ikon statis. Hasil pencarian dan severity harus mengikuti data telemetri yang tersedia.
-
-**Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
-
-
-## Peta Kontrol UI → PHP/Livewire → Service (Audit Final)
-
-| Kontrol pada halaman | Handler atau state | Penjelasan alur dan hasil |
-|---|---|---|
-| **Detail KPI** | `toggleDetail` | Membuka/menutup rincian KPI pada state Livewire. |
-| **Filter severity grafik** | `toggleSev` | Memilih severity untuk membatasi data dan grafik yang disajikan. |
-| **Daftar alerts** | `openAlerts` | Membuka browser alert/modal dengan data telemetri yang tersedia. |
-| **Filter severity alert** | `setSev` | Memperbarui filter severity pada tampilan alert. |
-| **Tutup alert** | `closeAlerts` | Menutup panel alert; sumber data tidak dihapus. |
-| **Pagination alert** | `setAlertsPage` | Mengubah halaman data alert, tidak mengubah log sumber. |
-
-**Kode UI/Blade:** [Buka `resources/views/filament/pages/security.blade.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/security.blade.php).
-
-**Kode handler PHP:** [Buka `app/Filament/Pages/Security.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/Security.php).
-
-**Cara membaca interaksi:** atribut `wire:click` menjalankan method komponen Livewire melalui request server; `wire:model` mengikat input dan properti; `wire:loading` hanya mencerminkan request masih diproses. Jika terjadi error, status aktual harus mengikuti respons backend, bukan hanya perubahan tampilan.
-
-**Validasi pengujian:** hasil fungsi tertentu ditulis **PASS** hanya jika telah direkam pada akun dan data uji, termasuk kasus akses ditolak, data kosong, dan kegagalan service. Screenshot UI sendiri adalah bukti tampilan, bukan bukti seluruh backend telah diuji.
