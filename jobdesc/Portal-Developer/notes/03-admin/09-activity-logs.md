@@ -169,4 +169,44 @@ Folder: `jobdesc/Portal-Developer/images/03-admin/09-activity-logs/`
 
 ## 6. Kesimpulan dan tindak lanjut
 
-Source modul Activity Logs telah diaudit dan terdokumentasi menggunakan 5 cuplikan kode dengan tautan ke baris aslinya. Tahap yang masih diperlukan adalah screenshot, uji role dan perilaku tombol, serta pembandingan dengan source terbaru di server `iaas-mgmt` karena sebagian perubahan lokal belum masuk GitHub `main`.
+Source modul Activity Logs telah diaudit dan terdokumentasi menggunakan 5 cuplikan kode dengan tautan ke baris aslinya. Tahap yang masih diperlukan adalah screenshot, uji role dan perilaku tombol, serta pembandingan dengan source terbaru di server `iaas-mgmt` karena source final sudah masuk GitHub `main` melalui commit `b3370b5`.
+
+
+---
+
+## Audit Revisi Final — Commit `b3370b5` (23 November 2026)
+
+Halaman audit trail menyediakan fitur ekspor; hindari menampilkan atau membagikan data sensitif.
+
+Cuplikan source aktual:
+
+```php
+<?php
+
+namespace App\Filament\Resources\ActivityLogs\Pages;
+
+use App\Filament\Resources\ActivityLogs\ActivityLogResource;
+use App\Models\ActivityLog;
+use App\Services\ActivityLogExcelWriter;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\ListRecords;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+
+class ListActivityLogs extends ListRecords
+{
+    protected static string $resource = ActivityLogResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [];
+    }
+
+    protected function getTableHeaderActions(): array
+```
+
+**[Buka kode asli app/Filament/Resources/ActivityLogs/Pages/ListActivityLogs.php — baris 1–24](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Resources/ActivityLogs/Pages/ListActivityLogs.php#L1-L24)**
+
+**Evaluasi:** Implementasi tersedia di kode final. Halaman yang berjalan merupakan bukti integrasi dasar, tetapi pengujian aksi, keamanan role, ekspor, dan respons kesalahan memerlukan hasil uji/screenshot khusus. Tabel skenario lama tidak dianggap otomatis PASS atau FAIL.
