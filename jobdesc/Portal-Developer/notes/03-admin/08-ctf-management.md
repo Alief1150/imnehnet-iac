@@ -197,120 +197,9 @@ Source modul CTF Management telah diaudit dan terdokumentasi menggunakan 6 cupli
 
 ---
 
-## Audit Revisi Final — Commit `b3370b5` (23 November 2026)
+## Interaksi dan Alur Backend
 
-Panel mengelola sesi CTF, inspection, course dan objective berdasarkan state sesi.
-
-Cuplikan source aktual:
-
-```php
-<?php
-
-namespace App\Filament\Pages;
-
-use App\Enums\ObjectiveStatus;
-use App\Models\Course;
-use App\Models\LabSession;
-use App\Models\Objective;
-use App\Models\ObjectiveProgress;
-use App\Models\User;
-use Filament\Pages\Page;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
-
-final class CtfControlCenter extends Page
-{
-    protected static ?string $navigationLabel = 'CTF Management';
-    protected static ?string $title = 'CTF Management';
-    protected static ?string $slug = 'ctf-management';
-    protected static ?int $navigationSort = 1;
-    protected static string|\UnitEnum|null $navigationGroup = 'GUIDED CTF';
-    protected string $view = 'filament.pages.ctf-control-center';
-
-    public string $search = '';
-```
-
-**[Buka kode asli app/Filament/Pages/CtfControlCenter.php — baris 1–24](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/CtfControlCenter.php#L1-L24)**
-
-**Evaluasi:** Implementasi tersedia di kode final. Halaman yang berjalan merupakan bukti integrasi dasar, tetapi pengujian aksi, keamanan role, ekspor, dan respons kesalahan memerlukan hasil uji/screenshot khusus. Tabel skenario lama tidak dianggap otomatis PASS atau FAIL.
-
-
-## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
-
-### State current/history, inspector dan penyuntingan course
-
-```php
-// KOMENTAR DOKUMENTASI: perhatikan hak akses, data dari service, state Livewire, dan fallback error.
-    public string $search = '';
-    public string $statusFilter = 'all';
-    public string $courseFilter = 'all';
-    public ?int $selectedSession = null;
-    public string $viewMode = 'current';
-    public int $historyPage = 1;
-    public string $inspectorTab = 'overview';
-    public ?int $editingCourse = null;
-    public string $courseTitle = '';
-    public string $courseDifficulty = '';
-    public string $courseSummary = '';
-    public ?int $editingObjective = null;
-    public string $objectiveTitle = '';
-    public string $objectiveDescription = '';
-    public string $objectiveHint = '';
-
-    public static function canAccess(): bool
-    {
-        return auth()->user()?->isAdmin() === true;
-    }
-
-    private function ensureAdmin(): void
-    {
-        abort_unless(auth()->user()?->isAdmin() === true, 403);
-    }
-
-    public function inspect(int $sessionId): void
-    {
-        $this->ensureAdmin();
-        $this->selectedSession = LabSession::query()->whereKey($sessionId)->value('id');
-        $this->inspectorTab = 'overview';
-    }
-
-    public function editCourse(int $id): void
-    {
-        $this->ensureAdmin();
-        $course = Course::query()->findOrFail($id);
-        $this->editingCourse = $course->id;
-        $this->courseTitle = $course->title;
-        $this->courseDifficulty = $course->difficulty;
-        $this->courseSummary = (string) $course->summary;
-        $this->editingObjective = null;
-    }
-
-    public function saveCourse(): void
-    {
-        $this->ensureAdmin();
-        $data = $this->validate([
-            'courseTitle' => 'required|string|max:128',
-            'courseDifficulty' => 'required|string|max:32',
-            'courseSummary' => 'nullable|string|max:5000',
-        ]);
-        abort_if($this->editingCourse === null, 404);
-        $course = Course::query()->findOrFail($this->editingCourse);
-        $course->update([
-            'title' => $data['courseTitle'],
-            'difficulty' => $data['courseDifficulty'],
-            'summary' => $data['courseSummary'],
-        ]);
-        $this->editingCourse = null;
-```
-
-**[Buka kode asli — app/Filament/Pages/CtfControlCenter.php (L24–L83)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/CtfControlCenter.php#L24-L83)**
-
-**Analisis implementasi:** State Livewire memisahkan current/history, filter status/course, inspector dan edit Course. Aksi penyimpanan harus dilihat bersama otorisasi serta validasi backend.
-
-**Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
-
-
-## Peta Kontrol UI → PHP/Livewire → Service (Audit Final)
+### Pemetaan tombol, aksi, dan handler
 
 | Kontrol pada halaman | Handler atau state | Penjelasan alur dan hasil |
 |---|---|---|
@@ -323,10 +212,5 @@ final class CtfControlCenter extends Page
 | **Edit dan Save Objective** | `editObjective / saveObjective` | Memuat objective terpilih dan memproses penyimpanannya di backend. |
 | **Cancel** | `cancelEdit` | Membatalkan state pengeditan tanpa menyimpan. |
 
-**Kode UI/Blade:** [Buka `resources/views/filament/pages/ctf-control-center.blade.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/ctf-control-center.blade.php).
-
-**Kode handler PHP:** [Buka `app/Filament/Pages/CtfControlCenter.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/CtfControlCenter.php).
 
 **Cara membaca interaksi:** atribut `wire:click` menjalankan method komponen Livewire melalui request server; `wire:model` mengikat input dan properti; `wire:loading` hanya mencerminkan request masih diproses. Jika terjadi error, status aktual harus mengikuti respons backend, bukan hanya perubahan tampilan.
-
-**Validasi pengujian:** hasil fungsi tertentu ditulis **PASS** hanya jika telah direkam pada akun dan data uji, termasuk kasus akses ditolak, data kosong, dan kegagalan service. Screenshot UI sendiri adalah bukti tampilan, bukan bukti seluruh backend telah diuji.
