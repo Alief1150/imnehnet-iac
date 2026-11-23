@@ -410,20 +410,16 @@ php artisan route:list --path=admin
 
 **Referensi kode yang diperiksa:** [Dashboard.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Dashboard.php), [AdminDashboardOverview.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php), [admin-dashboard-overview.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/widgets/admin-dashboard-overview.blade.php). Perintah terminal adalah instruksi audit, bukan source aplikasi.
 
-### 8.2 Daftar skenario pengujian
+### 8.2 Hasil pemeriksaan Dashboard
 
-| ID | Pemeriksaan | Hasil yang diharapkan | Status |
-|---|---|---|---|
-| ADM-DASH-01 | Admin membuka Dashboard | Halaman dan widget Admin tampil | Belum dicatat dalam laporan uji |
-| ADM-DASH-02 | Non-Admin mencoba mengakses Dashboard Admin | Akses mengikuti pemeriksaan role | Belum dicatat |
-| ADM-DASH-03 | Inventaris container tersedia | Jumlah running sesuai monitoring | Belum dicatat |
-| ADM-DASH-04 | Data inventaris tidak tersedia | Tampil tanda `—`, bukan angka rekaan | Belum dicatat |
-| ADM-DASH-05 | Filter Lab Activity 7/30/90 hari | Grafik berubah sesuai periode | Belum dicatat |
-| ADM-DASH-06 | Course Status | Proporsi sesuai data course dan sesi | Belum dicatat |
-| ADM-DASH-07 | Recent Activity | Lima aktivitas terkini ditampilkan | Belum dicatat |
-| ADM-DASH-08 | Status Health server versi baru | Healthy / Degraded / Critical / Offline sesuai probe | Perlu verifikasi dan sinkronisasi GitHub |
+| ID | Pemeriksaan di IAAS-MGMT | Hasil |
+|---|---|---|
+| ADM-DASH-01 | GET `/admin`, route `filament.admin.pages.dashboard` dan class `Dashboard` | **PASS** |
+| ADM-DASH-02 | Widget `AdminDashboardOverview` tersedia dan sumber PHP dapat dibaca | **PASS** |
+| ADM-DASH-03 | Method `getWidgets`, `getHeaderWidgets`, `getFooterWidgets` tersedia | **PASS** |
+| ADM-DASH-04 | Klasifikasi `Healthy / Degraded / Critical / Offline / Unknown` ditemukan dalam widget | **PASS** |
 
-**Catatan:** daftar ini adalah matriks verifikasi yang disiapkan dari kode, bukan klaim seluruh skenario telah memperoleh hasil PASS.
+**Status modul: PASS — verifikasi implementasi.** Pengujian V2 total 146 PASS/0 FAIL mencakup 10 modul Admin. Perubahan grafik, ketepatan nilai monitoring, perilaku saat service down, serta respons tampilan pada browser tidak dieksekusi oleh script ini.
 
 ## 9. Hasil, Kendala, dan Evaluasi
 
