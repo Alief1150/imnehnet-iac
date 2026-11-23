@@ -202,7 +202,6 @@ Kartu **Total Users** menampilkan `number_format($totalUsers)`. Di bagian bawah,
 Kartu **Course Status** mengambil array dari method `courseProgress()`, dengan empat nilai: `completed`, `inProgress`, `notStarted`, dan `total`. Grafik menggunakan `window.createImnehnetCourseChart()`. Method menghitung status **berdasarkan mahasiswa**, bukan jumlah semua percobaan lab: pengguna dianggap completed jika minimal satu sesinya selesai, in progress jika memiliki sesi tanpa completed, dan not started jika belum memiliki sesi terkait course.
 
 
-
 ### 5.4.1 Penjelasan kode Course Status — PHP
 
 ```php
@@ -294,13 +293,66 @@ Kartu **Course Status** mengambil array dari method `courseProgress()`, dengan e
 
 `@forelse` merupakan perulangan dengan kondisi ketika daftar kosong. `$activity->actor?->name` mengambil nama pelaku dari relasi model, sedangkan `diffForHumans()` mengubah tanggal menjadi relatif (misalnya *3 minutes ago*). Contoh ini disingkat; tabel asli juga membedakan jenis event menggunakan badge dan label yang berasal dari action.
 
-## 6. System Health — Implementasi Final yang Sudah Sinkron
+## 6. System Health — Klasifikasi Status Layanan
 
-Pada commit `b3370b5`, `systemHealth()` sudah menggunakan hasil `InfrastructureStatusService::summary()`, bukan persentase kesehatan. Urutan evaluasi: ringkasan kosong → Unknown; layanan inti `iaas_mgmt` atau `database` offline → Offline; dua atau lebih masalah core → Critical; tanpa masalah/unknown → Healthy; semua layanan tidak dapat diverifikasi → Unknown; kondisi lain → Degraded. **Total ada lima label hasil**: Healthy, Degraded, Critical, Offline, Unknown.
+Cuplikan berikut dibaca dari source pada branch `main`; baris pertama adalah komentar penjelasan yang hanya ditambahkan dalam dokumentasi.
 
-Kartu Blade menggunakan `$systemHealth['label']`, `['color']` dan `['description']`, dilengkapi `role="status"` dan `aria-live="polite"`.
+```php
+// CATATAN DOKUMENTASI (bukan kode produksi): Prioritas penilaian health: Offline bila layanan core offline; Critical bila masalah core >= 2; Healthy jika semua cek sehat; Unknown jika seluruh pemeriksaan unknown; selain itu Degraded.
+            if ($coreOffline) {
+                return $result(
+                    'Offline',
+                    'Core platform services unavailable',
+                    '#ef4444'
+                );
+            }
 
-**[PHP — algoritme lengkap System Health](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php#L177-L311)** · **[Blade — indikator kartu](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/widgets/admin-dashboard-overview.blade.php#L83-L114)**.
+            if ($coreProblems >= 2) {
+                return $result(
+                    'Critical',
+                    'Major infrastructure disruption',
+                    '#f97316'
+                );
+            }
+
+            if ($unhealthy === 0 && $unknown === 0) {
+                return $result(
+                    'Healthy',
+                    'All monitored services operational',
+                    '#22c55e'
+                );
+            }
+
+            // Unknown checks must never produce Healthy.
+            if ($unhealthy === 0 && $unknown === count($summary)) {
+                return $result(
+                    'Unknown',
+                    'Health could not be verified',
+                    '#94a3b8'
+                );
+            }
+
+            return $result(
+                'Degraded',
+                $unknown > 0
+                    ? 'Some services unavailable or unverified'
+                    : 'Some services are experiencing issues',
+                '#eab308'
+            );
+        } catch (Throwable) {
+            return $result(
+                'Unknown',
+                'Health checks are unavailable',
+                '#94a3b8'
+            );
+        }
+    }
+
+```
+
+**[Buka kode asli — app/Filament/Widgets/AdminDashboardOverview.php (L265–L313)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Widgets/AdminDashboardOverview.php#L265-L313)**
+
+**Penjelasan teknis:** `InfrastructureStatusService::summary()` menyediakan status pemeriksaan infrastruktur. Logika PHP menetapkan **Offline** saat layanan inti offline, **Critical** untuk setidaknya dua masalah inti, **Healthy** jika tidak ada unhealthy/unknown, **Unknown** saat hasil tidak memadai, dan **Degraded** untuk kondisi penurunan yang tersisa. Ini **lima label status**, bukan empat; jangan mempertahankan narasi skor persentase sebagai indikator utama.
 
 ## 7. Dokumentasi Screenshot
 
@@ -384,101 +436,3 @@ Halaman **Admin Dashboard** berfungsi sebagai titik ringkasan aktivitas dan kond
 
 
 ---
-
-## Pembaruan Audit Source Final — 23 November 2026
-
-**Basis versi:** commit [`b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf) (`feat(portal): joh nggateli`). Contoh berikut adalah cuplikan source terbaru; penjelasan ditempatkan di luar kode agar tidak disalahartikan sebagai baris asli.
-
-### Implementasi yang diverifikasi melalui source
-
-System Health dihitung dari InfrastructureStatusService::summary(); core yang hilang diperhitungkan. Hasil aktual meliputi Healthy, Degraded, Critical, Offline, Unknown, bukan persentase.
-
-```php
-    private function systemHealth(): array
-    {
-        $result = static fn (
-            string $label,
-            string $description,
-            string $color
-        ): array => compact('label', 'description', 'color');
-
-        try {
-            $summary = app(InfrastructureStatusService::class)->summary();
-
-            if ($summary === []) {
-                return $result(
-                    'Unknown',
-                    'Health checks are unavailable',
-                    '#94a3b8'
-                );
-```
-
-**[Buka kode asli — app/Filament/Widgets/AdminDashboardOverview.php, baris 177–193](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php#L177-L193)**
-
-**Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
-
-
-## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
-
-### System Health final: klasifikasi berbasis probe bukan persentase
-
-Cuplikan berikut dibaca dari source pada branch `main`; baris pertama adalah komentar penjelasan yang hanya ditambahkan dalam dokumentasi.
-
-```php
-// CATATAN DOKUMENTASI (bukan kode produksi): Prioritas penilaian health: Offline bila layanan core offline; Critical bila masalah core >= 2; Healthy jika semua cek sehat; Unknown jika seluruh pemeriksaan unknown; selain itu Degraded.
-            if ($coreOffline) {
-                return $result(
-                    'Offline',
-                    'Core platform services unavailable',
-                    '#ef4444'
-                );
-            }
-
-            if ($coreProblems >= 2) {
-                return $result(
-                    'Critical',
-                    'Major infrastructure disruption',
-                    '#f97316'
-                );
-            }
-
-            if ($unhealthy === 0 && $unknown === 0) {
-                return $result(
-                    'Healthy',
-                    'All monitored services operational',
-                    '#22c55e'
-                );
-            }
-
-            // Unknown checks must never produce Healthy.
-            if ($unhealthy === 0 && $unknown === count($summary)) {
-                return $result(
-                    'Unknown',
-                    'Health could not be verified',
-                    '#94a3b8'
-                );
-            }
-
-            return $result(
-                'Degraded',
-                $unknown > 0
-                    ? 'Some services unavailable or unverified'
-                    : 'Some services are experiencing issues',
-                '#eab308'
-            );
-        } catch (Throwable) {
-            return $result(
-                'Unknown',
-                'Health checks are unavailable',
-                '#94a3b8'
-            );
-        }
-    }
-
-```
-
-**[Buka kode asli — app/Filament/Widgets/AdminDashboardOverview.php (L265–L313)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Widgets/AdminDashboardOverview.php#L265-L313)**
-
-**Penjelasan teknis:** `InfrastructureStatusService::summary()` menyediakan status pemeriksaan infrastruktur. Logika PHP menetapkan **Offline** saat layanan inti offline, **Critical** untuk setidaknya dua masalah inti, **Healthy** jika tidak ada unhealthy/unknown, **Unknown** saat hasil tidak memadai, dan **Degraded** untuk kondisi penurunan yang tersisa. Ini **lima label status**, bukan empat; jangan mempertahankan narasi skor persentase sebagai indikator utama.
-
-**Kesimpulan verifikasi:** source sudah tersinkron di commit final. Status *implementasi tersedia* dapat dinyatakan terverifikasi lewat inspeksi kode; status *pengujian fungsi berhasil/PASS* hanya dicantumkan apabila hasil uji dan screenshot relevan telah dilampirkan. Dokumentasi ini tidak menjalankan aksi produksi untuk menghasilkan bukti palsu.
