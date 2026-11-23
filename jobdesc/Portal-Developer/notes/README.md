@@ -12,7 +12,7 @@
 ## Provenance dan Status
 
 - [Source Webportal final](../../../webportal/) telah disinkronkan ke `main` pada commit `b3370b5`.
-- Setiap modul memuat contoh PHP/Blade dan tautan langsung ke file asli di bawah cuplikan.
+- Setiap modul memuat contoh PHP/Blade, penjelasan tombol dan handler, serta tautan ke file asli. Lampiran audit berulang telah disatukan ke pembahasan utama.
 - **Implementasi source:** tersedia dan diaudit; **keberhasilan pengujian runtime:** hanya dinyatakan PASS bila ada langkah, hasil aktual dan bukti. Website yang dapat diakses adalah bukti integrasi awal, bukan bukti keseluruhan skenario.
 - Screenshot disimpan pada [images/](../images/) dan harus disensor bila berisi data sensitif.
 
@@ -20,12 +20,12 @@
 
 **System Health:** lima kemungkinan keluaran `Healthy / Degraded / Critical / Offline / Unknown` berdasarkan service checks, bukan KPI persentase. **Terminal:** Open shell memanggil Livewire/backend, berbeda dengan membuka tab fullscreen. **Users:** Presence dan Last Seen didokumentasikan berdasarkan source final.
 
-## Pemetaan UI Student yang Diverifikasi
+## Navigasi Penjelasan Interaksi Student
 
-Dokumentasi Student kini memuat inventaris kontrol spesifik berikut, beserta tautan Blade/PHP, perbedaan request GET / anchor / JavaScript / Livewire, dan skenario uji yang dapat direproduksi:
+Pembahasan tombol dan handler sudah disatukan dalam bagian implementasi utama setiap modul; tidak lagi dipisahkan menjadi lampiran audit:
 
-- [Dashboard Student — statistik, grafik, Lihat Semua, menu bawah](04-student/01-dashboard.md#pemetaan-interaksi-dashboard-student--audit-blade-final).
-- [History — filter status, validasi filter, nomor halaman dan panah pagination](04-student/04-history.md#pemetaan-kontrol-history--audit-blade-final).
-- [Documentation — ketersediaan PDF, pencarian lokal, daftar isi dan tautan Terms](04-student/05-documentation.md#pemetaan-tombol-dan-navigasi-dokumentasi--audit-blade-final).
+- [Dashboard Student — statistik, grafik, Lihat Semua, menu bawah](04-student/01-dashboard.md#pemetaan-tombol-aksi-dan-handler).
+- [History — filter status, validasi filter, nomor halaman dan panah pagination](04-student/04-history.md#pemetaan-tombol-aksi-dan-handler).
+- [Documentation — ketersediaan PDF, pencarian lokal, daftar isi dan tautan Terms](04-student/05-documentation.md#pemetaan-tombol-aksi-dan-handler).
 
 **Interpretasi hasil:** `AUDITED SOURCE` berarti tombol/handler ditelusuri di repository; `PASS RUNTIME` hanya berarti skenario yang benar-benar dijalankan menghasilkan output sesuai ekspektasi dengan bukti bertanggal. Tidak ada perubahan source aplikasi dalam pembaruan notes ini.
