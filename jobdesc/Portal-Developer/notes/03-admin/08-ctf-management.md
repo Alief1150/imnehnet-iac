@@ -192,4 +192,44 @@ Folder: `jobdesc/Portal-Developer/images/03-admin/08-ctf-management/`
 
 ## 6. Kesimpulan dan tindak lanjut
 
-Source modul CTF Management telah diaudit dan terdokumentasi menggunakan 6 cuplikan kode dengan tautan ke baris aslinya. Tahap yang masih diperlukan adalah screenshot, uji role dan perilaku tombol, serta pembandingan dengan source terbaru di server `iaas-mgmt` karena sebagian perubahan lokal belum masuk GitHub `main`.
+Source modul CTF Management telah diaudit dan terdokumentasi menggunakan 6 cuplikan kode dengan tautan ke baris aslinya. Tahap yang masih diperlukan adalah screenshot, uji role dan perilaku tombol, serta pembandingan dengan source terbaru di server `iaas-mgmt` karena source final sudah masuk GitHub `main` melalui commit `b3370b5`.
+
+
+---
+
+## Audit Revisi Final — Commit `b3370b5` (23 November 2026)
+
+Panel mengelola sesi CTF, inspection, course dan objective berdasarkan state sesi.
+
+Cuplikan source aktual:
+
+```php
+<?php
+
+namespace App\Filament\Pages;
+
+use App\Enums\ObjectiveStatus;
+use App\Models\Course;
+use App\Models\LabSession;
+use App\Models\Objective;
+use App\Models\ObjectiveProgress;
+use App\Models\User;
+use Filament\Pages\Page;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+
+final class CtfControlCenter extends Page
+{
+    protected static ?string $navigationLabel = 'CTF Management';
+    protected static ?string $title = 'CTF Management';
+    protected static ?string $slug = 'ctf-management';
+    protected static ?int $navigationSort = 1;
+    protected static string|\UnitEnum|null $navigationGroup = 'GUIDED CTF';
+    protected string $view = 'filament.pages.ctf-control-center';
+
+    public string $search = '';
+```
+
+**[Buka kode asli app/Filament/Pages/CtfControlCenter.php — baris 1–24](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/CtfControlCenter.php#L1-L24)**
+
+**Evaluasi:** Implementasi tersedia di kode final. Halaman yang berjalan merupakan bukti integrasi dasar, tetapi pengujian aksi, keamanan role, ekspor, dan respons kesalahan memerlukan hasil uji/screenshot khusus. Tabel skenario lama tidak dianggap otomatis PASS atau FAIL.
