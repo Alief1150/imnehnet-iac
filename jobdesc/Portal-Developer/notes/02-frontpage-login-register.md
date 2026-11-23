@@ -4,8 +4,8 @@
 **Bidang:** Portal Developer  
 **PIC:** Malik  
 **Tahap:** 02 — Antarmuka awal dan autentikasi  
-**Basis audit:** source repository `Alief1150/imnehnet-iac`, branch `main`, 22 November 2026  
-**Status:** Audit source selesai; screenshot dan pengujian end-to-end masih perlu dilampirkan
+**Basis audit:** repository `Alief1150/imnehnet-iac`, branch `main`, commit `b3370b5` (23 November 2026)  
+**Status:** Implementasi final terverifikasi melalui source; pengujian end-to-end perlu bukti hasil dan screenshot  
 
 > **Ruang lingkup:** pembahasan ini mendokumentasikan kode yang benar-benar teramati di repository, bukan menyalin seluruh source. Komentar pada contoh di bawah **ditambahkan untuk menjelaskan kode**, bukan berarti sudah ditempel pada source aplikasi. Implementasi produksi tidak diubah oleh dokumen ini.
 
@@ -541,3 +541,131 @@ Dokumen ini merupakan **hasil audit source dengan contoh kode berkomentar**, buk
 - [StudentPanelProvider](../../../webportal/app/Providers/Filament/StudentPanelProvider.php)
 - [User role access](../../../webportal/app/Models/User.php)
 - [Redirect middleware](../../../webportal/app/Http/Middleware/RedirectToOwnPanel.php)
+
+
+---
+
+## Lampiran Audit Final: Penyelarasan Implementasi Final Login dan Registrasi (23 November 2026)
+
+**Versi:** [`feat(portal): joh nggateli` — `b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf). Cuplikan persis dari source, dengan penjelasan di luar blok kode dan tautan tepat di bawah setiap cuplikan.
+
+### 1. web.php
+
+Route awal root diarahkan ke login Student; path /login diarahkan ke named route Filament Student; /login/regist menampilkan view registrasi. Blade login membedakan tab Student dan Admin berdasarkan panel aktif.
+
+```php
+
+Route::get('/', function () {
+    return redirect('/student/login');
+});
+
+// Named login so the landing page and the registration form have one address to
+// point at, rather than each hard-coding the panel path. The panel is the only
+// thing that authenticates; this is a redirect to it.
+Route::get('/login', function () {
+    return redirect()->route('filament.student.auth.login'); // IMNEHNET_AUTH_V6
+})->name('login');
+
+// Self-registration. Public on purpose: that is the point of it. What bounds it
+// is the per-student environment quota, the role being assigned server-side, and
+// the rate limit inside the component.
+// A view, not the component class: pointing the route straight at the Livewire
+// class makes Livewire look for a layout named "layouts", which does not exist.
+Route::view('/login/regist', 'imnehnet.auth.register')->name('register');
+
+// Compatibility route for the original Filament Student Dashboard name.
+// Redirects legacy links to the current Student Dashboard.
+Route::redirect(
+    '/student/dashboard-legacy',
+    '/student'
+)->name('filament.student.pages.dashboard');
+
+```
+
+**[Buka kode asli `webportal/routes/web.php` (L5–L30)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/routes/web.php#L5-L30)**
+
+### 2. register.blade.php
+
+View pembungkus registrasi memuat Livewire register-student dan aset tampilan.
+
+```blade
+
+<body class="imnehnet-register-body">
+
+    <div class="im-v5 im-register" data-theme="dark">
+
+        <div id="im-react-bits-ascii" aria-hidden="true"></div>
+
+        <main class="im-register-shell">
+
+            @livewire('register-student')
+
+        </main>
+
+    </div>
+
+    @vite('resources/js/imnehnet-login-ascii.jsx')
+```
+
+**[Buka kode asli `webportal/resources/views/imnehnet/auth/register.blade.php` (L30–L45)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/imnehnet/auth/register.blade.php#L30-L45)**
+
+### 3. RegisterStudent.php
+
+Handler register melakukan pemeriksaan input, proses backend, lalu membentuk akun Student; seluruh konsekuensi metode harus dibaca pada source lengkap.
+
+```php
+    public function register(ActivityLogService $activity): void
+    {
+        $email = Str::lower(trim($this->email));
+        $key = $this->throttleKey($email);
+
+        // Checked before validating, and counted on every attempt including the
+        // ones that fail. Validating first would mean a submission that never
+        // reached the limiter, so the endpoint could be driven as fast as the
+        // network allows to find out which addresses already have accounts and
+        // to create nothing at all.
+        if (RateLimiter::tooManyAttempts($key, self::ATTEMPTS)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            throw ValidationException::withMessages([
+                'email' => sprintf(
+                    'Too many registration attempts from this browser. Try again in %d minutes.',
+                    (int) ceil($seconds / 60),
+                ),
+            ]);
+        }
+
+        RateLimiter::hit($key, self::DECAY_SECONDS);
+
+```
+
+**[Buka kode asli `webportal/app/Livewire/RegisterStudent.php` (L60–L82)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Livewire/RegisterStudent.php#L60-L82)**
+
+### 4. login.blade.php
+
+Tab login Student dan Admin memakai tautan route Filament sesuai panel.
+
+```blade
+                {{-- IMNEHNET_AUTH_TABS_V7: tabs navigate to distinct panel login routes. --}}
+                @php($imLoginPanel = filament()->getCurrentPanel()?->getId())
+                <nav class="im-v5-tabs" aria-label="Login role">
+                    <a href="{{ route('filament.student.auth.login') }}"
+                       class="{{ $imLoginPanel === 'student' ? 'active' : '' }}"
+                       @if($imLoginPanel === 'student') aria-current="page" @endif>
+                        <i data-lucide="user-round" aria-hidden="true"></i>
+                        Login as Student
+                    </a>
+                    <a href="{{ route('filament.admin.auth.login') }}"
+                       class="{{ $imLoginPanel === 'admin' ? 'active' : '' }}"
+                       @if($imLoginPanel === 'admin') aria-current="page" @endif>
+                        <i data-lucide="shield-check" aria-hidden="true"></i>
+                        Login as Admin
+                    </a>
+                </nav>
+
+                <form wire:submit="authenticate"
+```
+
+**[Buka kode asli `webportal/resources/views/imnehnet/auth/login.blade.php` (L18–L35)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/imnehnet/auth/login.blade.php#L18-L35)**
+
+**Keterangan pengujian:** akses situs yang berjalan mendukung keberhasilan integrasi dasar, tetapi tidak cukup untuk mengklaim seluruh skenario instalasi, autentikasi, validasi, atau otorisasi telah PASS. Catat status aktual dan bukti per kasus; tanpa bukti hasil, gunakan *belum dilampirkan*, bukan *gagal* atau *lulus*.
