@@ -294,43 +294,13 @@ Kartu **Course Status** mengambil array dari method `courseProgress()`, dengan e
 
 `@forelse` merupakan perulangan dengan kondisi ketika daftar kosong. `$activity->actor?->name` mengambil nama pelaku dari relasi model, sedangkan `diffForHumans()` mengubah tanggal menjadi relatif (misalnya *3 minutes ago*). Contoh ini disingkat; tabel asli juga membedakan jenis event menggunakan badge dan label yang berasal dari action.
 
-## 6. System Health — Perbedaan Source GitHub dan Implementasi Server
+## 6. System Health — Implementasi Final yang Sudah Sinkron
 
-### 6.1 Source GitHub `main` yang sudah diaudit
+Pada commit `b3370b5`, `systemHealth()` sudah menggunakan hasil `InfrastructureStatusService::summary()`, bukan persentase kesehatan. Urutan evaluasi: ringkasan kosong → Unknown; layanan inti `iaas_mgmt` atau `database` offline → Offline; dua atau lebih masalah core → Critical; tanpa masalah/unknown → Healthy; semua layanan tidak dapat diverifikasi → Unknown; kondisi lain → Degraded. **Total ada lima label hasil**: Healthy, Degraded, Critical, Offline, Unknown.
 
-Dalam snapshot GitHub yang diperiksa 23 November 2026, `systemHealth()` masih menghitung jumlah hasil probe yang dianggap sehat dibagi total layanan terverifikasi, kemudian mengembalikan label dan nilai `percentage`. Blade menampilkan persentase tersebut.
+Kartu Blade menggunakan `$systemHealth['label']`, `['color']` dan `['description']`, dilengkapi `role="status"` dan `aria-live="polite"`.
 
-```php
-// Ilustrasi bagian rumus dari source GitHub.
-$percentage = (int) round(
-    ($healthy / $verified->count()) * 100
-);
-
-return [
-    'label' => $percentage === 100
-        ? 'Operational'
-        : 'Attention needed',
-    'percentage' => $percentage,
-];
-```
-
-**Kode asli:** [AdminDashboardOverview.php — systemHealth() versi GitHub main](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php). Patch empat status di server belum tercermin pada source ini.
-
-### 6.2 Perubahan terbaru di server `iaas-mgmt` (belum ditemukan di GitHub)
-
-Berdasarkan sesi implementasi dan output terminal proyek, kartu System Health pada aplikasi aktif sudah diubah agar **menampilkan satu status teks**, bukan angka persentase:
-
-| Status | Arti yang direncanakan pada implementasi server |
-|---|---|
-| Healthy | Seluruh pemeriksaan yang dipantau dinyatakan sehat |
-| Degraded | Ada gangguan sebagian layanan, tetapi inti masih tersedia |
-| Critical | Dua atau lebih pemeriksaan komponen inti bermasalah |
-| Offline | IAAS-MGMT atau database inti dilaporkan offline |
-| Unknown | Status tidak dapat diverifikasi |
-
-Pada implementasi tersebut nilai didapat dari probe `InfrastructureStatusService`, lalu Blade menampilkan `$systemHealth['label']`, `$systemHealth['description']`, dan warna indikator. **Status Unknown merupakan fallback monitoring, bukan tingkat kelima kondisi operasional.** Implementasi ini telah melewati pemeriksaan sintaks PHP dan kompilasi Blade dalam sesi pengerjaan, tetapi **belum dapat diverifikasi pada source GitHub `main`** saat audit dokumen ini.
-
-Pencatatan terpisah ini sengaja dilakukan agar dokumentasi tidak menggambarkan fitur yang belum tersinkron sebagai isi source repository.
+**[PHP — algoritme lengkap System Health](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php#L177-L311)** · **[Blade — indikator kartu](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/widgets/admin-dashboard-overview.blade.php#L83-L114)**.
 
 ## 7. Dokumentasi Screenshot
 
@@ -399,7 +369,7 @@ Hal yang perlu dilanjutkan adalah pengumpulan screenshot aktual, pengujian fungs
 
 ## 10. Kesimpulan
 
-Halaman **Admin Dashboard** berfungsi sebagai titik ringkasan aktivitas dan kondisi Webportal IMNEHNET. Komponen utamanya adalah Filament Page, widget PHP, Blade, Eloquent, service monitoring, serta JavaScript grafik. Dokumentasi ini mencatat keterkaitan setiap komponen, variabel utama, cara kerja filter, dan logika pengambilan data, sekaligus menjaga perbedaan antara source yang telah masuk repository dan perubahan terbaru yang masih berada pada server.
+Halaman **Admin Dashboard** berfungsi sebagai titik ringkasan aktivitas dan kondisi Webportal IMNEHNET. Komponen utamanya adalah Filament Page, widget PHP, Blade, Eloquent, service monitoring, serta JavaScript grafik. Dokumentasi ini mencatat keterkaitan setiap komponen, variabel utama, cara kerja filter, dan logika pengambilan data, sekaligus menjaga perbedaan antara source yang telah masuk repository dan pembaruan terbaru yang sudah masuk commit `b3370b5`.
 
 **Dokumentasi berikutnya:** `03-admin/02-terminal.md`, setelah screenshot dan verifikasi Dashboard dilengkapi.
 
@@ -411,3 +381,38 @@ Halaman **Admin Dashboard** berfungsi sebagai titik ringkasan aktivitas dan kond
 - [AdminDashboardOverview.php](../../../../webportal/app/Filament/Widgets/AdminDashboardOverview.php)
 - [admin-dashboard-overview.blade.php](../../../../webportal/resources/views/filament/widgets/admin-dashboard-overview.blade.php)
 - [InfrastructureStatusService.php](../../../../webportal/app/Services/InfrastructureStatusService.php)
+
+
+---
+
+## Pembaruan Audit Source Final — 23 November 2026
+
+**Basis versi:** commit [`b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf) (`feat(portal): joh nggateli`). Contoh berikut adalah cuplikan source terbaru; penjelasan ditempatkan di luar kode agar tidak disalahartikan sebagai baris asli.
+
+### Implementasi yang diverifikasi melalui source
+
+System Health dihitung dari InfrastructureStatusService::summary(); core yang hilang diperhitungkan. Hasil aktual meliputi Healthy, Degraded, Critical, Offline, Unknown, bukan persentase.
+
+```php
+    private function systemHealth(): array
+    {
+        $result = static fn (
+            string $label,
+            string $description,
+            string $color
+        ): array => compact('label', 'description', 'color');
+
+        try {
+            $summary = app(InfrastructureStatusService::class)->summary();
+
+            if ($summary === []) {
+                return $result(
+                    'Unknown',
+                    'Health checks are unavailable',
+                    '#94a3b8'
+                );
+```
+
+**[Buka kode asli — app/Filament/Widgets/AdminDashboardOverview.php, baris 177–193](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php#L177-L193)**
+
+**Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
