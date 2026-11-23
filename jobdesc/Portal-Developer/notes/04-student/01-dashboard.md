@@ -142,3 +142,53 @@ Dokumen mengacu langsung ke implementasi pada commit final, dengan pemisahan tan
 
 - [PHP — app/Filament/Pages/StudentDashboard.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/StudentDashboard.php)
 - [Blade — resources/views/filament/pages/student-dashboard.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/student-dashboard.blade.php)
+
+
+## Audit Final Implementasi — Commit b3370b5
+
+### Dashboard personal student
+
+Berikut cuplikan PHP asli dari repository terbaru; satu baris komentar dokumentasi ditambahkan untuk menjelaskan alur.
+
+```php
+// KOMENTAR DOKUMENTASI: pemrosesan terjadi di backend; periksa guard, state, dan hasil aksi.
+    public function dashboardData(): array
+    {
+        $uid = auth()->id();
+        $days = collect(range(6, 0))->map(fn ($i) => now()->startOfDay()->subDays($i));
+        $empty = [
+            'total' => 0, 'active' => 0, 'completed' => 0, 'objectives' => 0,
+            'hours' => 0, 'activity' => array_fill(0, 7, 0),
+            'usage' => array_fill(0, 7, 0), 'history' => collect(),
+            'days' => $days->map(fn ($day) => $day->format('D'))->all(),
+            'course_name' => 'Web Server Breach',
+        ];
+        if (! $uid) {
+            return $empty;
+        }
+
+        $sessions = LabSession::query()->where('user_id', $uid)
+            ->with('course')->orderByDesc('id')->get();
+        $active = $sessions->filter(fn ($s) => in_array(
+            $s->status?->value ?? $s->status, ['READY', 'RUNNING'], true
+        ))->count();
+
+        // The course is identified by its persisted slug, not by session count.
+        // Prefer the student's most recent course, otherwise use the MVP course.
+        $course = $sessions->first()?->course
+            ?? \App\Models\Course::webServerBreach();
+        $courseSessions = $course
+            ? $sessions->where('course_id', $course->id)
+            : collect();
+        $latestAttempt = $courseSessions->first();
+        $objectives = $course?->objectives()->count() ?? 0;
+        $completed = $latestAttempt
+            ? min($objectives, $latestAttempt->progress()
+                ->where('status', \App\Enums\ObjectiveStatus::Completed->value)
+```
+
+**[Buka kode asli — app/Filament/Pages/StudentDashboard.php (L51–L83)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/StudentDashboard.php#L51-L83)**
+
+**Logika fitur:** `dashboardData()` menggunakan `auth()->id()` untuk membatasi data per user, menyediakan fallback ketika belum terautentikasi, dan mengumpulkan sesi lab untuk KPI/riwayat. Data grafik bukan angka dummy global.
+
+**Pengujian dan hasil:** Source sudah diverifikasi terpasang pada commit final. Akses panel membuktikan halaman dapat diakses pada kondisi pengguna yang diuji, tetapi tidak otomatis memverifikasi semua skenario. Catat PASS pada kasus yang benar-benar sudah diuji beserta screenshot dan outputnya; jangan membuat data hasil uji yang tidak terlampir.
