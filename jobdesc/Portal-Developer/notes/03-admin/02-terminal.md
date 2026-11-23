@@ -3,7 +3,7 @@
 **Penanggung jawab:** Septihadi Malik — Portal Developer  
 **Tahap:** 03 — Admin Panel  
 **Sumber:** Repository `Alief1150/imnehnet-iac`, branch `main` (audit 23 November 2026)  
-**Status: Implementasi terverifikasi pada source final; bukti end-to-end dan screenshot menyusul.
+**Status:** Implementasi terverifikasi pada source final; bukti end-to-end dan screenshot menyusul.
 
 ## 1. Deskripsi dan fungsi modul
 
@@ -204,3 +204,186 @@ Open shell: tombol Blade mengirim key node via Livewire; node divalidasi, dipili
 **[Buka kode asli — app/Filament/Pages/Terminal.php, baris 91–107](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Terminal.php#L91-L107)**
 
 **Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
+
+
+## Lampiran Teknis — Logika End-to-End Tombol Open Shell (Final)
+
+Tombol **Open shell** tidak sama dengan tautan **Open Terminal Fullscreen**. Tombol Open shell memicu pembuatan/mengambil sesi backend, sedangkan Fullscreen membuka konsol ttyd yang URL-nya tersedia setelah sesi berhasil dan embed ticket valid. Mengklik kartu target saja tidak menjalankan shell. UI menyediakan penutupan sesi secara terpisah.
+
+**Urutan:** pilih target melalui tombol per-node → Livewire validasi node → service validasi user → audit permintaan → reconnect/create proses terminal → persist sesi dan ticket → embed frame → opsi fullscreen atau Close.
+
+### 1. Tombol dan state Blade
+
+**Open shell di Blade.** `wire:click` memanggil `openAdminSessionFor` menggunakan key node pada kartu. `wire:loading.attr` menonaktifkan tombol selama request. `wire:target` memastikan `Connecting...` hanya muncul untuk target yang sedang diproses. Tombol `Close` ditampilkan secara kondisional ketika sesi aktif.
+
+```blade
+
+                        {{-- Beside the card, never inside it: a button in a button is
+                             invalid markup, and the inner click would also select. One
+                             click opens that node's shell directly, so a shell never
+                             depends on an earlier selection round trip having applied. --}}
+                        <button type="button" wire:click="openAdminSessionFor('{{ $target['key'] }}')"
+                                wire:key="admin-terminal-open-{{ $target['key'] }}"
+                                wire:loading.attr="disabled"
+                                wire:target="openAdminSessionFor('{{ $target['key'] }}')"
+                                title="Open a shell on {{ $target['name'] }} now"
+                                class="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-teal-600/30 bg-teal-600/10 px-3 text-[11px] font-semibold text-teal-700 hover:bg-teal-600/20 disabled:opacity-60 dark:text-teal-300 dark:hover:bg-teal-500/20">
+                            {!! \App\Support\Lucide::html('terminal') !!}
+                            <span wire:loading.remove wire:target="openAdminSessionFor('{{ $target['key'] }}')">Open shell</span>
+                            <span wire:loading wire:target="openAdminSessionFor('{{ $target['key'] }}')">Connecting...</span>
+                        </button>
+
+                        @if ($this->hasAdminSession($target['key']))
+                            <button type="button" wire:click="closeAdminSessionFor('{{ $target['key'] }}')"
+                                    wire:key="admin-terminal-close-{{ $target['key'] }}"
+                                    wire:loading.attr="disabled"
+                                    wire:target="closeAdminSessionFor('{{ $target['key'] }}')"
+                                    title="Close the shell on {{ $target['name'] }}"
+                                    class="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:border-white/15 dark:text-gray-300 dark:hover:bg-white/5">
+                                {!! \App\Support\Lucide::html('trash') !!}
+                                <span wire:loading.remove wire:target="closeAdminSessionFor('{{ $target['key'] }}')">Close</span>
+                                <span wire:loading wire:target="closeAdminSessionFor('{{ $target['key'] }}')">Closing...</span>
+                            </button>
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+```
+
+**[Buka kode asli `resources/views/filament/pages/terminal-admin.blade.php` — L112–L142](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/terminal-admin.blade.php#L112-L142)**
+
+### 2. Handler PHP/Livewire
+
+**Alur Livewire.** Method memvalidasi key node terhadap `adminTargets()`, memilih target, kemudian memanggil `openAdminSessionOn`. Method internal memastikan user login, meminta service membuka sesi, membuat embed ticket, lalu menampilkan notifikasi sukses atau pesan kesalahan.
+
+```php
+    public function openAdminSessionFor(string $node): void
+    {
+        $allowed = collect($this->adminTargets())->pluck('key');
+
+        if (! $allowed->contains($node)) {
+            $this->deny();
+
+            return;
+        }
+
+        $this->selectedAdminTarget = $node;
+
+        $this->openAdminSessionOn($node);
+    }
+
+    /**
+     * Open a shell on a node key the caller has already decided.
+     *
+     * Every refusal is turned into a message on the page rather than an exception,
+     * because the refusals are the expected cases here: an unprivileged role, a node
+     * that will not answer, a slot that is already in use. A stack trace for any of
+     * those tells an operator nothing they can act on.
+     */
+    private function openAdminSessionOn(string $nodeKey): void
+    {
+        $user = auth()->user();
+
+        if ($user === null) {
+            $this->deny();
+
+            return;
+        }
+
+        try {
+            $service = app(AdminTerminalService::class);
+            $session = $service->open($user, $nodeKey);
+
+            $this->rememberEmbedTicket($service, $session);
+
+            Notification::make()
+                ->title('Shell opened')
+                ->body(sprintf('Connected to %s as %s.', $session->target_node, $session->shell_user))
+                ->success()
+                ->send();
+        } catch (Throwable $exception) {
+            Notification::make()
+                ->title('Could not open a shell')
+                ->body($exception->getMessage())
+                ->danger()
+                ->persistent()
+                ->send();
+        }
+    }
+
+    /**
+     * Close this person's live shell on the selected node.
+     */
+```
+
+**[Buka kode asli `app/Filament/Pages/Terminal.php` — L91–L147](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Terminal.php#L91-L147)**
+
+### 3. Service otorisasi, audit, dan sesi
+
+**Alur service.** Service menjalankan `assertMayOperate` untuk role/otorisasi, mengidentifikasi node, menulis audit aktivitas `requested`, melakukan reconnect jika sesi masih hidup, atau menyiapkan port/credential/PID bagi sesi baru. Proses belum selesai pada cuplikan: pencatatan `TerminalSession`, grant ticket, dan penanganan kegagalan dilanjutkan pada source.
+
+```php
+    public function open(User $user, string $nodeKey): TerminalSession
+    {
+        $this->assertMayOperate($user);
+
+        $node = $this->node($nodeKey);
+
+        // Before the shell exists. A log written only on success contains nothing about
+        // the attempts that failed, which are the ones worth reading.
+        $this->activity->record(
+            actor: $user,
+            action: self::ACTION_OPEN,
+            resource: null,
+            status: 'requested',
+            description: sprintf('Requested an administrative shell on %s.', $node['label']),
+        );
+
+        $existing = TerminalSession::query()
+            ->where('user_id', $user->getKey())
+            ->where('target_kind', 'node')
+            ->where('target_node', $node['key'])
+            ->whereNull('closed_at')
+            ->orderByDesc('created_at')
+            ->first();
+
+        // Reconnect reuses the existing PTY, preserving shell history and running tasks.
+        if ($existing && $this->isConnected($existing)) {
+            return $existing;
+        }
+        if ($existing) {
+            $this->close($existing);
+        }
+
+        $port = $this->reservePort();
+        $credential = bin2hex(random_bytes(self::CREDENTIAL_BYTES));
+        $pid = $this->spawn($node, $port);
+
+        try {
+            $session = TerminalSession::query()->create([
+            'user_id' => $user->getKey(),
+            'lab_environment_id' => null,
+            'target_kind' => 'node',
+            'target_node' => $node['key'],
+            'container_name' => null,
+            'pid' => (string) $pid,
+            'ttyd_port' => (string) $port,
+            'credential' => $credential,
+            'shell_uid' => null,
+            'shell_user' => $this->loginName($node),
+            'expires_at' => Carbon::now()->addMinutes(self::SESSION_MINUTES),
+            ]);
+
+            $this->slotAuth()->grant($port, $credential);
+            $this->embedTickets()->issue($port);
+        } catch (Throwable $exception) {
+            // No orphaned shell when the database or grant file fails.
+            $this->terminate($pid);
+            if (isset($session)) {
+                $session->forceFill(['closed_at' => Carbon::now()])->save();
+            }
+```
+
+**[Buka kode asli `app/Services/Terminal/AdminTerminalService.php` — L163–L221](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Services/Terminal/AdminTerminalService.php#L163-L221)**
+
+**Kontrol keamanan:** akses terminal administratif bersifat istimewa. Keberhasilan klik tombol harus dibuktikan dengan audit log, status sesi, batasan role, dan hasil koneksi pada node uji; kegagalan tidak boleh disamarkan sebagai sesi terbuka. Jangan membuka shell produksi hanya untuk dokumentasi screenshot.
