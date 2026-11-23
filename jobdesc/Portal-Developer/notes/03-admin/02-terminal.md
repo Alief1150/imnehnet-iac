@@ -3,7 +3,7 @@
 **Penanggung jawab:** Septihadi Malik — Portal Developer  
 **Tahap:** 03 — Admin Panel  
 **Sumber:** Repository `Alief1150/imnehnet-iac`, branch `main` (audit 23 November 2026)  
-**Status:** Source telah diaudit; pengujian end-to-end dan screenshot masih perlu dilampirkan.
+**Status: Implementasi terverifikasi pada source final; bukti end-to-end dan screenshot menyusul.
 
 ## 1. Deskripsi dan fungsi modul
 
@@ -164,8 +164,43 @@ Upload ke folder `jobdesc/Portal-Developer/images/03-admin/02-terminal/`:
 | Cek isi kartu/tabel/status | Nilai sesuai data backend; tidak dikarang | Belum dilampirkan |
 | Coba tombol/filter pada data uji sah | Alur dan validasi backend berjalan sesuai aturan | Belum dilampirkan |
 
-**Catatan:** jangan memodifikasi infrastruktur atau membuka sesi nyata hanya untuk screenshot. Source GitHub bisa berbeda dengan patch di server `iaas-mgmt`; hasil runtime harus diverifikasi terpisah.
+**Catatan:** jangan memodifikasi infrastruktur atau membuka sesi nyata hanya untuk screenshot. Source final telah disinkronkan ke GitHub main pada commit b3370b5; perilaku runtime tetap memerlukan bukti uji.
 
 ## 6. Kesimpulan
 
 Struktur dan alur utama **Terminal** telah dijelaskan dengan 5 cuplikan source tertaut. Screenshot dan bukti pengujian masih perlu dilengkapi untuk menyatakan dokumentasi final.
+
+
+---
+
+## Pembaruan Audit Source Final — 23 November 2026
+
+**Basis versi:** commit [`b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf) (`feat(portal): joh nggateli`). Contoh berikut adalah cuplikan source terbaru; penjelasan ditempatkan di luar kode agar tidak disalahartikan sebagai baris asli.
+
+### Implementasi yang diverifikasi melalui source
+
+Open shell: tombol Blade mengirim key node via Livewire; node divalidasi, dipilih, lalu openAdminSessionOn memanggil AdminTerminalService dan menangani notifikasi/error.
+
+```php
+    public function openAdminSessionFor(string $node): void
+    {
+        $allowed = collect($this->adminTargets())->pluck('key');
+
+        if (! $allowed->contains($node)) {
+            $this->deny();
+
+            return;
+        }
+
+        $this->selectedAdminTarget = $node;
+
+        $this->openAdminSessionOn($node);
+    }
+
+    /**
+     * Open a shell on a node key the caller has already decided.
+```
+
+**[Buka kode asli — app/Filament/Pages/Terminal.php, baris 91–107](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Terminal.php#L91-L107)**
+
+**Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
