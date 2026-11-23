@@ -712,3 +712,19 @@ final class RegisterStudent extends Component
 **Penjelasan teknis:** Blade/Alpine mengelola tampilan serta feedback instan; `RegisterStudent` bertanggung jawab atas validasi server-side dan pembuatan akun. Kredensial dan password harus diproses oleh backend, bukan dipercayakan hanya pada UI. Status berhasil registrasi per skenario perlu bukti pengujian.
 
 **Kesimpulan verifikasi:** source sudah tersinkron di commit final. Status *implementasi tersedia* dapat dinyatakan terverifikasi lewat inspeksi kode; status *pengujian fungsi berhasil/PASS* hanya dicantumkan apabila hasil uji dan screenshot relevan telah dilampirkan. Dokumentasi ini tidak menjalankan aksi produksi untuk menghasilkan bukti palsu.
+
+
+## Peta Kontrol UI → PHP/Livewire (Audit Final)
+
+| Kontrol | Handler / state | Proses, validasi, dan hasil |
+|---|---|---|
+| **Login as Student / Admin** | `route('filament.student.auth.login') / route('filament.admin.auth.login')` | Navigasi tab menentukan panel dan route tujuan; bukan pilihan role yang langsung mengganti hak akses akun. |
+| **Sign in** | `wire:submit="authenticate"` | Mengirim form ke autentikasi Filament, menangani validasi kredensial dan redirect sesuai panel serta middleware. |
+| **Register student** | `/login/regist / RegisterStudent::register` | Mengarahkan ke form Livewire registrasi; backend memvalidasi dan menyimpan akun baru sesuai aturan. |
+| **Validasi password** | `wire:model + Alpine.js` | Indikator klien membantu pengguna, tetapi validasi penentu tetap di backend PHP. |
+
+**[Buka kode tampilan Blade — resources/views/imnehnet/auth/login.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/imnehnet/auth/login.blade.php)**
+
+**[Buka kode handler PHP — app/Filament/Auth/Pages/Login.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Auth/Pages/Login.php)**
+
+**Penjelasan:** Blade menyajikan form, tombol, dan indikator loading; method PHP/Livewire menjalankan otorisasi, query, notifikasi, validasi, serta memanggil service atau queue ketika diperlukan. **Pengujian UI dan runtime dipisahkan** agar status keberhasilan tidak dilebihkan tanpa bukti kasus uji.
