@@ -188,15 +188,9 @@ Blade mengimplementasikan bagian antarmuka `$rows = collect`; interaksi dinamis 
 
 **Batas pembuktian:** script tidak menjalankan Start/Stop/Reset/Delete Lab, Submit Flag, upload avatar, perubahan profil/password, maupun interaksi browser secara nyata. Keberhasilan runtime aksi-aksi tersebut memerlukan bukti uji tersendiri. **PASS di sini berarti lolos verifikasi implementasi, bukan uji end-to-end.**
 
+**Hasil modul ini: PASS — verifikasi implementasi.** Route, class, Blade dan method yang dicakup script Student berhasil diperiksa melalui script read-only pada IAAS-MGMT. Pengujian enam modul menghasilkan 82 PASS dan satu asumsi URL Pentest yang dikoreksi dengan pemeriksaan route tambahan yang PASS.
 
-| Pengujian | Kriteria hasil | Status bukti |
-|---|---|---|
-| Halaman dapat dibuka akun Student | Render tanpa exception, akses sesuai role | Perlu bukti screenshot |
-| Data sesuai identitas pengguna | Tidak menampilkan sesi milik pengguna lain | Perlu uji dengan akun uji |
-| Filter, tombol, dan transisi state | Hasil UI konsisten dengan DB/service | Perlu hasil uji dan tangkapan layar |
-| Kesalahan dan data kosong | Fallback/validasi aman | Perlu hasil uji |
-
-**Catatan:** aplikasi dapat diakses tidak berarti semua alur uji telah PASS. Pengujian ditandai berhasil setelah langkah, hasil aktual, dan bukti tercatat.
+**Ruang lingkup:** pemeriksaan source dan keterhubungan handler yang ditemukan. Pengujian klik browser langsung, mutasi data, pembatasan akses antar-akun, dan hasil perubahan state bukan bagian dari bukti ini.
 
 ## 5. Screenshot
 
@@ -212,7 +206,7 @@ Simpan di [`images/04-student/04-history`](../../images/04-student/04-history/).
 
 ## 6. Kesimpulan
 
-Dokumentasi dibuat dari implementasi PHP/Blade final, termasuk alur data, pengamanan per pengguna, dan aksi yang relevan. Lampiran pengujian akan menentukan status kelulusan fungsi secara objektif.
+Dokumentasi dibuat dari implementasi PHP/Blade final, termasuk alur data, pengamanan per pengguna, dan aksi yang relevan. Verifikasi implementasi di IAAS-MGMT sudah dicatat PASS; pengujian fungsi end-to-end tetap memiliki cakupan bukti tersendiri.
 
 ## Referensi
 
