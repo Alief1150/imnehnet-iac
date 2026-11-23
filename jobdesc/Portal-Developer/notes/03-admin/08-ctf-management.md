@@ -191,9 +191,6 @@ Folder: `jobdesc/Portal-Developer/images/03-admin/08-ctf-management/`
 **Makna hasil:** halaman, class, method dan relasi UI–handler yang diperiksa tersedia. Sinyal seperti `authorization-check`, `validation` dan `service-reference` adalah hasil pembacaan source, **bukan** eksekusi seluruh cabang logika.
 
 **Batas pembuktian:** belum dilakukan klik browser end-to-end, perubahan database, eksekusi action lifecycle lab, pembuatan sesi terminal, atau penyimpanan konfigurasi. Perilaku runtime tidak dinyatakan PASS dari pemeriksaan statis saja.
-
-**Hasil modul ini: PASS — verifikasi implementasi.** Route, class, method, dan binding/aksi yang dicakup script Admin V2 telah diperiksa pada IAAS-MGMT. Total pengujian 10 modul Admin: **146 PASS, 0 FAIL**. Aksi pengguna, ekspor, perubahan data, dan skenario role di browser tidak dijalankan.
-
 ## 6. Kesimpulan dan tindak lanjut
 
 Source modul CTF Management telah diaudit dan terdokumentasi menggunakan 6 cuplikan kode dengan tautan ke baris aslinya. Verifikasi source dan hubungan handler di server `iaas-mgmt` telah lulus pengujian implementasi; uji interaksi langsung dan screenshot tetap dibedakan.
