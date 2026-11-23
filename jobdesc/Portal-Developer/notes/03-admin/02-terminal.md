@@ -135,84 +135,16 @@ Modul dibuat dengan **Filament/Livewire PHP** untuk state, pengambilan data, oto
 3. Blade menampilkan nilai/status; tombol dan filter mengirim event Livewire jika tersedia.
 4. Server memverifikasi permintaan dan mengembalikan hasil; status operasi harus diperiksa melalui data aktual.
 
-## 4. Screenshot yang dibutuhkan
 
-Upload ke folder `jobdesc/Portal-Developer/images/03-admin/02-terminal/`:
+## Implementasi dan Interaksi Terminal
 
-![Gambar 1 — Terminal](../../images/03-admin/02-terminal/01-terminal-overview.png)
-
-*Gambar 1. Terminal: terminal overview.*
-
-![Gambar 2 — Terminal](../../images/03-admin/02-terminal/02-terminal-target.png)
-
-*Gambar 2. Terminal: terminal target.*
-
-![Gambar 3 — Terminal](../../images/03-admin/02-terminal/03-terminal-session.png)
-
-*Gambar 3. Terminal: terminal session.*
-
-![Gambar 4 — Terminal](../../images/03-admin/02-terminal/04-terminal-status.png)
-
-*Gambar 4. Terminal: terminal status.*
-
-## 5. Pengujian dan batasan
-
-| Pengujian | Ekspektasi | Status |
-|---|---|---|
-| Login Admin lalu buka modul | Halaman dan komponen muncul tanpa error | Belum dilampirkan |
-| Akses oleh akun tanpa izin | Akses dibatasi sesuai role | Belum dilampirkan |
-| Cek isi kartu/tabel/status | Nilai sesuai data backend; tidak dikarang | Belum dilampirkan |
-| Coba tombol/filter pada data uji sah | Alur dan validasi backend berjalan sesuai aturan | Belum dilampirkan |
-
-**Catatan:** jangan memodifikasi infrastruktur atau membuka sesi nyata hanya untuk screenshot. Source final telah disinkronkan ke GitHub main pada commit b3370b5; perilaku runtime tetap memerlukan bukti uji.
-
-## 6. Kesimpulan
-
-Struktur dan alur utama **Terminal** telah dijelaskan dengan 5 cuplikan source tertaut. Screenshot dan bukti pengujian masih perlu dilengkapi untuk menyatakan dokumentasi final.
-
-
----
-
-## Pembaruan Audit Source Final — 23 November 2026
-
-**Basis versi:** commit [`b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf) (`feat(portal): joh nggateli`). Contoh berikut adalah cuplikan source terbaru; penjelasan ditempatkan di luar kode agar tidak disalahartikan sebagai baris asli.
-
-### Implementasi yang diverifikasi melalui source
-
-Open shell: tombol Blade mengirim key node via Livewire; node divalidasi, dipilih, lalu openAdminSessionOn memanggil AdminTerminalService dan menangani notifikasi/error.
-
-```php
-    public function openAdminSessionFor(string $node): void
-    {
-        $allowed = collect($this->adminTargets())->pluck('key');
-
-        if (! $allowed->contains($node)) {
-            $this->deny();
-
-            return;
-        }
-
-        $this->selectedAdminTarget = $node;
-
-        $this->openAdminSessionOn($node);
-    }
-
-    /**
-     * Open a shell on a node key the caller has already decided.
-```
-
-**[Buka kode asli — app/Filament/Pages/Terminal.php, baris 91–107](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Terminal.php#L91-L107)**
-
-**Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
-
-
-## Lampiran Teknis — Logika End-to-End Tombol Open Shell (Final)
+### Alur lengkap Open Shell, penutupan sesi, dan service terminal
 
 Tombol **Open shell** tidak sama dengan tautan **Open Terminal Fullscreen**. Tombol Open shell memicu pembuatan/mengambil sesi backend, sedangkan Fullscreen membuka konsol ttyd yang URL-nya tersedia setelah sesi berhasil dan embed ticket valid. Mengklik kartu target saja tidak menjalankan shell. UI menyediakan penutupan sesi secara terpisah.
 
 **Urutan:** pilih target melalui tombol per-node → Livewire validasi node → service validasi user → audit permintaan → reconnect/create proses terminal → persist sesi dan ticket → embed frame → opsi fullscreen atau Close.
 
-### 1. Tombol dan state Blade
+#### Tombol dan state Blade
 
 **Open shell di Blade.** `wire:click` memanggil `openAdminSessionFor` menggunakan key node pada kartu. `wire:loading.attr` menonaktifkan tombol selama request. `wire:target` memastikan `Connecting...` hanya muncul untuk target yang sedang diproses. Tombol `Close` ditampilkan secara kondisional ketika sesi aktif.
 
@@ -252,7 +184,7 @@ Tombol **Open shell** tidak sama dengan tautan **Open Terminal Fullscreen**. Tom
 
 **[Buka kode asli `resources/views/filament/pages/terminal-admin.blade.php` — L112–L142](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/terminal-admin.blade.php#L112-L142)**
 
-### 2. Handler PHP/Livewire
+#### Handler PHP/Livewire
 
 **Alur Livewire.** Method memvalidasi key node terhadap `adminTargets()`, memilih target, kemudian memanggil `openAdminSessionOn`. Method internal memastikan user login, meminta service membuka sesi, membuat embed ticket, lalu menampilkan notifikasi sukses atau pesan kesalahan.
 
@@ -318,7 +250,7 @@ Tombol **Open shell** tidak sama dengan tautan **Open Terminal Fullscreen**. Tom
 
 **[Buka kode asli `app/Filament/Pages/Terminal.php` — L91–L147](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Terminal.php#L91-L147)**
 
-### 3. Service otorisasi, audit, dan sesi
+#### Service otorisasi, audit, dan sesi
 
 **Alur service.** Service menjalankan `assertMayOperate` untuk role/otorisasi, mengidentifikasi node, menulis audit aktivitas `requested`, melakukan reconnect jika sesi masih hidup, atau menyiapkan port/credential/PID bagi sesi baru. Proses belum selesai pada cuplikan: pencatatan `TerminalSession`, grant ticket, dan penanganan kegagalan dilanjutkan pada source.
 
@@ -388,52 +320,7 @@ Tombol **Open shell** tidak sama dengan tautan **Open Terminal Fullscreen**. Tom
 
 **Kontrol keamanan:** akses terminal administratif bersifat istimewa. Keberhasilan klik tombol harus dibuktikan dengan audit log, status sesi, batasan role, dan hasil koneksi pada node uji; kegagalan tidak boleh disamarkan sebagai sesi terbuka. Jangan membuka shell produksi hanya untuk dokumentasi screenshot.
 
-
-## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
-
-### Open shell di Blade — satu klik per node dan feedback loading
-
-Cuplikan berikut dibaca dari source pada branch `main`; baris pertama adalah komentar penjelasan yang hanya ditambahkan dalam dokumentasi.
-
-```blade
-{{-- CATATAN DOKUMENTASI (bukan kode produksi): Tombol Open shell memanggil Livewire pada node target spesifik, menonaktifkan klik ganda saat request aktif, dan mengganti teks menjadi Connecting. --}}
-                        {{-- Beside the card, never inside it: a button in a button is
-                             invalid markup, and the inner click would also select. One
-                             click opens that node's shell directly, so a shell never
-                             depends on an earlier selection round trip having applied. --}}
-                        <button type="button" wire:click="openAdminSessionFor('{{ $target['key'] }}')"
-                                wire:key="admin-terminal-open-{{ $target['key'] }}"
-                                wire:loading.attr="disabled"
-                                wire:target="openAdminSessionFor('{{ $target['key'] }}')"
-                                title="Open a shell on {{ $target['name'] }} now"
-                                class="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-teal-600/30 bg-teal-600/10 px-3 text-[11px] font-semibold text-teal-700 hover:bg-teal-600/20 disabled:opacity-60 dark:text-teal-300 dark:hover:bg-teal-500/20">
-                            {!! \App\Support\Lucide::html('terminal') !!}
-                            <span wire:loading.remove wire:target="openAdminSessionFor('{{ $target['key'] }}')">Open shell</span>
-                            <span wire:loading wire:target="openAdminSessionFor('{{ $target['key'] }}')">Connecting...</span>
-                        </button>
-
-                        @if ($this->hasAdminSession($target['key']))
-                            <button type="button" wire:click="closeAdminSessionFor('{{ $target['key'] }}')"
-                                    wire:key="admin-terminal-close-{{ $target['key'] }}"
-                                    wire:loading.attr="disabled"
-                                    wire:target="closeAdminSessionFor('{{ $target['key'] }}')"
-                                    title="Close the shell on {{ $target['name'] }}"
-                                    class="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:border-white/15 dark:text-gray-300 dark:hover:bg-white/5">
-                                {!! \App\Support\Lucide::html('trash') !!}
-                                <span wire:loading.remove wire:target="closeAdminSessionFor('{{ $target['key'] }}')">Close</span>
-                                <span wire:loading wire:target="closeAdminSessionFor('{{ $target['key'] }}')">Closing...</span>
-                            </button>
-                        @endif
-```
-
-**[Buka kode asli — resources/views/filament/pages/terminal-admin.blade.php (L113–L139)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/terminal-admin.blade.php#L113-L139)**
-
-**Penjelasan teknis:** Ekspresi `wire:click="openAdminSessionFor('{{ $target['key'] }}')"` mengirim key node ke method PHP; `wire:key` menjaga identitas elemen per node; `wire:loading.attr="disabled"` mencegah request ganda; `wire:loading` menampilkan `Connecting...`. Tombol **Close** menggunakan `closeAdminSessionFor(...)` dan muncul jika ada sesi. Button tidak menjalankan shell melalui JavaScript langsung.
-
-**Kesimpulan verifikasi:** source sudah tersinkron di commit final. Status *implementasi tersedia* dapat dinyatakan terverifikasi lewat inspeksi kode; status *pengujian fungsi berhasil/PASS* hanya dicantumkan apabila hasil uji dan screenshot relevan telah dilampirkan. Dokumentasi ini tidak menjalankan aksi produksi untuk menghasilkan bukti palsu.
-
-
-## Peta Kontrol UI → PHP/Livewire → Service (Audit Final)
+### Pemetaan tombol, aksi, dan handler
 
 | Kontrol pada halaman | Handler atau state | Penjelasan alur dan hasil |
 |---|---|---|
@@ -442,10 +329,43 @@ Cuplikan berikut dibaca dari source pada branch `main`; baris pertama adalah kom
 | **Close** | `closeAdminSessionFor` | Menutup sesi pada node terkait melalui handler dan service; pelepasan listener, kredensial, dan ticket harus sukses. |
 | **Fullscreen** | `adminEmbed` | Tautan/akses fullscreen bergantung pada status sesi dan URL embed yang sudah valid; tidak membuat shell baru. |
 
-**Kode UI/Blade:** [Buka `resources/views/filament/pages/terminal-admin.blade.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/terminal-admin.blade.php).
-
-**Kode handler PHP:** [Buka `app/Filament/Pages/Terminal.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/Terminal.php).
 
 **Cara membaca interaksi:** atribut `wire:click` menjalankan method komponen Livewire melalui request server; `wire:model` mengikat input dan properti; `wire:loading` hanya mencerminkan request masih diproses. Jika terjadi error, status aktual harus mengikuti respons backend, bukan hanya perubahan tampilan.
 
-**Validasi pengujian:** hasil fungsi tertentu ditulis **PASS** hanya jika telah direkam pada akun dan data uji, termasuk kasus akses ditolak, data kosong, dan kegagalan service. Screenshot UI sendiri adalah bukti tampilan, bukan bukti seluruh backend telah diuji.
+## 4. Screenshot yang dibutuhkan
+
+Upload ke folder `jobdesc/Portal-Developer/images/03-admin/02-terminal/`:
+
+![Gambar 1 — Terminal](../../images/03-admin/02-terminal/01-terminal-overview.png)
+
+*Gambar 1. Terminal: terminal overview.*
+
+![Gambar 2 — Terminal](../../images/03-admin/02-terminal/02-terminal-target.png)
+
+*Gambar 2. Terminal: terminal target.*
+
+![Gambar 3 — Terminal](../../images/03-admin/02-terminal/03-terminal-session.png)
+
+*Gambar 3. Terminal: terminal session.*
+
+![Gambar 4 — Terminal](../../images/03-admin/02-terminal/04-terminal-status.png)
+
+*Gambar 4. Terminal: terminal status.*
+
+## 5. Pengujian dan batasan
+
+| Pengujian | Ekspektasi | Status |
+|---|---|---|
+| Login Admin lalu buka modul | Halaman dan komponen muncul tanpa error | Belum dilampirkan |
+| Akses oleh akun tanpa izin | Akses dibatasi sesuai role | Belum dilampirkan |
+| Cek isi kartu/tabel/status | Nilai sesuai data backend; tidak dikarang | Belum dilampirkan |
+| Coba tombol/filter pada data uji sah | Alur dan validasi backend berjalan sesuai aturan | Belum dilampirkan |
+
+**Catatan:** jangan memodifikasi infrastruktur atau membuka sesi nyata hanya untuk screenshot. Source final telah disinkronkan ke GitHub main pada commit b3370b5; perilaku runtime tetap memerlukan bukti uji.
+
+## 6. Kesimpulan
+
+Struktur dan alur utama **Terminal** telah dijelaskan dengan 5 cuplikan source tertaut. Screenshot dan bukti pengujian masih perlu dilengkapi untuk menyatakan dokumentasi final.
+
+
+---
