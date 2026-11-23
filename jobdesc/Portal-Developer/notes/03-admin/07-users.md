@@ -193,9 +193,6 @@ Upload ke `jobdesc/Portal-Developer/images/03-admin/07-users/`. Nama file di baw
 **Makna hasil:** halaman, class, method dan relasi UI–handler yang diperiksa tersedia. Sinyal seperti `authorization-check`, `validation` dan `service-reference` adalah hasil pembacaan source, **bukan** eksekusi seluruh cabang logika.
 
 **Batas pembuktian:** belum dilakukan klik browser end-to-end, perubahan database, eksekusi action lifecycle lab, pembuatan sesi terminal, atau penyimpanan konfigurasi. Perilaku runtime tidak dinyatakan PASS dari pemeriksaan statis saja.
-
-**Hasil modul ini: PASS — pemeriksaan implementasi pada IAAS-MGMT.** Route, class/method, view (jika ada), dan binding/aksi yang relevan tercakup dalam pengujian Admin V2 (146 PASS, 0 FAIL untuk 10 modul). Uji klik nyata, hasil query runtime, perubahan data, dan akses lintas role tidak termasuk dalam pengujian ini.
-
 ## 7. Kesimpulan
 
 Source Users telah diaudit dan dapat ditelusuri melalui 6 tautan langsung. Verifikasi implementasi pada server IAAS-MGMT telah PASS; pengujian runtime interaktif dan screenshot tetap dipisahkan.
