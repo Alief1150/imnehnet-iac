@@ -431,3 +431,21 @@ Cuplikan berikut dibaca dari source pada branch `main`; baris pertama adalah kom
 **Penjelasan teknis:** Ekspresi `wire:click="openAdminSessionFor('{{ $target['key'] }}')"` mengirim key node ke method PHP; `wire:key` menjaga identitas elemen per node; `wire:loading.attr="disabled"` mencegah request ganda; `wire:loading` menampilkan `Connecting...`. Tombol **Close** menggunakan `closeAdminSessionFor(...)` dan muncul jika ada sesi. Button tidak menjalankan shell melalui JavaScript langsung.
 
 **Kesimpulan verifikasi:** source sudah tersinkron di commit final. Status *implementasi tersedia* dapat dinyatakan terverifikasi lewat inspeksi kode; status *pengujian fungsi berhasil/PASS* hanya dicantumkan apabila hasil uji dan screenshot relevan telah dilampirkan. Dokumentasi ini tidak menjalankan aksi produksi untuk menghasilkan bukti palsu.
+
+
+## Peta Kontrol UI → PHP/Livewire → Service (Audit Final)
+
+| Kontrol pada halaman | Handler atau state | Penjelasan alur dan hasil |
+|---|---|---|
+| **Open shell** | `openAdminSessionFor` | Node spesifik dikirim dari kartu ke Livewire, divalidasi terhadap target yang diizinkan, kemudian operasi diteruskan ke AdminTerminalService untuk otorisasi, audit, port, proses ttyd, dan penyimpanan sesi. |
+| **Connecting...** | `wire:loading` | Indikator loading selama request, bukan tanda bahwa koneksi shell sudah berhasil. |
+| **Close** | `closeAdminSessionFor` | Menutup sesi pada node terkait melalui handler dan service; pelepasan listener, kredensial, dan ticket harus sukses. |
+| **Fullscreen** | `adminEmbed` | Tautan/akses fullscreen bergantung pada status sesi dan URL embed yang sudah valid; tidak membuat shell baru. |
+
+**Kode UI/Blade:** [Buka `resources/views/filament/pages/terminal-admin.blade.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/terminal-admin.blade.php).
+
+**Kode handler PHP:** [Buka `app/Filament/Pages/Terminal.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/Terminal.php).
+
+**Cara membaca interaksi:** atribut `wire:click` menjalankan method komponen Livewire melalui request server; `wire:model` mengikat input dan properti; `wire:loading` hanya mencerminkan request masih diproses. Jika terjadi error, status aktual harus mengikuti respons backend, bukan hanya perubahan tampilan.
+
+**Validasi pengujian:** hasil fungsi tertentu ditulis **PASS** hanya jika telah direkam pada akun dan data uji, termasuk kasus akses ditolak, data kosong, dan kegagalan service. Screenshot UI sendiri adalah bukti tampilan, bukan bukti seluruh backend telah diuji.
