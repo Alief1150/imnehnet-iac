@@ -1,24 +1,21 @@
-# Portal Developer — Catatan Pengerjaan Webportal IMNEHNET
+# Portal Developer — Dokumentasi Implementasi Webportal IMNEHNET
 
-**PIC:** Malik  
-**Ruang lingkup:** pembangunan fondasi dan pengembangan aplikasi Laravel/Filament untuk kontrol-plane IMNEHNET. Dokumentasi dibagi kronologis; seri Admin dibahas sebelum seri Student.
+**PIC:** Malik · **Terakhir diaudit:** 23 November 2026 · **Basis source final:** [commit `b3370b5` — `feat(portal): joh nggateli`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf).
 
-## Daftar notes
+## Daftar Bab
 
-1. [01 — Persiapan Server dan Instalasi Fondasi Webportal IMNEHNET](01-persiapan-instalasi-webportal-imnehnet.md) — lingkungan IAAS-MGMT, PHP, Composer, Laravel, MySQL, Filament, Node/Vite, Apache, queue, pemeriksaan, serta panduan screenshot.
+1. [01 — Persiapan dan instalasi Webportal](01-persiapan-instalasi-webportal-imnehnet.md) — PHP, Composer, Laravel, Filament, database, Node/Vite, Apache, queue, konfigurasi dan bukti instalasi.
+2. [02 — Frontpage, login dan registrasi](02-frontpage-login-register.md) — route, login role Student/Admin, Blade, Livewire, validasi, redirect, CSS/JS.
+3. [03 — Admin Panel (10 modul)](03-admin/README.md) — Dashboard, Terminal, Infrastructure, Monitoring, Security, Environments, Users, CTF Management, Activity Logs, System Settings.
+4. [04 — Student Panel (6 modul)](04-student/README.md) — Dashboard, My Labs, Pentest, History, Documentation, Profile.
 
-## Bukti dan provenance
+## Provenance dan Status
 
-- [Source utama webportal](../../../webportal/)
-- [Commit sinkronisasi Webportal 22 November 2026](https://github.com/Alief1150/imnehnet-iac/commit/658b8cd2e82375f015450250f87b1a1158aee66f)
-- [Status dan audit proyek](../../../docs/status.md)
+- [Source Webportal final](../../../webportal/) telah disinkronkan ke `main` pada commit `b3370b5`.
+- Setiap modul memuat contoh PHP/Blade dan tautan langsung ke file asli di bawah cuplikan.
+- **Implementasi source:** tersedia dan diaudit; **keberhasilan pengujian runtime:** hanya dinyatakan PASS bila ada langkah, hasil aktual dan bukti. Website yang dapat diakses adalah bukti integrasi awal, bukan bukti keseluruhan skenario.
+- Screenshot disimpan pada [images/](../images/) dan harus disensor bila berisi data sensitif.
 
-Dokumen Notes 01 membedakan **hasil audit historis**, **konfigurasi repository**, dan **contoh prosedur instalasi**. Screenshot belum dianggap tersedia sampai diunggah ke `../images/01-instalasi-webportal/`. Catatan lanjutan untuk fitur Admin, pengujian, dan Student disusun terpisah.
+## Penanda Khusus
 
-## Roadmap dokumentasi berikutnya
-
-- [02 — Frontpage, Login & Registration](02-frontpage-login-register.md) — kerangka, menunggu dokumentasi dan screenshot.
-- [03 — Admin Panel](03-admin/README.md) — 10 modul, seluruhnya kerangka.
-- [04 — Student Panel](04-student/README.md) — 6 modul, seluruhnya kerangka.
-
-Semua dokumen baru adalah placeholder yang belum menjadi bukti penyelesaian implementasi atau pengujian.
+**System Health:** lima kemungkinan keluaran `Healthy / Degraded / Critical / Offline / Unknown` berdasarkan service checks, bukan KPI persentase. **Terminal:** Open shell memanggil Livewire/backend, berbeda dengan membuka tab fullscreen. **Users:** Presence dan Last Seen didokumentasikan berdasarkan source final.
