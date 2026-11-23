@@ -227,3 +227,53 @@ final class InfrastructureStatusService
 **[Buka kode asli — app/Services/InfrastructureStatusService.php, baris 1–17](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Services/InfrastructureStatusService.php#L1-L17)**
 
 **Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
+
+
+## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
+
+### Ringkasan infrastruktur dan topologi
+
+```php
+// KOMENTAR DOKUMENTASI: perhatikan hak akses, data dari service, state Livewire, dan fallback error.
+    public function statusSummary(): array
+    {
+        return app(InfrastructureStatusService::class)->summary();
+    }
+
+    /**
+     * The planes, hosts, network segments and provisioning stack.
+     *
+     * Collected here rather than passed to the view as data so that the service stays the
+     * only place that knows how any of it is measured. The template holds no constants:
+     * a page whose job is to describe this installation must not carry its own
+     * description of it as a literal, because the installation changes and the literal
+     * would not.
+     *
+     * @return array<string, mixed>
+     */
+    public function topology(): array
+    {
+        return app(InfrastructureTopologyService::class)->topology();
+    }
+
+    /**
+     * When the figures above were read.
+     *
+     * Stated rather than implied. A topology page with no timestamp reads as current even
+     * though it was assembled from probes that each have their own age, and an operator
+     * comparing a plane card to a `ping` needs to know which is older.
+     *
+     * @return array<Action>
+     */
+    /**
+ * The page's own name.
+ *
+ * Without this Filament renders the class name, and the heading was simply missing — the
+ * page opened straight onto its cards with no title and nothing saying what the page was
+```
+
+**[Buka kode asli — app/Filament/Pages/Infrastructure.php (L55–L89)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/Infrastructure.php#L55-L89)**
+
+**Analisis implementasi:** `statusSummary()` dan `topology()` mengambil ringkasan probe serta peta topologi dari service. Tampilan harus membedakan kondisi berhasil, gagal, dan tidak teramati; nilai status adalah data runtime bukan deklarasi statis.
+
+**Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
