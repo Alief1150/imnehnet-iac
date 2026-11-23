@@ -185,10 +185,10 @@ Upload ke `jobdesc/Portal-Developer/images/03-admin/05-security/`. Nama file di 
 
 | ID | Skenario | Target | Status |
 |---|---|---|---|
-| 01 | Admin membuka modul | Halaman tampil | Belum diuji dalam dokumen |
-| 02 | Pengguna non-Admin mengakses | Akses sesuai kebijakan role | Belum diuji |
-| 03 | Search/filter/sort (jika tersedia) | Hasil sesuai data | Belum diuji |
-| 04 | Aksi pada data uji | Validasi dan perubahan backend benar | Belum diuji |
+| 01 | Admin membuka modul | Halaman tampil | Bukti hasil uji belum dilampirkan |
+| 02 | Pengguna non-Admin mengakses | Akses sesuai kebijakan role | Bukti hasil uji belum dilampirkan |
+| 03 | Search/filter/sort (jika tersedia) | Hasil sesuai data | Bukti hasil uji belum dilampirkan |
+| 04 | Aksi pada data uji | Validasi dan perubahan backend benar | Bukti hasil uji belum dilampirkan |
 
 **Risiko:** Tidak adanya alert bukan bukti sistem bebas risiko. Periksa freshness collector dan data Wazuh.
 
