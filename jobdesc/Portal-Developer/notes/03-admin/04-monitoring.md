@@ -227,3 +227,73 @@ final class MonitoringService
 **[Buka kode asli — app/Services/MonitoringService.php, baris 1–17](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Services/MonitoringService.php#L1-L17)**
 
 **Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
+
+
+## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
+
+### Monitoring host, backend, dan data VM
+
+```php
+// KOMENTAR DOKUMENTASI: perhatikan hak akses, data dari service, state Livewire, dan fallback error.
+    public function hostDetails(): array
+    {
+        return app(\App\Services\MonitoringHostDetailsService::class)->summary();
+    }
+
+    public function physicalHost(): array
+
+    {
+
+        return app(\App\Services\MonitoringHostService::class)->summary();
+
+    }
+
+
+
+    public function resources(): array
+    {
+        return app(MonitoringService::class)->summary();
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public function trends(): array
+    {
+        return app(MonitoringService::class)->trend();
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public function health(): array
+    {
+        return app(InfrastructureStatusService::class)->summary();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function backends(): array
+    {
+        return app(MonitoringService::class)->backends();
+    }
+
+    /** @return array<string, mixed> */
+    public function containerInventory(): array
+    {
+        return app(IncusInventoryMonitoringService::class)->summary();
+    }
+
+    /** @return array<string, mixed> */
+    public function vmSeries(): array
+    {
+        return app(MonitoringVmSeriesService::class)->series();
+    }
+```
+
+**[Buka kode asli — app/Filament/Pages/Monitoring.php (L22–L76)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/Monitoring.php#L22-L76)**
+
+**Analisis implementasi:** Page Monitoring menyediakan getter untuk host fisik, resource, tren, health, backend, dan seri metrik VM. Blade membaca hasilnya, sementara service monitoring menentukan asal serta kesegaran telemetri.
+
+**Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
