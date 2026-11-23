@@ -297,3 +297,19 @@ final class MonitoringService
 **Analisis implementasi:** Page Monitoring menyediakan getter untuk host fisik, resource, tren, health, backend, dan seri metrik VM. Blade membaca hasilnya, sementara service monitoring menentukan asal serta kesegaran telemetri.
 
 **Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
+
+
+## Peta Interaksi dan Data Antarmuka — Audit Final
+
+| UI / aksi | Method, enum, atau komponen | Logika yang diperiksa |
+|---|---|---|
+| **Physical Host** | `hostDetails / physicalHost` | KPI CPU, RAM dan storage bersumber dari service monitoring. |
+| **VM Metrics** | `vmSeries` | Seri metrik VM berasal dari backend; nilai kosong harus dibedakan dari nilai nol. |
+| **Trends / Resources** | `trends / resources` | Grafik dan daftar memakai data monitoring terbaru yang tersedia. |
+| **Polling** | `isPolling / refreshedAt` | Menentukan pemutakhiran dan waktu data terakhir; refresh tidak berarti data dari semua endpoint selalu sukses. |
+
+**[Buka kode tampilan/konfigurasi — resources/views/filament/pages/monitoring.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/monitoring.blade.php)**
+
+**[Buka kode PHP/handler — app/Filament/Pages/Monitoring.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/Monitoring.php)**
+
+**Pengujian:** pengecekan kode dan UI dapat dinyatakan telah diaudit; hasil operasi setiap tombol, pembatasan role, dan interaksi dengan backend diberi PASS hanya apabila bukti aktual tersedia. Tidak menjalankan operasi destruktif pada server produksi untuk tujuan dokumentasi.
