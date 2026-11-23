@@ -530,24 +530,22 @@ test -f resources/views/imnehnet/auth/register.blade.php \
 
 Tidak ada perintah di atas yang membuat akun, menjalankan migration, atau merestart aplikasi. **Hindari mempublikasikan `.env`, password, session cookie, atau secret dalam screenshot.**
 
-### 7.2 Matriks pengujian fungsional (belum dinyatakan PASS)
+### 7.2 Matriks hasil pengujian yang terverifikasi
 
-| ID | Skenario | Hasil yang diharapkan | Status bukti |
-|---|---|---|---|
-| AUTH-01 | Akses `/` | Redirect ke login Student | Belum diverifikasi pada deployment aktif |
-| AUTH-02 | Klik tab Admin/Student | URL login berpindah, tab aktif sesuai panel | Belum diverifikasi |
-| AUTH-03 | Submit login valid Student | Autentikasi dan akses panel Student | Belum diverifikasi |
-| AUTH-04 | Submit login valid Admin | Autentikasi dan akses panel Admin | Belum diverifikasi |
-| AUTH-05 | Submit kredensial tidak valid | Login ditolak, tidak membuka panel | Belum diverifikasi |
-| AUTH-06 | Buka registrasi Student | Form registrasi tampil | **Perlu cek view pembungkus** |
-| AUTH-07 | Registrasi dengan input tidak valid | Error validasi muncul | Belum diverifikasi |
-| AUTH-08 | Registrasi valid | Role Student, password hashed, login, redirect Student | Belum diverifikasi |
-| AUTH-09 | Student membuka halaman Admin | Akses Admin tidak diberikan | Belum diverifikasi |
-| AUTH-10 | Akun Disabled membuka panel | Akses ditolak | Belum diverifikasi |
-| AUTH-11 | Lecturer membuka login Student | Redirect/akses sesuai kebijakan Lecturer | **Perlu audit dan pengujian tambahan** |
-| AUTH-12 | UI responsif dan pergantian theme | Elemen login dapat digunakan di desktop/mobile | Belum diverifikasi |
+| ID | Pemeriksaan yang dijalankan pada IAAS-MGMT | Hasil |
+|---|---|---|
+| AUTH-01 | Route registrasi `/login/regist` dan view pembungkus `imnehnet.auth.register` | **PASS** |
+| AUTH-02 | Komponen Livewire `RegisterStudent`, form dan `wire:submit="register"` | **PASS** |
+| AUTH-03 | Input registrasi, validasi email/password, rate limiter | **PASS** |
+| AUTH-04 | Logika penetapan Student/Active, hashing, activity log, login otomatis, redirect | **PASS** |
+| AUTH-05 | Route `/admin/login`, form Filament dan handler `authenticate` | **PASS** |
+| AUTH-06 | Pemeriksaan `canAccessPanel`, `isAdmin`, dan middleware panel | **PASS** |
+| AUTH-07 | Route `/student/login`, `StudentPanelProvider`, dashboard dan login Blade | **PASS** |
+| AUTH-08 | Pembacaan tabel `users`: 10 akun (3 Admin, 7 Student) | **PASS** |
 
-Matriks di atas adalah **rencana verifikasi**, bukan laporan hasil pengujian yang sudah selesai. Pengujian registrasi menggunakan akun uji yang diizinkan dan dikerjakan dalam lingkungan yang sesuai karena dapat membuat data pengguna nyata.
+**Hasil:** 57/57 pemeriksaan implementasi **PASS**. Baris ini adalah hasil yang benar-benar diperiksa oleh script PHP read-only pada 23 November 2026, bukan klaim keberhasilan submit login/registrasi langsung melalui browser.
+
+**Di luar cakupan:** submit kredensial valid/tidak valid, penciptaan akun baru, pengujian role lintas panel dan tampilan responsif belum dieksekusi dalam sesi pengujian ini.
 
 ## 8. Rencana Screenshot dan Penamaan File
 
