@@ -279,3 +279,18 @@ class StudentDocumentation extends Page
 **Logika fitur:** Class halaman mengatur route, judul, dan kontrol akses. Isi dokumentasi student ada di Blade; menu tidak identik dengan bukti semua link dokumentasi berhasil dibuka.
 
 **Pengujian:** Source tersedia di GitHub. Keberhasilan buka halaman dapat dilaporkan sebagai verifikasi akses hanya apabila telah dicoba, sedangkan keberhasilan simpan/edit/otorisasi/validasi memerlukan bukti pengujian per aksi. Jangan menandai fitur otomatis PASS karena aplikasi secara umum berjalan.
+
+## Pemetaan Tombol dan Navigasi Dokumentasi — Audit Blade Final
+
+| Kontrol | Fungsi dan logika | Source |
+|---|---|---|
+| **Ke Dashboard** | Anchor menuju `/student` dan tidak mengubah data | [Blade L54](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-documentation.blade.php#L54) |
+| **Download PDF** | Tautan `downloads/IMNEHNET-Manual-Book.pdf` hanya muncul bila `$manualBookReady` benar; ketika tidak siap, UI menampilkan **Segera Tersedia**, bukan tautan unduh aktif | [Blade L70–99](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-documentation.blade.php#L70-L99) |
+| **Cari bagian panduan...** | Input `type="search"` melakukan penyaringan tautan sidebar di browser melalui handler `oninput`; bukan pencarian database atau request ke API | [Blade L112–140](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-documentation.blade.php#L112-L140) |
+| **Mengenal IMNEHNET / Membuat Lab / Mengakses Containers / Pentest & Submit Flag / Mengelola Sesi Lab / Troubleshooting** | Tautan menuju anchor seksi dalam halaman dokumentasi yang sama, bukan menjalankan lifecycle lab | [Blade L148–164](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-documentation.blade.php#L148-L164) |
+| **Ketentuan Penggunaan** dan **Selanjutnya: Ketentuan Penggunaan** | Navigasi ke `/student/documentation/terms` | [Blade L166–205](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-documentation.blade.php#L166-L205) |
+| **DI HALAMAN INI** | Daftar *table of contents* dengan anchor lokal seperti `#about`, `#first`, `#containers`; tanpa operasi backend | [Blade L206](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-documentation.blade.php#L206) |
+
+**Source kode lengkap:** [student-documentation.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-documentation.blade.php).
+
+**Uji:** cek ketersediaan berkas PDF dan dua state unduhan; uji search dengan kata yang ada/tidak ada; cek setiap anchor dan tautan Terms, termasuk kondisi mobile. Ini merupakan verifikasi fungsi navigasi dan aset, bukan pengujian mutasi database.
