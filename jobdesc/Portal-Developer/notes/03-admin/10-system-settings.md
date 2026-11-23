@@ -180,16 +180,34 @@ Folder: `jobdesc/Portal-Developer/images/03-admin/10-system-settings/`
 
 ## 5. Pemeriksaan dan pengujian
 
+### Tujuan dan Metode Pengujian
 
-### Hasil Pengujian Implementasi Admin — PASS (23 November 2026)
+Pengujian bertujuan memverifikasi kesesuaian route, class PHP, antarmuka Blade, dan interaksi/handler yang dapat diperiksa di source modul. Lingkungan pengujian: server **IAAS-MGMT**, proyek `/home/iaas/projects/webportal-iaas`, **23 November 2026**. Metode: skrip PHP CLI Laravel **read-only** tanpa mutasi database atau infrastruktur.
 
-**Server:** `iaas-mgmt` · **Project:** `/home/iaas/projects/webportal-iaas` · **Metode:** verifikasi PHP read-only terhadap Laravel GET routes, class/method, Blade, binding `wire:click`/`wire:submit`, deklarasi aksi Filament Resource, dan indikasi validasi/otorisasi/pemanggilan service.
+### Tabel Hasil Pengujian
 
-**Hasil pada modul system-settings: PASS.** Seluruh **10 dari 10 modul Admin PASS**, dengan **146 pemeriksaan PASS dan 0 FAIL** pada script *Admin Panel Deep Verification V2*, dieksekusi **23 November 2026 pukul 05:04:41** (waktu tercetak di terminal server). Angka 146 merupakan **total lintas 10 modul**, bukan 146 pengujian khusus modul ini.
+| ID | Skenario pemeriksaan | Kriteria keberhasilan | Hasil aktual dari terminal | Status |
+|---|---|---|---|---|
+| AD-SET-01 | Route & tampilan System Settings | Halaman, class, Blade tersedia | GET `/admin/system-settings`, class, Blade terdeteksi | PASS |
+| AD-SET-02 | Tab dan editing overview | Tombol dan handler cocok | `selectTab()`, `editOverview()`, `addSoftware()`, `removeSoftware()` terhubung | PASS |
+| AD-SET-03 | Save Overview | Form submit ke method publik; validasi di source | `wire:submit` → `saveOverview()`; sinyal validasi/authorization terdeteksi | PASS |
+| AD-SET-04 | Save Profile | Form submit ke method publik | `wire:submit` → `updateProfile()`; sinyal validasi dan perubahan DB ditemukan | PASS |
+| AD-SET-05 | Change Password | Form submit ke handler yang tersedia | `wire:submit` → `changePassword()`; sinyal validasi dan DB ditemukan | PASS |
+| AD-SET-06 | Pembatasan akses | Method pembatasan akses terdefinisi | `requireAdmin()` dan `canAccess()` ditemukan | PASS |
 
-**Makna hasil:** halaman, class, method dan relasi UI–handler yang diperiksa tersedia. Sinyal seperti `authorization-check`, `validation` dan `service-reference` adalah hasil pembacaan source, **bukan** eksekusi seluruh cabang logika.
+### Bukti dan Analisis
 
-**Batas pembuktian:** belum dilakukan klik browser end-to-end, perubahan database, eksekusi action lifecycle lab, pembuatan sesi terminal, atau penyimpanan konfigurasi. Perilaku runtime tidak dinyatakan PASS dari pemeriksaan statis saja.
+**Rekap Admin V2:** 10/10 modul PASS, 146 pemeriksaan PASS, 0 FAIL, pada 23 November 2026 pukul 05:04:41 menurut output terminal. Angka 146 merupakan total lintas Admin, bukan hanya modul ini.
+
+**Bukti terminal:** [Ringkasan transkrip hasil pengujian IAAS-MGMT](../evidence/2026-11-23-iaas-mgmt-verification.md). Cuplikan bukti berasal dari output yang diserahkan operator dan dikaitkan dengan source modul pada bagian implementasi dokumen ini.
+
+**Analisis:** pada skenario yang diuji, route, class, method dan/atau hubungan binding yang relevan berhasil ditemukan. Status **PASS** pada tabel menyatakan *verifikasi implementasi*, bukan kepastian setiap operasi tombol berhasil dieksekusi secara runtime.
+
+### Batasan Pengujian
+
+Pengujian belum mengklik kontrol browser secara nyata, mengeksekusi aksi infrastruktur, membuka sesi terminal, memodifikasi course/user/settings, atau menguji seluruh kebijakan akses dengan akun berbeda. Hasil operasi tersebut harus dicatat melalui skenario end-to-end tersendiri. Untuk laporan akhir, tambahkan screenshot terminal asli yang telah disensor jika disyaratkan dosen.
+
+
 ## 6. Kesimpulan dan tindak lanjut
 
 Source modul System Settings telah diaudit dan terdokumentasi menggunakan 6 cuplikan kode dengan tautan ke baris aslinya. Verifikasi source dan hubungan handler di server `iaas-mgmt` telah lulus pengujian implementasi; uji interaksi langsung dan screenshot tetap dibedakan.
