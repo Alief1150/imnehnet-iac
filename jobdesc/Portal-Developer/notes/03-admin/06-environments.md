@@ -310,3 +310,20 @@ use Throwable;
 **Analisis implementasi:** Kolom **Provisioning** berasal dari `EnvironmentStatus`, sedangkan **Runtime** memakai `RuntimeStatus`; keduanya tidak dapat disamakan. Filter dan aksi lifecycle harus dinilai terhadap status masing-masing.
 
 **Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
+
+
+## Peta Interaksi dan Data Antarmuka — Audit Final
+
+| UI / aksi | Method, enum, atau komponen | Logika yang diperiksa |
+|---|---|---|
+| **Provisioning filter** | `EnvironmentStatus` | Status provisioning menjelaskan proses penyediaan; berbeda dari keadaan runtime. |
+| **Runtime filter** | `RuntimeStatus` | Status runtime menampilkan hidup/mati/container; tidak setara dengan provisioning. |
+| **Start / Stop / Reset** | `EnvironmentActions dan Table actions` | Aksi memicu lifecycle backend dengan validasi role/ownership dan kondisi environment. |
+| **Delete** | `EnvironmentActions dan Table actions` | Aksi destruktif memerlukan verifikasi kepemilikan/konfirmasi dan pemeriksaan hasil penghapusan. |
+| **Pair Terminal** | `EnvironmentsTable` | Alur khusus paired lab membuka hubungan terminal setelah state dan target valid. |
+
+**[Buka kode tampilan/konfigurasi — app/Filament/Resources/Environments/Tables/EnvironmentsTable.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Resources/Environments/Tables/EnvironmentsTable.php)**
+
+**[Buka kode PHP/handler — app/Filament/Resources/Environments/Tables/EnvironmentActions.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Resources/Environments/Tables/EnvironmentActions.php)**
+
+**Pengujian:** pengecekan kode dan UI dapat dinyatakan telah diaudit; hasil operasi setiap tombol, pembatasan role, dan interaksi dengan backend diberi PASS hanya apabila bukti aktual tersedia. Tidak menjalankan operasi destruktif pada server produksi untuk tujuan dokumentasi.
