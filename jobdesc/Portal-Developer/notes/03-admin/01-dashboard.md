@@ -380,46 +380,31 @@ Unggah screenshot ke folder `jobdesc/Portal-Developer/images/03-admin/01-dashboa
 
 ## 8. Verifikasi dan Pengujian
 
+### Tujuan dan Lingkungan Pengujian
 
-### Hasil Pengujian Implementasi Admin — PASS (23 November 2026)
+Memastikan implementasi modul dapat ditelusuri dari route Laravel/Filament ke class PHP, tampilan Blade, serta metode/aksi backend yang digunakan. Pengujian berlangsung di **IAAS-MGMT** pada **23 November 2026** menggunakan aplikasi `/home/iaas/projects/webportal-iaas`. Metode berupa skrip **read-only** yang melakukan bootstrap Laravel, inspeksi method/source, dan membaca database bila relevan.
 
-**Server:** `iaas-mgmt` · **Project:** `/home/iaas/projects/webportal-iaas` · **Metode:** verifikasi PHP read-only terhadap Laravel GET routes, class/method, Blade, binding `wire:click`/`wire:submit`, deklarasi aksi Filament Resource, dan indikasi validasi/otorisasi/pemanggilan service.
+### Tabel Hasil Pengujian
 
-**Hasil pada modul dashboard: PASS.** Seluruh **10 dari 10 modul Admin PASS**, dengan **146 pemeriksaan PASS dan 0 FAIL** pada script *Admin Panel Deep Verification V2*, dieksekusi **23 November 2026 pukul 05:04:41** (waktu tercetak di terminal server). Angka 146 merupakan **total lintas 10 modul**, bukan 146 pengujian khusus modul ini.
+| ID | Skenario pemeriksaan | Kriteria keberhasilan | Hasil aktual dari terminal | Status |
+|---|---|---|---|---|
+| AD-DB-01 | Akses route Admin | GET `/admin` terdaftar dan class Dashboard tersedia | `filament.admin.pages.dashboard` dan class ditemukan | PASS |
+| AD-DB-02 | Pengelolaan widget | Method getWidgets dan widget Overview tersedia | `getWidgets()`, `getHeaderWidgets()`, `getFooterWidgets()` ditemukan | PASS |
+| AD-DB-03 | Indikator System Health | Lima kategori health tercakup dalam logika PHP | `Healthy`, `Degraded`, `Critical`, `Offline`, `Unknown` semuanya ditemukan | PASS |
+| AD-DB-04 | Sumber widget | Source `AdminDashboardOverview.php` dapat dibaca | Pemeriksaan file source dan class berhasil | PASS |
 
-**Makna hasil:** halaman, class, method dan relasi UI–handler yang diperiksa tersedia. Sinyal seperti `authorization-check`, `validation` dan `service-reference` adalah hasil pembacaan source, **bukan** eksekusi seluruh cabang logika.
+**Interpretasi status:** **PASS** berarti pemeriksaan implementasi yang tercantum benar-benar lolos pada terminal. Ini **bukan** hasil klik dan eksekusi operasi produksi.
 
-**Batas pembuktian:** belum dilakukan klik browser end-to-end, perubahan database, eksekusi action lifecycle lab, pembuatan sesi terminal, atau penyimpanan konfigurasi. Perilaku runtime tidak dinyatakan PASS dari pemeriksaan statis saja.
+### Bukti dan Pembahasan
 
+**Rekap Admin Panel V2:** 10 modul **PASS**, 146 pemeriksaan **PASS**, 0 FAIL; angka 146 adalah akumulasi seluruh Admin, bukan jumlah khusus modul ini. Waktu output terminal **05:04:41** (waktu server). Bukti terstruktur: **[Transkrip ringkas pengujian IAAS-MGMT](../evidence/2026-11-23-iaas-mgmt-verification.md)**. File bukti mengutip keluaran hasil terminal yang diberikan operator, termasuk route, method, dan binding yang terdeteksi. Tautan source PHP/Blade terdapat pada bagian implementasi dan referensi dokumen ini.
 
-### 8.1 Perintah pemeriksaan source (read-only)
+**Analisis:** seluruh baris yang diuji memenuhi kriteria berupa ketersediaan route, file/class, dan keterhubungan UI–handler sebagaimana cakupan script. Tidak ditemukan kegagalan di dalam pemeriksaan tersebut.
 
-```bash
-cd /home/iaas/projects/webportal-iaas
+### Batasan dan Tindak Lanjut
 
-# Sintaks class halaman dan widget.
-php -l app/Filament/Pages/Dashboard.php
-php -l app/Filament/Widgets/AdminDashboardOverview.php
+Pengujian ini **tidak** menekan tombol pada browser, menjalankan perubahan data, membuka sesi terminal, mengubah environment, atau memvalidasi seluruh output service secara end-to-end. Karena itu, aksi nyata tersebut tidak diklaim PASS. Bukti screenshot terminal lengkap yang disensor dapat dilampirkan saat penyusunan laporan akhir.
 
-# Periksa lokasi file Blade.
-test -f resources/views/filament/widgets/admin-dashboard-overview.blade.php   && echo "Admin Dashboard Blade: tersedia"
-
-# Lihat nama route Dashboard terdaftar.
-php artisan route:list --path=admin
-```
-
-**Referensi kode yang diperiksa:** [Dashboard.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Dashboard.php), [AdminDashboardOverview.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php), [admin-dashboard-overview.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/widgets/admin-dashboard-overview.blade.php). Perintah terminal adalah instruksi audit, bukan source aplikasi.
-
-### 8.2 Hasil pemeriksaan Dashboard
-
-| ID | Pemeriksaan di IAAS-MGMT | Hasil |
-|---|---|---|
-| ADM-DASH-01 | GET `/admin`, route `filament.admin.pages.dashboard` dan class `Dashboard` | **PASS** |
-| ADM-DASH-02 | Widget `AdminDashboardOverview` tersedia dan sumber PHP dapat dibaca | **PASS** |
-| ADM-DASH-03 | Method `getWidgets`, `getHeaderWidgets`, `getFooterWidgets` tersedia | **PASS** |
-| ADM-DASH-04 | Klasifikasi `Healthy / Degraded / Critical / Offline / Unknown` ditemukan dalam widget | **PASS** |
-
-**Status modul: PASS — verifikasi implementasi.** Pengujian V2 total 146 PASS/0 FAIL mencakup 10 modul Admin. Perubahan grafik, ketepatan nilai monitoring, perilaku saat service down, serta respons tampilan pada browser tidak dieksekusi oleh script ini.
 
 ## 9. Hasil, Kendala, dan Evaluasi
 
