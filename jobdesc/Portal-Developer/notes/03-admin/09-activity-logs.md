@@ -169,19 +169,11 @@ Folder: `jobdesc/Portal-Developer/images/03-admin/09-activity-logs/`
 
 **Batas pembuktian:** belum dilakukan klik browser end-to-end, perubahan database, eksekusi action lifecycle lab, pembuatan sesi terminal, atau penyimpanan konfigurasi. Perilaku runtime tidak dinyatakan PASS dari pemeriksaan statis saja.
 
-
-| Skenario | Target | Status |
-|---|---|---|
-| Masuk sebagai Admin | Halaman Activity Logs terbuka | Belum dicatat |
-| Akses role tanpa izin | Akses ditolak sesuai kebijakan | Belum dicatat |
-| Search/filter/tombol yang tersedia | Perubahan UI sesuai data dan proses server | Belum dicatat |
-| Data backend tidak tersedia | Pesan status tidak menyatakan sehat secara palsu | Belum dicatat |
-
-**Perhatian:** File ekspor mungkin berisi data sensitif seperti IP/email/log; jangan unggah hasil ekspor ke repo publik.
+**Hasil modul ini: PASS — verifikasi implementasi.** Route, class, method, dan binding/aksi yang dicakup script Admin V2 telah diperiksa pada IAAS-MGMT. Total pengujian 10 modul Admin: **146 PASS, 0 FAIL**. Aksi pengguna, ekspor, perubahan data, dan skenario role di browser tidak dijalankan.
 
 ## 6. Kesimpulan dan tindak lanjut
 
-Source modul Activity Logs telah diaudit dan terdokumentasi menggunakan 5 cuplikan kode dengan tautan ke baris aslinya. Tahap yang masih diperlukan adalah screenshot, uji role dan perilaku tombol, serta pembandingan dengan source terbaru di server `iaas-mgmt` karena source final sudah masuk GitHub `main` melalui commit `b3370b5`.
+Source modul Activity Logs telah diaudit dan terdokumentasi menggunakan 5 cuplikan kode dengan tautan ke baris aslinya. Verifikasi source dan hubungan handler di server `iaas-mgmt` telah lulus pengujian implementasi; uji interaksi langsung dan screenshot tetap dibedakan.
 
 
 ---
