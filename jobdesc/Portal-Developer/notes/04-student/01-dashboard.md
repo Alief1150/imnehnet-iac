@@ -133,11 +133,6 @@ Blade menggunakan ekspresi PHP/komponen dan atribut Livewire untuk merender data
 **Cakupan PASS:** keberadaan route yang benar, file aplikasi, method, dan kecocokan binding Livewire yang memang ada dalam source. Beberapa kontrol seperti tautan, filter GET, JavaScript, atau action tidak memakai `wire:click` dan tidak seluruhnya diuji otomatis.
 
 **Batas pembuktian:** script tidak menjalankan Start/Stop/Reset/Delete Lab, Submit Flag, upload avatar, perubahan profil/password, maupun interaksi browser secara nyata. Keberhasilan runtime aksi-aksi tersebut memerlukan bukti uji tersendiri. **PASS di sini berarti lolos verifikasi implementasi, bukan uji end-to-end.**
-
-**Hasil modul ini: PASS — verifikasi implementasi.** Route, class, Blade dan method yang dicakup script Student berhasil diperiksa melalui script read-only pada IAAS-MGMT. Pengujian enam modul menghasilkan 82 PASS dan satu asumsi URL Pentest yang dikoreksi dengan pemeriksaan route tambahan yang PASS.
-
-**Ruang lingkup:** pemeriksaan source dan keterhubungan handler yang ditemukan. Pengujian klik browser langsung, mutasi data, pembatasan akses antar-akun, dan hasil perubahan state bukan bagian dari bukti ini.
-
 ## 5. Screenshot
 
 Folder: [`images/04-student/01-dashboard/`](../../images/04-student/01-dashboard/)
