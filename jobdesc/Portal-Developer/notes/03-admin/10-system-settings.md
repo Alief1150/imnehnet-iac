@@ -233,3 +233,76 @@ final class SystemSettings extends Page
 **[Buka kode asli app/Filament/Pages/SystemSettings.php — baris 1–24](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/SystemSettings.php#L1-L24)**
 
 **Evaluasi:** Implementasi tersedia di kode final. Halaman yang berjalan merupakan bukti integrasi dasar, tetapi pengujian aksi, keamanan role, ekspor, dan respons kesalahan memerlukan hasil uji/screenshot khusus. Tabel skenario lama tidak dianggap otomatis PASS atau FAIL.
+
+
+## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
+
+### Edit Overview versus pengaturan akun
+
+```php
+// KOMENTAR DOKUMENTASI: perhatikan hak akses, data dari service, state Livewire, dan fallback error.
+    public function editOverview(): void
+    {
+        $this->requireAdmin();
+        $this->overviewDraft = ProjectOverview::read();
+        $this->editingOverview = true;
+        $this->resetValidation();
+    }
+
+    public function cancelOverviewChanges(): void
+    {
+        $this->editingOverview = false;
+        $this->overviewDraft = [];
+        $this->resetValidation();
+    }
+
+    public function addSoftware(): void
+    {
+        $this->requireAdmin();
+        if (! $this->editingOverview || count($this->overviewDraft['software'] ?? []) >= 50) { return; }
+        $this->overviewDraft['software'][] = ['name' => '', 'group' => 'Portal', 'version' => '', 'purpose' => ''];
+    }
+
+    public function removeSoftware(int $index): void
+    {
+        $this->requireAdmin();
+        unset($this->overviewDraft['software'][$index]);
+        $this->overviewDraft['software'] = array_values($this->overviewDraft['software']);
+        $this->resetValidation();
+    }
+
+    public function saveOverview(): void
+    {
+        $user = $this->requireAdmin();
+        $validated = $this->validate([
+            'overviewDraft' => ['required', 'array:name,release,summary,objectives,architecture,features,team,institution,software'],
+            'overviewDraft.name' => ['required', 'string', 'max:120'],
+            'overviewDraft.release' => ['nullable', 'string', 'max:60'],
+            'overviewDraft.summary' => ['required', 'string', 'max:4000'],
+            'overviewDraft.objectives' => ['required', 'string', 'max:4000'],
+            'overviewDraft.architecture' => ['required', 'string', 'max:6000'],
+            'overviewDraft.features' => ['required', 'string', 'max:4000'],
+            'overviewDraft.team' => ['nullable', 'string', 'max:3000'],
+            'overviewDraft.institution' => ['required', 'string', 'max:255'],
+            'overviewDraft.software' => ['present', 'array', 'max:50'],
+            'overviewDraft.software.*' => ['array:name,group,version,purpose'],
+            'overviewDraft.software.*.name' => ['required', 'string', 'max:100', 'distinct:ignore_case'],
+            'overviewDraft.software.*.group' => ['required', Rule::in(['Portal', 'Automation / Data', 'Virtualisasi / Lab', 'Monitoring', 'Security / Connectivity'])],
+            'overviewDraft.software.*.version' => ['nullable', 'string', 'max:100'],
+            'overviewDraft.software.*.purpose' => ['required', 'string', 'max:500'],
+        ]);
+        ProjectOverview::write($validated['overviewDraft']);
+        app(ActivityLogService::class)->record(actor: $user, action: 'UPDATE_SETTINGS', resource: null, status: 'completed', description: 'Memperbarui dokumentasi proyek dan inventaris software IMNEHNET.');
+        $this->cancelOverviewChanges();
+        Notification::make()->title('Overview disimpan')->body('Informasi proyek dan versi teknologi telah diperbarui.')->success()->send();
+    }
+
+    public function cancelProfileChanges(): void
+    {
+```
+
+**[Buka kode asli — app/Filament/Pages/SystemSettings.php (L108–L165)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/SystemSettings.php#L108-L165)**
+
+**Analisis implementasi:** Method edit Overview mengubah metadata platform yang dikelola halaman, bukan otomatis meng-upgrade software sistem operasi. Form profil dan perubahan password harus diaudit terpisah.
+
+**Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Pengujian aksi, integrasi layanan, role, kondisi error, dan perubahan data baru berstatus **PASS** jika ada bukti hasil aktual. Kode tidak diubah oleh dokumentasi.
