@@ -235,3 +235,64 @@ final class UserPresence
 **[Buka kode asli app/Support/UserPresence.php — baris 1–24](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Support/UserPresence.php#L1-L24)**
 
 **Evaluasi:** Implementasi tersedia di kode final. Halaman yang berjalan merupakan bukti integrasi dasar, tetapi pengujian aksi, keamanan role, ekspor, dan respons kesalahan memerlukan hasil uji/screenshot khusus. Tabel skenario lama tidak dianggap otomatis PASS atau FAIL.
+
+
+## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
+
+### Presence dan Last Seen aktual
+
+```php
+// KOMENTAR DOKUMENTASI: perhatikan hak akses, data dari service, state Livewire, dan fallback error.
+                    ->badge()
+                    ->color(fn (User $record): string => $record->environments()->count() === 0 ? 'warning' : 'success')
+                    ->toggleable(),
+
+                // Presence and Last Seen share one compact column.
+                TextColumn::make('presence')
+                    ->label('Presence')
+                    ->state(function (User $record): HtmlString {
+                        $online = \App\Support\UserPresence::online(
+                            (int) $record->getKey()
+                        );
+
+                        $lastSeen = $record->last_seen_at;
+
+                        $badge = $online ? 'Online' : 'Offline';
+
+                        $time = $online
+                            ? 'Now'
+                            : ($lastSeen
+                                ? $lastSeen->diffForHumans(
+                                    null, null, true
+                                )
+                                : 'Never');
+
+                        $tooltip = $lastSeen
+                            ? 'Last seen: '.$lastSeen->format('d M Y, H:i:s T')
+                            : 'No activity recorded';
+
+                        $style = $online
+                            ? 'background:rgba(34,197,94,.12);'
+                                .'color:#22c55e;'
+                                .'border:1px solid rgba(34,197,94,.3);'
+                            : 'background:rgba(148,163,184,.12);'
+                                .'color:#94a3b8;'
+                                .'border:1px solid rgba(148,163,184,.25);';
+
+                        return new HtmlString(
+                            '<div style="display:flex;'
+                            .'flex-direction:column;'
+                            .'align-items:center;'
+                            .'gap:3px;">'
+
+                            .'<span style="display:inline-flex;'
+                            .'padding:2px 7px;'
+                            .'border-radius:5px;'
+                            .'font-size:11px;'
+```
+
+**[Buka kode asli — app/Filament/Resources/Users/Tables/UsersTable.php (L65–L110)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Resources/Users/Tables/UsersTable.php#L65-L110)**
+
+**Analisis implementasi:** Indikator Presence memanfaatkan informasi keberadaan pengguna dan waktu pembaruan. Jangan menafsirkan 'online' hanya dari status akun aktif; keberadaan pengguna dan hak akses adalah dua hal terpisah.
+
+**Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
