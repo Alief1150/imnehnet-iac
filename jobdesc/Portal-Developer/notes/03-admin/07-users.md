@@ -296,3 +296,20 @@ final class UserPresence
 **Analisis implementasi:** Indikator Presence memanfaatkan informasi keberadaan pengguna dan waktu pembaruan. Jangan menafsirkan 'online' hanya dari status akun aktif; keberadaan pengguna dan hak akses adalah dua hal terpisah.
 
 **Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
+
+
+## Peta Interaksi dan Data Antarmuka — Audit Final
+
+| UI / aksi | Method, enum, atau komponen | Logika yang diperiksa |
+|---|---|---|
+| **Search / filters** | `UsersTable` | Pencarian dan filter bekerja pada query Eloquent yang didefinisikan table. |
+| **Presence** | `UserPresence` | Status online/offline dinilai lewat aktivitas/presence, bukan berdasarkan role akun. |
+| **Last Seen** | `last_seen_at` | Timestamp aktivitas terakhir berasal dari model/kolom migrasi. |
+| **Create / Edit** | `UserResource / UserForm` | Form memvalidasi field role, status dan atribut akun sebelum penyimpanan. |
+| **Delete** | `UsersTable actions` | Proses penghapusan harus memperhatikan relasi dan lifecycle resource milik pengguna. |
+
+**[Buka kode tampilan/konfigurasi — app/Filament/Resources/Users/Tables/UsersTable.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Resources/Users/Tables/UsersTable.php)**
+
+**[Buka kode PHP/handler — app/Filament/Resources/Users/UserResource.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Resources/Users/UserResource.php)**
+
+**Pengujian:** pengecekan kode dan UI dapat dinyatakan telah diaudit; hasil operasi setiap tombol, pembatasan role, dan interaksi dengan backend diberi PASS hanya apabila bukti aktual tersedia. Tidak menjalankan operasi destruktif pada server produksi untuk tujuan dokumentasi.
