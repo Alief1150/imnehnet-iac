@@ -210,3 +210,80 @@ class ListActivityLogs extends ListRecords
 **[Buka kode asli app/Filament/Resources/ActivityLogs/Pages/ListActivityLogs.php — baris 1–24](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Resources/ActivityLogs/Pages/ListActivityLogs.php#L1-L24)**
 
 **Evaluasi:** Implementasi tersedia di kode final. Halaman yang berjalan merupakan bukti integrasi dasar, tetapi pengujian aksi, keamanan role, ekspor, dan respons kesalahan memerlukan hasil uji/screenshot khusus. Tabel skenario lama tidak dianggap otomatis PASS atau FAIL.
+
+
+## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
+
+### Audit trail: actor, action, result dan filter
+
+```php
+// KOMENTAR DOKUMENTASI: perhatikan hak akses, data dari service, state Livewire, dan fallback error.
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->columns([
+                TextColumn::make('created_at')
+                    ->label('When')
+                    ->since()
+                    ->dateTooltip()
+                    ->sortable(),
+
+                TextColumn::make('action')
+                    ->label('Action')
+                    ->badge()
+                    ->sortable()
+                    ->searchable()
+                    ->color(fn (string $state): string => str_ends_with($state, '_RESULT') ? 'success' : 'gray'),
+
+                TextColumn::make('actor.name')
+                    ->label('Actor')
+                    ->placeholder('System')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('description')
+                    ->label('Description')
+                    ->wrap()
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('status')
+                    ->label('Result')
+                    ->badge()
+                    ->icon(fn (string $state): string => match ($state) {
+                        'completed', 'success' => 'heroicon-m-check-circle',
+                        'failed' => 'heroicon-m-x-circle',
+                        'queued' => 'heroicon-m-clock',
+                        default => 'heroicon-m-minus-circle',
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'completed', 'success' => 'success',
+                        'failed' => 'danger',
+                        'queued', 'running' => 'warning',
+                        default => 'gray',
+                    })
+                    ->sortable(),
+
+                TextColumn::make('resource_type')
+                    ->label('Resource')
+                    ->formatStateUsing(fn (?string $state): string => $state === null ? '—' : class_basename($state))
+                    ->toggleable(),
+
+                TextColumn::make('ip_address')
+                    ->label('Source IP')
+                    ->placeholder('—')
+                    ->fontFamily('mono')
+                    ->toggleable(),
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->filters([
+                SelectFilter::make('status')
+                    ->label('Result')
+                    ->options([
+```
+
+**[Buka kode asli — app/Filament/Resources/ActivityLogs/Tables/ActivityLogsTable.php (L12–L73)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Resources/ActivityLogs/Tables/ActivityLogsTable.php#L12-L73)**
+
+**Analisis implementasi:** Tabel audit memetakan aksi, aktor, deskripsi, hasil, sumber, serta filter. Daftar log bukan bukti bahwa ekspor maupun setiap aksi audit sudah diuji end-to-end.
+
+**Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Pengujian aksi, integrasi layanan, role, kondisi error, dan perubahan data baru berstatus **PASS** jika ada bukti hasil aktual. Kode tidak diubah oleh dokumentasi.
