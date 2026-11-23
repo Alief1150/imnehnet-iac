@@ -1,31 +1,194 @@
-# Admin Panel — Monitoring — Webportal IMNEHNET
+# Admin Monitoring — Dokumentasi Implementasi Webportal IMNEHNET
 
-**Proyek:** IMNEHNET
-**Bidang:** Portal Developer
-**PIC:** Malik
-**Tahap:** 03 — Admin Panel
-**Status:** Draft dokumentasi — belum diverifikasi
+**Penanggung jawab:** Septihadi Malik — Portal Developer  
+**Tahap:** 03 — Admin Panel  
+**Sumber:** Repository `Alief1150/imnehnet-iac`, branch `main` (audit 23 November 2026)  
+**Status:** Source telah diaudit; pengujian end-to-end dan screenshot masih perlu dilampirkan.
 
-## 1. Deskripsi Pekerjaan
+## 1. Deskripsi dan fungsi modul
 
-Tuliskan tujuan dan ruang lingkup pekerjaan berdasarkan implementasi aktual Webportal.
+Admin Monitoring memperlihatkan telemetry host fisik, VM IAAS-MGMT/LAB-ENV/LAB-ATK, CPU, memory, storage, container, dan status endpoint monitoring.
 
-## 2. Implementasi
+Modul dibuat dengan **Filament/Livewire PHP** untuk state, pengambilan data, otorisasi dan aksi backend, serta **Blade** untuk presentasi dan interaksi `wire:click`/`wire:poll`. Kode di bawah merupakan baris dari source asli dengan **komentar tambahan untuk penjelasan**, bukan file lengkap yang dapat langsung ditempel.
 
-Jelaskan fitur, komponen antarmuka, alur kerja, serta integrasi backend berdasarkan source dan pengujian.
+## 2. Kode penting: PHP, Blade, variabel dan alurnya
 
-## 3. Dokumentasi Tampilan
+### 2.1 Monitoring.php
 
-Unggah screenshot implementasi aktual ke `jobdesc/Portal-Developer/images/03-admin/04-monitoring/`, lalu tambahkan referensi gambar dan caption di sini.
+```php
+// PENJELASAN: Data host fisik diperoleh dari service monitoring.
 
-## 4. Pengujian
+    public function physicalHost(): array
 
-Catat langkah pengujian, hasil aktual, dan bukti. Jangan menyatakan pengujian berhasil sebelum diverifikasi.
+    {
 
-## 5. Hasil dan Evaluasi
+        return app(\App\Services\MonitoringHostService::class)->summary();
 
-Uraikan hasil dan keterbatasan yang teridentifikasi.
+    }
+
+
+
+    public function resources(): array
+    {
+```
+
+**Kode asli:** [Monitoring.php — baris 26–38](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Monitoring.php#L26-L38).
+
+**Fungsi dan alasan:** Data host fisik diperoleh dari service monitoring. Method/properti PHP memproses data di server. Nama variabel pada cuplikan perlu dibaca bersama class dan service yang dipanggil.
+
+### 2.2 Monitoring.php
+
+```php
+// PENJELASAN: Rangkaian metrik VM disiapkan untuk grafik.
+    /** @return array<string, mixed> */
+    public function vmSeries(): array
+    {
+        return app(MonitoringVmSeriesService::class)->series();
+    }
+
+    public function isPolling(): bool
+    {
+        return true;
+    }
+
+    public function refreshedAt(): ?Carbon
+    {
+```
+
+**Kode asli:** [Monitoring.php — baris 72–84](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Monitoring.php#L72-L84).
+
+**Fungsi dan alasan:** Rangkaian metrik VM disiapkan untuk grafik. Method/properti PHP memproses data di server. Nama variabel pada cuplikan perlu dibaca bersama class dan service yang dipanggil.
+
+### 2.3 monitoring.blade.php
+
+```blade
+{{-- PENJELASAN: Blade menampung hasil method halaman PHP. --}}
+    @php
+        $resources = $this->resources();
+        $physicalHost = $this->physicalHost();
+        $hostDetails = $this->hostDetails();
+        $trends = $this->trends();
+        $inventory = $this->containerInventory();
+        $backends = $this->backends();
+        $health = $this->health();
+        $vmSeries = $this->vmSeries();
+        $metricNames = ['cpu' => 'Average CPU', 'memory' => 'Average Memory', 'storage' => 'Average Storage'];
+        $metricIcons = ['cpu' => 'cpu', 'memory' => 'memory-stick', 'storage' => 'hard-drive'];
+        $metricColors = ['cpu' => '#14b8a6', 'memory' => '#3b82f6', 'storage' => '#f59e0b'];
+        $statusTone = fn ($status) => match ($status) {
+```
+
+**Kode asli:** [monitoring.blade.php — baris 2–14](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/monitoring.blade.php#L2-L14).
+
+**Fungsi dan alasan:** Blade menampung hasil method halaman PHP. Elemen Blade bertanggung jawab menampilkan UI atau mengirim event ke method Livewire; keputusan akses dan efek sistem tetap berada di PHP.
+
+### 2.4 monitoring.blade.php
+
+```blade
+{{-- PENJELASAN: Halaman meminta refresh Livewire 10 detik. --}}
+
+    <div wire:poll.10s class="space-y-4" data-im-monitoring>
+        @php
+            $hostSamples = collect(['cpu', 'memory', 'storage'])->map(fn ($key) => $physicalHost[$key]['sample_at'] ?? null)->filter(fn ($v) => is_numeric($v));
+            $lastHostSample = $hostSamples->isNotEmpty() ? (float) $hostSamples->min() : null;
+            $hostAge = $hostDetails['age_seconds'] ?? null;
+            $hostOnline = ($hostDetails['up'] ?? false) && collect(['cpu', 'memory', 'storage'])->every(fn ($key) => ($physicalHost[$key]['status'] ?? '') === 'live');
+        @endphp
+        <div data-monitor-v2-layout class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h2 class="text-xl font-semibold">Infrastructure Monitoring</h2>
+                <p class="mt-1 text-xs text-base-content/60">Near-real-time telemetry · physical host and 3 VMs · dashboard refresh 10s</p>
+            </div>
+```
+
+**Kode asli:** [monitoring.blade.php — baris 19–31](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/monitoring.blade.php#L19-L31).
+
+**Fungsi dan alasan:** Halaman meminta refresh Livewire 10 detik. Elemen Blade bertanggung jawab menampilkan UI atau mengirim event ke method Livewire; keputusan akses dan efek sistem tetap berada di PHP.
+
+### 2.5 monitoring.blade.php
+
+```blade
+{{-- PENJELASAN: Tombol metrik CPU mengubah tampilan grafik frontend. --}}
+                        <div class="join" role="group" aria-label="Performance metric">
+                            <button type="button" class="btn btn-sm join-item btn-primary" data-monitor-metric="cpu">CPU</button>
+                            <button type="button" class="btn btn-sm join-item btn-soft" data-monitor-metric="memory">Memory</button>
+                            <button type="button" class="btn btn-sm join-item btn-soft" data-monitor-metric="storage">Storage</button>
+                        </div>
+                    </div>
+                    <div wire:ignore class="min-w-0" data-monitor-chart style="height:290px"></div>
+                    <div class="flex flex-wrap items-center gap-4 text-xs text-base-content/70">
+                        <span><span class="mr-1 inline-block size-2.5 rounded-full bg-teal-500"></span>IAAS-MGMT</span>
+                        <span><span class="mr-1 inline-block size-2.5 rounded-full bg-blue-500"></span>LAB-ENV</span>
+                        <span><span class="mr-1 inline-block size-2.5 rounded-full bg-amber-500"></span>LAB-ATK</span>
+                    </div>
+                    <p class="text-[11px] text-base-content/55">Live host telemetry from three native Node Exporters. Missing metrics are shown as No Data.</p>
+```
+
+**Kode asli:** [monitoring.blade.php — baris 427–439](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/monitoring.blade.php#L427-L439).
+
+**Fungsi dan alasan:** Tombol metrik CPU mengubah tampilan grafik frontend. Elemen Blade bertanggung jawab menampilkan UI atau mengirim event ke method Livewire; keputusan akses dan efek sistem tetap berada di PHP.
+
+### 2.6 monitoring.blade.php
+
+```blade
+{{-- PENJELASAN: Daftar endpoint telemetry dibentuk melalui foreach. --}}
+                    <div class="divide-y divide-base-content/10">
+                        @foreach ($backends as $backend)
+                            @php
+                                $probe = $health[$backend['key']] ?? [];
+                                $effectiveStatus = $backend['status'];
+                            @endphp
+                            <div class="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <span class="size-2 shrink-0 rounded-full {{ $effectiveStatus === 'healthy' ? 'bg-success' : ($effectiveStatus === 'offline' ? 'bg-error' : 'bg-warning') }}"></span>
+                                        <span class="text-sm font-semibold">{{ $backend['label'] }}</span>
+                                    </div>
+                                    <div class="truncate text-xs text-base-content/55">{{ $backend['scope'] }}</div>
+```
+
+**Kode asli:** [monitoring.blade.php — baris 476–488](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/monitoring.blade.php#L476-L488).
+
+**Fungsi dan alasan:** Daftar endpoint telemetry dibentuk melalui foreach. Elemen Blade bertanggung jawab menampilkan UI atau mengirim event ke method Livewire; keputusan akses dan efek sistem tetap berada di PHP.
+
+## 3. Alur penggunaan
+
+1. Administrator masuk ke panel **Admin** dengan akun yang memiliki izin.
+2. Halaman Filament memuat data yang diperlukan dari service atau model.
+3. Blade menampilkan nilai/status; tombol dan filter mengirim event Livewire jika tersedia.
+4. Server memverifikasi permintaan dan mengembalikan hasil; status operasi harus diperiksa melalui data aktual.
+
+## 4. Screenshot yang dibutuhkan
+
+Upload ke folder `jobdesc/Portal-Developer/images/03-admin/04-monitoring/`:
+
+![Gambar 1 — Monitoring](../../images/03-admin/04-monitoring/01-monitoring-overview.png)
+
+*Gambar 1. Monitoring: monitoring overview.*
+
+![Gambar 2 — Monitoring](../../images/03-admin/04-monitoring/02-physical-host.png)
+
+*Gambar 2. Monitoring: physical host.*
+
+![Gambar 3 — Monitoring](../../images/03-admin/04-monitoring/03-vm-metrics.png)
+
+*Gambar 3. Monitoring: vm metrics.*
+
+![Gambar 4 — Monitoring](../../images/03-admin/04-monitoring/04-telemetry-endpoints.png)
+
+*Gambar 4. Monitoring: telemetry endpoints.*
+
+## 5. Pengujian dan batasan
+
+| Pengujian | Ekspektasi | Status |
+|---|---|---|
+| Login Admin lalu buka modul | Halaman dan komponen muncul tanpa error | Belum dilampirkan |
+| Akses oleh akun tanpa izin | Akses dibatasi sesuai role | Belum dilampirkan |
+| Cek isi kartu/tabel/status | Nilai sesuai data backend; tidak dikarang | Belum dilampirkan |
+| Coba tombol/filter pada data uji sah | Alur dan validasi backend berjalan sesuai aturan | Belum dilampirkan |
+
+**Catatan:** jangan memodifikasi infrastruktur atau membuka sesi nyata hanya untuk screenshot. Source GitHub bisa berbeda dengan patch di server `iaas-mgmt`; hasil runtime harus diverifikasi terpisah.
 
 ## 6. Kesimpulan
 
-Ringkas hasil pekerjaan dengan merujuk pada bukti yang tersedia.
+Struktur dan alur utama **Monitoring** telah dijelaskan dengan 6 cuplikan source tertaut. Screenshot dan bukti pengujian masih perlu dilengkapi untuk menyatakan dokumentasi final.
