@@ -15,13 +15,14 @@ History menampilkan histori sesi laboratorium berdasarkan kepemilikan akun dan f
 
 ## 3. Cuplikan Kode, Variabel dan Logika
 
-Cuplikan di bawah **persis dari file yang di-commit**. Penjelasan diberikan di luar cuplikan, sedangkan tautan tepat di bawahnya menunjuk ke baris source.
+Baris source pada cuplikan berasal dari file yang di-commit; komentar bertanda PENJELASAN DOKUMENTASI adalah anotasi tambahan. Penjelasan diberikan di luar cuplikan, sedangkan tautan tepat di bawahnya menunjuk ke baris source.
 
 ### 3.1 PHP — canAccess
 
 Fungsi `canAccess` dipanggil dalam konteks page Filament. Pemeriksaan akses, data, dan efek samping dilakukan melalui kode backend, bukan sekadar tampilan.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Memeriksa akses halaman sesuai autentikasi dan role Student.
 
 
     public static function canAccess(): bool
@@ -47,6 +48,7 @@ Fungsi `canAccess` dipanggil dalam konteks page Filament. Pemeriksaan akses, dat
 Fungsi `getSlug` dipanggil dalam konteks page Filament. Pemeriksaan akses, data, dan efek samping dilakukan melalui kode backend, bukan sekadar tampilan.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Menentukan slug/route halaman pada panel Filament.
 
 
     public static function getSlug(?Panel $panel = null): string
@@ -77,6 +79,7 @@ Fungsi `getSlug` dipanggil dalam konteks page Filament. Pemeriksaan akses, data,
 Blade mengimplementasikan bagian antarmuka `$filter = request()`; interaksi dinamis dikaitkan dengan action PHP atau state hasil query.
 
 ```blade
+{{-- PENJELASAN DOKUMENTASI (bukan bagian source): Blade adalah lapisan presentasi: tampilkan state, lakukan binding event, jangan menaruh otorisasi hanya di markup. --}}
     $user = auth()->user();
 
     $filter = request()->query('status', 'all');
@@ -106,6 +109,7 @@ Blade mengimplementasikan bagian antarmuka `$filter = request()`; interaksi dina
 Blade mengimplementasikan bagian antarmuka `LabSession`; interaksi dinamis dikaitkan dengan action PHP atau state hasil query.
 
 ```blade
+{{-- PENJELASAN DOKUMENTASI (bukan bagian source): Blade adalah lapisan presentasi: tampilkan state, lakukan binding event, jangan menaruh otorisasi hanya di markup. --}}
     try {
 
         $model = new \App\Models\LabSession;
@@ -135,6 +139,7 @@ Blade mengimplementasikan bagian antarmuka `LabSession`; interaksi dinamis dikai
 Blade mengimplementasikan bagian antarmuka `$rows = collect`; interaksi dinamis dikaitkan dengan action PHP atau state hasil query.
 
 ```blade
+{{-- PENJELASAN DOKUMENTASI (bukan bagian source): Blade adalah lapisan presentasi: tampilkan state, lakukan binding event, jangan menaruh otorisasi hanya di markup. --}}
 
 
     $rows = collect();
