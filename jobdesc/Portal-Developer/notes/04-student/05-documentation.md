@@ -17,13 +17,14 @@ Documentation menyediakan panduan pengguna dan tautan Manual Book PDF secara kon
 
 ## 3. Analisis Implementasi PHP dan Blade
 
-Cuplikan berikut diambil dari source asli; seluruh penjelasan sengaja berada di luar cuplikan, sehingga tautan pada setiap blok bisa dibandingkan baris demi baris.
+Cuplikan memuat source asli dan komentar dokumentasi yang ditandai secara eksplisit, dan tautan pada setiap blok menunjuk ke baris kode asli (tanpa komentar tambahan).
 
 ### 3.1 Method PHP — canAccess()
 
 Kode di bawah menangani bagian method php — canaccess(). Perhatikan argumen, validasi, pengembalian status, dan dependensi. Kode PHP menjalankan logika domain sedangkan Blade hanya menyusun tampilan serta interaksi yang disediakan.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Memeriksa akses halaman sesuai autentikasi dan role Student.
 
 
     public static function canAccess(): bool
@@ -49,6 +50,7 @@ Kode di bawah menangani bagian method php — canaccess(). Perhatikan argumen, v
 Kode di bawah menangani bagian method php — getslug(). Perhatikan argumen, validasi, pengembalian status, dan dependensi. Kode PHP menjalankan logika domain sedangkan Blade hanya menyusun tampilan serta interaksi yang disediakan.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Menentukan slug/route halaman pada panel Filament.
 
 
     public static function getSlug(?Panel $panel = null): string
@@ -82,6 +84,7 @@ Kode di bawah menangani bagian method php — getslug(). Perhatikan argumen, val
 Kode di bawah menangani bagian blade — $manualbookpath. Perhatikan argumen, validasi, pengembalian status, dan dependensi. Kode PHP menjalankan logika domain sedangkan Blade hanya menyusun tampilan serta interaksi yang disediakan.
 
 ```blade
+{{-- PENJELASAN DOKUMENTASI (bukan bagian source): Blade adalah lapisan presentasi: tampilkan state, lakukan binding event, jangan menaruh otorisasi hanya di markup. --}}
 @php
 
     $manualBookPath = public_path('downloads/IMNEHNET-Manual-Book.pdf');
@@ -113,6 +116,7 @@ Kode di bawah menangani bagian blade — $manualbookpath. Perhatikan argumen, va
 Kode di bawah menangani bagian blade — $manualbookready. Perhatikan argumen, validasi, pengembalian status, dan dependensi. Kode PHP menjalankan logika domain sedangkan Blade hanya menyusun tampilan serta interaksi yang disediakan.
 
 ```blade
+{{-- PENJELASAN DOKUMENTASI (bukan bagian source): Blade adalah lapisan presentasi: tampilkan state, lakukan binding event, jangan menaruh otorisasi hanya di markup. --}}
     $manualBookPath = public_path('downloads/IMNEHNET-Manual-Book.pdf');
 
     $manualBookReady = is_file($manualBookPath);
@@ -144,6 +148,7 @@ Kode di bawah menangani bagian blade — $manualbookready. Perhatikan argumen, v
 Kode di bawah menangani bagian blade — @if($manualbookready). Perhatikan argumen, validasi, pengembalian status, dan dependensi. Kode PHP menjalankan logika domain sedangkan Blade hanya menyusun tampilan serta interaksi yang disediakan.
 
 ```blade
+{{-- PENJELASAN DOKUMENTASI (bukan bagian source): Blade adalah lapisan presentasi: tampilkan state, lakukan binding event, jangan menaruh otorisasi hanya di markup. --}}
         <p>
 
             @if($manualBookReady)
