@@ -387,3 +387,47 @@ Tombol **Open shell** tidak sama dengan tautan **Open Terminal Fullscreen**. Tom
 **[Buka kode asli `app/Services/Terminal/AdminTerminalService.php` — L163–L221](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Services/Terminal/AdminTerminalService.php#L163-L221)**
 
 **Kontrol keamanan:** akses terminal administratif bersifat istimewa. Keberhasilan klik tombol harus dibuktikan dengan audit log, status sesi, batasan role, dan hasil koneksi pada node uji; kegagalan tidak boleh disamarkan sebagai sesi terbuka. Jangan membuka shell produksi hanya untuk dokumentasi screenshot.
+
+
+## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
+
+### Open shell di Blade — satu klik per node dan feedback loading
+
+Cuplikan berikut dibaca dari source pada branch `main`; baris pertama adalah komentar penjelasan yang hanya ditambahkan dalam dokumentasi.
+
+```blade
+{{-- CATATAN DOKUMENTASI (bukan kode produksi): Tombol Open shell memanggil Livewire pada node target spesifik, menonaktifkan klik ganda saat request aktif, dan mengganti teks menjadi Connecting. --}}
+                        {{-- Beside the card, never inside it: a button in a button is
+                             invalid markup, and the inner click would also select. One
+                             click opens that node's shell directly, so a shell never
+                             depends on an earlier selection round trip having applied. --}}
+                        <button type="button" wire:click="openAdminSessionFor('{{ $target['key'] }}')"
+                                wire:key="admin-terminal-open-{{ $target['key'] }}"
+                                wire:loading.attr="disabled"
+                                wire:target="openAdminSessionFor('{{ $target['key'] }}')"
+                                title="Open a shell on {{ $target['name'] }} now"
+                                class="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-teal-600/30 bg-teal-600/10 px-3 text-[11px] font-semibold text-teal-700 hover:bg-teal-600/20 disabled:opacity-60 dark:text-teal-300 dark:hover:bg-teal-500/20">
+                            {!! \App\Support\Lucide::html('terminal') !!}
+                            <span wire:loading.remove wire:target="openAdminSessionFor('{{ $target['key'] }}')">Open shell</span>
+                            <span wire:loading wire:target="openAdminSessionFor('{{ $target['key'] }}')">Connecting...</span>
+                        </button>
+
+                        @if ($this->hasAdminSession($target['key']))
+                            <button type="button" wire:click="closeAdminSessionFor('{{ $target['key'] }}')"
+                                    wire:key="admin-terminal-close-{{ $target['key'] }}"
+                                    wire:loading.attr="disabled"
+                                    wire:target="closeAdminSessionFor('{{ $target['key'] }}')"
+                                    title="Close the shell on {{ $target['name'] }}"
+                                    class="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:border-white/15 dark:text-gray-300 dark:hover:bg-white/5">
+                                {!! \App\Support\Lucide::html('trash') !!}
+                                <span wire:loading.remove wire:target="closeAdminSessionFor('{{ $target['key'] }}')">Close</span>
+                                <span wire:loading wire:target="closeAdminSessionFor('{{ $target['key'] }}')">Closing...</span>
+                            </button>
+                        @endif
+```
+
+**[Buka kode asli — resources/views/filament/pages/terminal-admin.blade.php (L113–L139)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/terminal-admin.blade.php#L113-L139)**
+
+**Penjelasan teknis:** Ekspresi `wire:click="openAdminSessionFor('{{ $target['key'] }}')"` mengirim key node ke method PHP; `wire:key` menjaga identitas elemen per node; `wire:loading.attr="disabled"` mencegah request ganda; `wire:loading` menampilkan `Connecting...`. Tombol **Close** menggunakan `closeAdminSessionFor(...)` dan muncul jika ada sesi. Button tidak menjalankan shell melalui JavaScript langsung.
+
+**Kesimpulan verifikasi:** source sudah tersinkron di commit final. Status *implementasi tersedia* dapat dinyatakan terverifikasi lewat inspeksi kode; status *pengujian fungsi berhasil/PASS* hanya dicantumkan apabila hasil uji dan screenshot relevan telah dilampirkan. Dokumentasi ini tidak menjalankan aksi produksi untuk menghasilkan bukti palsu.
