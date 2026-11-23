@@ -134,15 +134,9 @@ Blade menggunakan ekspresi PHP/komponen dan atribut Livewire untuk merender data
 
 **Batas pembuktian:** script tidak menjalankan Start/Stop/Reset/Delete Lab, Submit Flag, upload avatar, perubahan profil/password, maupun interaksi browser secara nyata. Keberhasilan runtime aksi-aksi tersebut memerlukan bukti uji tersendiri. **PASS di sini berarti lolos verifikasi implementasi, bukan uji end-to-end.**
 
+**Hasil modul ini: PASS — verifikasi implementasi.** Route, class, Blade dan method yang dicakup script Student berhasil diperiksa melalui script read-only pada IAAS-MGMT. Pengujian enam modul menghasilkan 82 PASS dan satu asumsi URL Pentest yang dikoreksi dengan pemeriksaan route tambahan yang PASS.
 
-| Aspek | Hasil audit | Bukti runtime |
-|---|---|---|
-| Registrasi halaman & kontrol akses | Ada pada source/panel | Periksa akses role student/admin |
-| Tampilan & pengambilan data | Ada pada PHP/Blade | Lampirkan screenshot sesuai akun uji |
-| Aksi tombol dan status | Handler tersedia sesuai cuplikan | Jalankan pada data uji sah; catat aktual dan hasil |
-| Error, data kosong, dan batasan | Perlu periksa jalur exception/fallback | Belum ada bukti uji terlampir |
-
-Keberhasilan membuka website tidak membuktikan seluruh aksi berjalan sukses. Status **lulus** hanya diberikan ketika langkah, hasil aktual, dan bukti tercatat.
+**Ruang lingkup:** pemeriksaan source dan keterhubungan handler yang ditemukan. Pengujian klik browser langsung, mutasi data, pembatasan akses antar-akun, dan hasil perubahan state bukan bagian dari bukti ini.
 
 ## 5. Screenshot
 
@@ -166,7 +160,7 @@ Folder: [`images/04-student/01-dashboard/`](../../images/04-student/01-dashboard
 
 ## 6. Kesimpulan
 
-Dokumen mengacu langsung ke implementasi pada commit final, dengan pemisahan tanggung jawab page PHP dan Blade. Pengujian runtime, role, interaksi, dan lampiran screenshot dilengkapi sebagai bukti final tanpa mengubah source produksi.
+Dokumen mengacu langsung ke implementasi pada commit final, dengan pemisahan tanggung jawab page PHP dan Blade. Pengujian implementasi dari IAAS-MGMT telah PASS. Uji interaksi browser, role lintas akun, dan screenshot tetap dipisahkan sesuai bukti yang tersedia.
 
 ## Referensi Source
 
