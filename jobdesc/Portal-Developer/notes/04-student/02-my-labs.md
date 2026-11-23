@@ -230,3 +230,23 @@ Berikut cuplikan PHP asli dari repository terbaru; satu baris komentar dokumenta
 **Logika fitur:** Handler `startLab()` memeriksa autentikasi/course, mendeteksi sesi berjalan, dan menyampaikan feedback lewat Notification. Aksi hidup/mati/reset menggunakan handler backend yang perlu diuji pada sesi latihan, bukan klik tombol pada halaman produksi.
 
 **Pengujian dan hasil:** Source sudah diverifikasi terpasang pada commit final. Akses panel membuktikan halaman dapat diakses pada kondisi pengguna yang diuji, tetapi tidak otomatis memverifikasi semua skenario. Catat PASS pada kasus yang benar-benar sudah diuji beserta screenshot dan outputnya; jangan membuat data hasil uji yang tidak terlampir.
+
+
+## Peta Kontrol UI → PHP/Livewire (Audit Final)
+
+| Kontrol | Handler / state | Proses, validasi, dan hasil |
+|---|---|---|
+| **Start Lab** | `startLab` | Memeriksa autentikasi dan course, mencegah duplikasi sesi, kemudian memulai jalur provisioning sesuai layanan dan queue. |
+| **Open Workspace** | `openWorkspace` | Mengarahkan student ke workspace lab sesuai sesi yang tersedia dan aturan akses. |
+| **Stop** | `requestStop → stopLab` | Konfirmasi dilakukan sebelum lifecycle berhenti; aksi perubahan runtime ditangani backend. |
+| **Resume** | `resumeLab` | Meminta start ulang runtime sesi sesuai status dan batasannya. |
+| **Reset** | `requestReset → confirmReset` | Menampilkan konfirmasi dan meminta reset; efek pada state latihan harus diinformasikan kepada student. |
+| **Delete** | `requestDelete → confirmDelete` | Meminta konfirmasi lalu menghapus sesi/lab menurut alur backend; jangan dipakai hanya untuk screenshot. |
+| **Cancel dialog** | `cancelDelete / cancelStop / cancelReset` | Menutup dialog konfirmasi tanpa memicu operasi destruktif. |
+| **Dual Terminal** | `connectLabTerminals` | Menghubungkan terminal untuk lab yang siap, menyimpan state/kegagalan akses menurut handler. |
+
+**[Buka kode tampilan Blade — resources/views/filament/pages/my-labs.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/my-labs.blade.php)**
+
+**[Buka kode handler PHP — app/Filament/Pages/MyLabs.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/MyLabs.php)**
+
+**Penjelasan:** Blade menyajikan form, tombol, dan indikator loading; method PHP/Livewire menjalankan otorisasi, query, notifikasi, validasi, serta memanggil service atau queue ketika diperlukan. **Pengujian UI dan runtime dipisahkan** agar status keberhasilan tidak dilebihkan tanpa bukti kasus uji.
