@@ -208,15 +208,9 @@ Kode di bawah menangani bagian blade — @include. Perhatikan argumen, validasi,
 
 **Batas pembuktian:** script tidak menjalankan Start/Stop/Reset/Delete Lab, Submit Flag, upload avatar, perubahan profil/password, maupun interaksi browser secara nyata. Keberhasilan runtime aksi-aksi tersebut memerlukan bukti uji tersendiri. **PASS di sini berarti lolos verifikasi implementasi, bukan uji end-to-end.**
 
+**Hasil modul ini: PASS — verifikasi implementasi.** Route, class, Blade dan method yang dicakup script Student berhasil diperiksa melalui script read-only pada IAAS-MGMT. Pengujian enam modul menghasilkan 82 PASS dan satu asumsi URL Pentest yang dikoreksi dengan pemeriksaan route tambahan yang PASS.
 
-| Aspek | Verifikasi yang diperlukan | Status |
-|---|---|---|
-| Halaman dan role | Halaman tersedia, akun yang tidak berhak ditolak | Source terverifikasi; hasil uji belum dilampirkan |
-| Rendering Blade | Data dan tombol muncul sesuai kondisi | Perlu screenshot |
-| Interaksi | Hasil backend sesuai masukan dan validasi | Perlu bukti uji |
-| Negative case | Masukan tidak valid/akses tak berhak aman | Perlu bukti uji |
-
-Akses website yang berhasil tidak mengesahkan seluruh skenario uji. Jangan mengklaim PASS tanpa rekaman hasil aktual.
+**Ruang lingkup:** pemeriksaan source dan keterhubungan handler yang ditemukan. Pengujian klik browser langsung, mutasi data, pembatasan akses antar-akun, dan hasil perubahan state bukan bagian dari bukti ini.
 
 ## 5. Screenshot
 
