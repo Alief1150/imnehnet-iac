@@ -25,8 +25,6 @@ Method `dashboardData()` perlu dibaca bersama validasi, state, dan pemanggilan s
 
 ```php
 // PENJELASAN DOKUMENTASI (bukan bagian source): Mengambil data ringkasan untuk Dashboard Student; output dikonsumsi oleh tampilan.
-    }
-
     public function dashboardData(): array
     {
         $uid = auth()->id();
