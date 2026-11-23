@@ -1,31 +1,197 @@
-# Admin Panel — Environments — Webportal IMNEHNET
+# 03 — Admin Environments: Dokumentasi Implementasi IMNEHNET
 
-**Proyek:** IMNEHNET
-**Bidang:** Portal Developer
-**PIC:** Malik
-**Tahap:** 03 — Admin Panel
-**Status:** Draft dokumentasi — belum diverifikasi
+**PIC:** Septihadi Malik — Portal Developer  
+**Source:** `Alief1150/imnehnet-iac` / `main`, audit 23 November 2026  
+**Status:** Audit source selesai; bukti screenshot dan pengujian perlu dilengkapi
 
-## 1. Deskripsi Pekerjaan
+> Cuplikan berasal dari source asli dan diberi **komentar tambahan**. Potongan baris bukan file lengkap siap tempel. Source GitHub dan deployment server dapat berbeda jika ada patch lokal yang belum dipush.
 
-Tuliskan tujuan dan ruang lingkup pekerjaan berdasarkan implementasi aktual Webportal.
+## 1. Tujuan halaman
 
-## 2. Implementasi
+Resource Filament untuk inventaris, provisioning/runtime status, filter, dan lifecycle container. Table/Actions dideklarasikan lewat PHP sehingga tidak perlu satu Blade untuk setiap tombol.
 
-Jelaskan fitur, komponen antarmuka, alur kerja, serta integrasi backend berdasarkan source dan pengujian.
+## 2. Arsitektur dan fungsi komponen
 
-## 3. Dokumentasi Tampilan
+Filament Resource/Page mendefinisikan data dan action di PHP; Blade (untuk halaman kustom) menampilkan markup dan event UI. Login dan pemeriksaan hak akses tetap harus dilakukan di server. Variabel state Livewire menghubungkan form/filter dengan method backend.
 
-Unggah screenshot implementasi aktual ke `jobdesc/Portal-Developer/images/03-admin/06-environments/`, lalu tambahkan referensi gambar dan caption di sini.
+## 3. Penjelasan kode penting
 
-## 4. Pengujian
+### 3.1 EnvironmentResource.php
 
-Catat langkah pengujian, hasil aktual, dan bukti. Jangan menyatakan pengujian berhasil sebelum diverifikasi.
+```php
+// Penjelasan: Resource terhubung dengan model LabEnvironment.
+{
+    protected static ?string $model = LabEnvironment::class;
 
-## 5. Hasil dan Evaluasi
+    protected static ?string $recordTitleAttribute = 'container_name';
 
-Uraikan hasil dan keterbatasan yang teridentifikasi.
+    protected static ?string $label = 'Environment';
 
-## 6. Kesimpulan
+    protected static ?string $pluralLabel = 'Environments';
 
-Ringkas hasil pekerjaan dengan merujuk pada bukti yang tersedia.
+    protected static string|\UnitEnum|null $navigationGroup = 'LAB MANAGEMENT';
+
+    protected static ?int $navigationSort = 10;
+
+```
+
+**Kode asli:** [EnvironmentResource.php, baris 24–36](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Resources/Environments/EnvironmentResource.php#L24-L36).
+
+**Fungsi:** Resource terhubung dengan model LabEnvironment. Deklarasi di PHP digunakan Filament/Livewire untuk data dan tindakan. Perhatikan validasi, callback, serta nilai status dari model/service saat menguji.
+
+### 3.2 EnvironmentsTable.php
+
+```php
+// Penjelasan: Filament menyusun kolom nama container.
+            ->columns([
+                TextColumn::make('container_name')
+                    // IMNEHNET_PAIR_BORDER_V3
+                    ->formatStateUsing(function ($state): \Illuminate\Support\HtmlString {
+                        $css = <<<'CSS'
+tr.imnehnet-pair-admin-attacker > td,
+tr.imnehnet-pair-admin-victim > td {
+    background-color: rgba(20,184,166,.035);
+}
+tr.imnehnet-pair-student-attacker > td,
+tr.imnehnet-pair-student-victim > td {
+    background-color: rgba(96,165,250,.035);
+}
+```
+
+**Kode asli:** [EnvironmentsTable.php, baris 36–48](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Resources/Environments/Tables/EnvironmentsTable.php#L36-L48).
+
+**Fungsi:** Filament menyusun kolom nama container. Deklarasi di PHP digunakan Filament/Livewire untuk data dan tindakan. Perhatikan validasi, callback, serta nilai status dari model/service saat menguji.
+
+### 3.3 EnvironmentsTable.php
+
+```php
+// Penjelasan: Runtime dibedakan dari provisioning status agar status tidak rancu.
+
+                TextColumn::make('runtime_status')
+                    ->label('Runtime')
+                    ->badge()
+                    ->formatStateUsing(fn (RuntimeStatus $state): string => $state->label())
+                    ->color(fn (RuntimeStatus $state): string => $state->color())
+                    ->icon(fn (RuntimeStatus $state): ?Htmlable => $state->icon())
+                    ->extraAttributes(fn (LabEnvironment $record): array => $record->hasStateMismatch()
+                        ? ['title' => 'State mismatch: the record and the container disagree']
+                        : []),
+
+                TextColumn::make('tofu_workspace')
+                    ->label('Workspace')
+```
+
+**Kode asli:** [EnvironmentsTable.php, baris 205–217](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Resources/Environments/Tables/EnvironmentsTable.php#L205-L217).
+
+**Fungsi:** Runtime dibedakan dari provisioning status agar status tidak rancu. Deklarasi di PHP digunakan Filament/Livewire untuk data dan tindakan. Perhatikan validasi, callback, serta nilai status dari model/service saat menguji.
+
+### 3.4 EnvironmentActions.php
+
+```php
+// Penjelasan: Daftar aksi lifecycle dideklarasikan terpusat.
+     */
+    public static function all(): array
+    {
+        return [
+            self::start(),
+            self::stop(),
+            self::reset(),
+            self::refresh(),
+
+            // IMNEHNET_ADMIN_DELETE_PAIR_V8
+            self::delete(),
+        ];
+    }
+```
+
+**Kode asli:** [EnvironmentActions.php, baris 37–49](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Resources/Environments/Tables/EnvironmentActions.php#L37-L49).
+
+**Fungsi:** Daftar aksi lifecycle dideklarasikan terpusat. Deklarasi di PHP digunakan Filament/Livewire untuk data dan tindakan. Perhatikan validasi, callback, serta nilai status dari model/service saat menguji.
+
+### 3.5 EnvironmentActions.php
+
+```php
+// Penjelasan: Tombol Start terikat pada callback dan pemeriksaan yang sesuai.
+
+    private static function start(): Action
+    {
+        return Action::make('start')
+            ->iconButton()
+            ->label('Start')
+            ->icon(Lucide::icon('play'))
+            ->color('success')
+            ->tooltip('Converge the container onto running')
+            ->visible(fn (LabEnvironment $record): bool => self::pairRuntimeVisible($record, 'start'))
+            ->action(fn (LabEnvironment $record) => self::pairRuntimeAction($record, 'start'));
+    }
+
+```
+
+**Kode asli:** [EnvironmentActions.php, baris 409–421](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Resources/Environments/Tables/EnvironmentActions.php#L409-L421).
+
+**Fungsi:** Tombol Start terikat pada callback dan pemeriksaan yang sesuai. Deklarasi di PHP digunakan Filament/Livewire untuk data dan tindakan. Perhatikan validasi, callback, serta nilai status dari model/service saat menguji.
+
+### 3.6 EnvironmentActions.php
+
+```php
+// Penjelasan: Aksi Delete diproses backend dan memiliki guard sesuai record.
+    // Exactly one Delete action for independent and managed environments.
+    private static function delete(): Action
+    {
+        $linkedLab = static function (LabEnvironment $record): ?\App\Models\LabSession {
+            return \App\Models\LabSession::query()
+                ->where(function ($query) use ($record): void {
+                    $query
+                        ->where('attacker_environment_id', $record->getKey())
+                        ->orWhere('victim_environment_id', $record->getKey());
+                })
+                ->latest('id')
+                ->first();
+        };
+```
+
+**Kode asli:** [EnvironmentActions.php, baris 649–661](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Resources/Environments/Tables/EnvironmentActions.php#L649-L661).
+
+**Fungsi:** Aksi Delete diproses backend dan memiliki guard sesuai record. Deklarasi di PHP digunakan Filament/Livewire untuk data dan tindakan. Perhatikan validasi, callback, serta nilai status dari model/service saat menguji.
+
+## 4. Logika tombol, filter, dan data
+
+- **Sumber data:** diambil dari model dan service melalui PHP; HTML/Blade hanya menerima hasil untuk ditampilkan.
+- **Tombol/aksi:** konfigurasi Filament `Action::make(...)` atau direktif Livewire memanggil callback/method, termasuk pemeriksaan izin dan kondisi record.
+- **Filter/state:** input atau select mengganti nilai state yang diproses pada query/method backend.
+- **Hasil:** keberhasilan proses harus diperiksa pada status dan catatan sebenarnya; bukan hanya perubahan warna badge.
+
+## 5. Screenshot dokumentasi
+
+Upload ke `jobdesc/Portal-Developer/images/03-admin/06-environments/`. Nama file di bawah harus sama persis:
+
+![Gambar 1 — Environments](../../images/03-admin/06-environments/01-environments-overview.png)
+
+*Gambar 1. Environments — environments overview.*
+
+![Gambar 2 — Environments](../../images/03-admin/06-environments/02-environments-filters.png)
+
+*Gambar 2. Environments — environments filters.*
+
+![Gambar 3 — Environments](../../images/03-admin/06-environments/03-environments-actions.png)
+
+*Gambar 3. Environments — environments actions.*
+
+![Gambar 4 — Environments](../../images/03-admin/06-environments/04-environment-details.png)
+
+*Gambar 4. Environments — environment details.*
+
+## 6. Pengujian dan evaluasi
+
+| ID | Skenario | Target | Status |
+|---|---|---|---|
+| 01 | Admin membuka modul | Halaman tampil | Belum diuji dalam dokumen |
+| 02 | Pengguna non-Admin mengakses | Akses sesuai kebijakan role | Belum diuji |
+| 03 | Search/filter/sort (jika tersedia) | Hasil sesuai data | Belum diuji |
+| 04 | Aksi pada data uji | Validasi dan perubahan backend benar | Belum diuji |
+
+**Risiko:** Start/Stop/Reset/Delete dapat mengubah container nyata. Jangan klik tanpa data uji dan izin.
+
+## 7. Kesimpulan
+
+Source Environments telah diaudit dan dapat ditelusuri melalui 6 tautan langsung. Hasil pengujian runtime, screenshot, dan sinkronisasi dengan server aktif tetap perlu dilengkapi sebelum status dokumen final.
