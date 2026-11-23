@@ -19,3 +19,13 @@
 ## Penanda Khusus
 
 **System Health:** lima kemungkinan keluaran `Healthy / Degraded / Critical / Offline / Unknown` berdasarkan service checks, bukan KPI persentase. **Terminal:** Open shell memanggil Livewire/backend, berbeda dengan membuka tab fullscreen. **Users:** Presence dan Last Seen didokumentasikan berdasarkan source final.
+
+## Pemetaan UI Student yang Diverifikasi
+
+Dokumentasi Student kini memuat inventaris kontrol spesifik berikut, beserta tautan Blade/PHP, perbedaan request GET / anchor / JavaScript / Livewire, dan skenario uji yang dapat direproduksi:
+
+- [Dashboard Student — statistik, grafik, Lihat Semua, menu bawah](04-student/01-dashboard.md#pemetaan-interaksi-dashboard-student--audit-blade-final).
+- [History — filter status, validasi filter, nomor halaman dan panah pagination](04-student/04-history.md#pemetaan-kontrol-history--audit-blade-final).
+- [Documentation — ketersediaan PDF, pencarian lokal, daftar isi dan tautan Terms](04-student/05-documentation.md#pemetaan-tombol-dan-navigasi-dokumentasi--audit-blade-final).
+
+**Interpretasi hasil:** `AUDITED SOURCE` berarti tombol/handler ditelusuri di repository; `PASS RUNTIME` hanya berarti skenario yang benar-benar dijalankan menghasilkan output sesuai ekspektasi dengan bukti bertanggal. Tidak ada perubahan source aplikasi dalam pembaruan notes ini.
