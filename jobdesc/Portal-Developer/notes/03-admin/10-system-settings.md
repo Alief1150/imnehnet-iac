@@ -306,3 +306,25 @@ final class SystemSettings extends Page
 **Analisis implementasi:** Method edit Overview mengubah metadata platform yang dikelola halaman, bukan otomatis meng-upgrade software sistem operasi. Form profil dan perubahan password harus diaudit terpisah.
 
 **Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Pengujian aksi, integrasi layanan, role, kondisi error, dan perubahan data baru berstatus **PASS** jika ada bukti hasil aktual. Kode tidak diubah oleh dokumentasi.
+
+
+## Peta Kontrol UI → PHP/Livewire → Service (Audit Final)
+
+| Kontrol pada halaman | Handler atau state | Penjelasan alur dan hasil |
+|---|---|---|
+| **Overview / Account & Security** | `selectTab` | Mengubah tab aktif tanpa mengeksekusi operasi server. |
+| **Edit Overview** | `editOverview` | Membuka state form pengeditan metadata proyek. |
+| **Add / Remove Software** | `addSoftware / removeSoftware` | Mengubah baris daftar software pada draft form, belum menginstal atau menghapus paket OS. |
+| **Save / Cancel Overview** | `saveOverview / cancelOverviewChanges` | Menyimpan metadata form atau membatalkan draft; tidak melakukan upgrade infrastruktur. |
+| **Update Profile** | `updateProfile` | Memvalidasi dan memperbarui data akun admin. |
+| **Remove Photo** | `removePhoto` | Menghapus avatar akun sesuai handler dan izin. |
+| **Change Password** | `changePassword` | Memeriksa input password saat ini, password baru, dan konfirmasi di backend. |
+| **Cancel Profile / Password** | `cancelProfileChanges / cancelPasswordChanges` | Menghapus state perubahan yang belum disimpan. |
+
+**Kode UI/Blade:** [Buka `resources/views/filament/pages/system-settings.blade.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/system-settings.blade.php).
+
+**Kode handler PHP:** [Buka `app/Filament/Pages/SystemSettings.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/SystemSettings.php).
+
+**Cara membaca interaksi:** atribut `wire:click` menjalankan method komponen Livewire melalui request server; `wire:model` mengikat input dan properti; `wire:loading` hanya mencerminkan request masih diproses. Jika terjadi error, status aktual harus mengikuti respons backend, bukan hanya perubahan tampilan.
+
+**Validasi pengujian:** hasil fungsi tertentu ditulis **PASS** hanya jika telah direkam pada akun dan data uji, termasuk kasus akses ditolak, data kosong, dan kegagalan service. Screenshot UI sendiri adalah bukti tampilan, bukan bukti seluruh backend telah diuji.
