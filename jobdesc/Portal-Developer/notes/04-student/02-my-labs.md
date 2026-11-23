@@ -24,6 +24,7 @@ Komentar penjelas berada di luar cuplikan agar baris kode tetap persis sama deng
 Method `startLab()` perlu dibaca bersama validasi, state, dan pemanggilan service setelah cuplikan; perhatikan parameter, guard, serta pemutakhiran state.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Memulai lifecycle sesi lab lewat backend; kondisi/kuota diperiksa sebelum membuat sesi.
     }
 
     public function startLab(): void
@@ -52,6 +53,7 @@ Method `startLab()` perlu dibaca bersama validasi, state, dan pemanggilan servic
 Method `requestDelete()` perlu dibaca bersama validasi, state, dan pemanggilan service setelah cuplikan; perhatikan parameter, guard, serta pemutakhiran state.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Menampilkan/menyiapkan konfirmasi penghapusan tanpa langsung menghapus lab.
     }
 
     public function requestDelete(): void
@@ -80,6 +82,7 @@ Method `requestDelete()` perlu dibaca bersama validasi, state, dan pemanggilan s
 Method `connectLabTerminals()` perlu dibaca bersama validasi, state, dan pemanggilan service setelah cuplikan; perhatikan parameter, guard, serta pemutakhiran state.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Menghubungkan terminal sesi lab berdasarkan status lingkungan dan izin pengguna.
     public array $dualTerminalErrors = [];
 
     public function connectLabTerminals(): void
@@ -108,6 +111,7 @@ Method `connectLabTerminals()` perlu dibaca bersama validasi, state, dan pemangg
 Blade menggunakan ekspresi PHP/komponen dan atribut Livewire untuk merender data. Elemen markup hanya tampilan; operasi sesungguhnya berada di method PHP yang dipanggil.
 
 ```blade
+{{-- PENJELASAN DOKUMENTASI (bukan bagian source): Blade adalah lapisan presentasi: tampilkan state, lakukan binding event, jangan menaruh otorisasi hanya di markup. --}}
 <div id="im-v4" class="im-v4" data-theme="dark" data-im-v4-root wire:ignore.self>
     <div class="im-v4-ambient" aria-hidden="true"></div>
     @include('filament.pages.partials.student-shell-sidebar')
