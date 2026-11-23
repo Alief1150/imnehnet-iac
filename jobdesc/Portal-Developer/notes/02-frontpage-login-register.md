@@ -486,6 +486,25 @@ View pembungkus registrasi memuat Livewire register-student dan aset tampilan.
 
 ## 7. Pengujian dan Verifikasi
 
+
+### Hasil Pengujian Implementasi Autentikasi — PASS (23 November 2026)
+
+**Lingkungan uji:** `iaas-mgmt` · **Aplikasi:** `/home/iaas/projects/webportal-iaas` · **Metode:** script PHP read-only dengan bootstrap Laravel, pemeriksaan route, class, view, binding Livewire, aturan autentikasi, dan query database non-mutasi.
+
+| Skenario | Hasil pengujian | Bukti spesifik |
+|---|---|---|
+| Registrasi Student | **PASS** | Route `/login/regist`, wrapper Blade, `RegisterStudent::register()`, input `name/email/password/password_confirmation`, validasi email unik dan password, rate limiter, `UserRole::Student`, `UserStatus::Active`, `Hash::make`, activity log, `Auth::login`, dan redirect Student terbaca dari implementasi. |
+| Login Admin | **PASS** | `/admin/login`, `filament.admin.pages.dashboard`, form `wire:submit="authenticate"`, Filament Login, pemeriksaan `canAccessPanel`, dan middleware redirect lintas panel terverifikasi. |
+| Login Student | **PASS** | `/student/login`, dashboard Student, tab login, handler Filament dan konfigurasi `StudentPanelProvider` terverifikasi. |
+| Integrasi database | **PASS** | Tabel `users` beserta kolom wajib dapat dibaca; **10 akun (3 Admin, 7 Student)** tercatat saat pengujian. |
+
+**Rekap asli terminal:** **57 pemeriksaan PASS, 0 FAIL**; keempat kelompok pengujian PASS, pada **23 November 2026 pukul 05:06:05** (waktu yang tercetak di terminal server).
+
+**Batas pembuktian:** PASS di atas menyatakan implementasi source, route, view, dan pembacaan database sudah terverifikasi. Script **tidak** mengirim password sungguhan, membuat akun baru, mengeksekusi autentikasi browser, atau membuktikan keberhasilan redirect aktual. Uji end-to-end tetap terpisah; tidak dinyatakan PASS tanpa bukti.
+
+**Tautan implementasi:** [Routes](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/routes/web.php) · [Login PHP](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Auth/Pages/Login.php) · [RegisterStudent PHP](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Livewire/RegisterStudent.php).
+
+
 ### 7.1 Pemeriksaan source dan route (tanpa mengubah data)
 
 ```bash
