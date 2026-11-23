@@ -132,6 +132,25 @@ Blade menggunakan ekspresi PHP/komponen dan atribut Livewire untuk merender data
 
 **[Buka kode asli: `resources/views/filament/pages/my-labs.blade.php` baris 153–172](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/my-labs.blade.php#L153-L172)**
 
+
+## Interaksi dan Alur Backend
+
+### Pemetaan tombol, aksi, dan handler
+
+| Kontrol | Handler / state | Proses, validasi, dan hasil |
+|---|---|---|
+| **Start Lab** | `startLab` | Memeriksa autentikasi dan course, mencegah duplikasi sesi, kemudian memulai jalur provisioning sesuai layanan dan queue. |
+| **Open Workspace** | `openWorkspace` | Mengarahkan student ke workspace lab sesuai sesi yang tersedia dan aturan akses. |
+| **Stop** | `requestStop → stopLab` | Konfirmasi dilakukan sebelum lifecycle berhenti; aksi perubahan runtime ditangani backend. |
+| **Resume** | `resumeLab` | Meminta start ulang runtime sesi sesuai status dan batasannya. |
+| **Reset** | `requestReset → confirmReset` | Menampilkan konfirmasi dan meminta reset; efek pada state latihan harus diinformasikan kepada student. |
+| **Delete** | `requestDelete → confirmDelete` | Meminta konfirmasi lalu menghapus sesi/lab menurut alur backend; jangan dipakai hanya untuk screenshot. |
+| **Cancel dialog** | `cancelDelete / cancelStop / cancelReset` | Menutup dialog konfirmasi tanpa memicu operasi destruktif. |
+| **Dual Terminal** | `connectLabTerminals` | Menghubungkan terminal untuk lab yang siap, menyimpan state/kegagalan akses menurut handler. |
+
+
+**Penjelasan:** Blade menyajikan form, tombol, dan indikator loading; method PHP/Livewire menjalankan otorisasi, query, notifikasi, validasi, serta memanggil service atau queue ketika diperlukan. **Pengujian UI dan runtime dipisahkan** agar status keberhasilan tidak dilebihkan tanpa bukti kasus uji.
+
 ## 4. Perilaku yang Perlu Diverifikasi
 
 | Aspek | Hasil audit | Bukti runtime |
@@ -171,82 +190,3 @@ Dokumen mengacu langsung ke implementasi pada commit final, dengan pemisahan tan
 
 - [PHP — app/Filament/Pages/MyLabs.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/MyLabs.php)
 - [Blade — resources/views/filament/pages/my-labs.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/my-labs.blade.php)
-
-
-## Audit Final Implementasi — Commit b3370b5
-
-### Start Lab dan pencegahan duplikasi
-
-Berikut cuplikan PHP asli dari repository terbaru; satu baris komentar dokumentasi ditambahkan untuk menjelaskan alur.
-
-```php
-// KOMENTAR DOKUMENTASI: pemrosesan terjadi di backend; periksa guard, state, dan hasil aksi.
-    public function startLab(): void
-    {
-        $user = auth()->user();
-        $course = $this->course();
-
-        if (! $user || ! $course) {
-            Notification::make()
-                ->title('Course tidak tersedia')
-                ->danger()
-                ->send();
-
-            return;
-        }
-
-        // Reopen an existing session. Never enqueue a duplicate job.
-        if ($this->currentSession()) {
-            Notification::make()
-                ->title('Limit lab tercapai')
-                ->body('Kamu sudah memiliki 1 paired lab. Selesaikan atau hapus lab sebelumnya sebelum membuat lab baru.')
-                ->warning()
-                ->send();
-
-            return;
-        }
-
-        try {
-            $session = app(LabSessionManager::class)->start($user, $course);
-
-            if (! $session->wasRecentlyCreated) {
-                Notification::make()
-                    ->title('Lab sudah tersedia')
-                    ->body('Sesi lab yang sudah ada akan dibuka.')
-                    ->warning()
-                    ->send();
-
-                $this->redirect(GuidedCtf::getUrl(panel: 'student'));
-
-                return;
-            }
-
-            ProvisioningTimeline::record((int) $session->id, 'queued',
-                'Create diterima. User #'.$session->user_id.'; session #'.$session->id.
-```
-
-**[Buka kode asli — app/Filament/Pages/MyLabs.php (L108–L149)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/MyLabs.php#L108-L149)**
-
-**Logika fitur:** Handler `startLab()` memeriksa autentikasi/course, mendeteksi sesi berjalan, dan menyampaikan feedback lewat Notification. Aksi hidup/mati/reset menggunakan handler backend yang perlu diuji pada sesi latihan, bukan klik tombol pada halaman produksi.
-
-**Pengujian dan hasil:** Source sudah diverifikasi terpasang pada commit final. Akses panel membuktikan halaman dapat diakses pada kondisi pengguna yang diuji, tetapi tidak otomatis memverifikasi semua skenario. Catat PASS pada kasus yang benar-benar sudah diuji beserta screenshot dan outputnya; jangan membuat data hasil uji yang tidak terlampir.
-
-
-## Peta Kontrol UI → PHP/Livewire (Audit Final)
-
-| Kontrol | Handler / state | Proses, validasi, dan hasil |
-|---|---|---|
-| **Start Lab** | `startLab` | Memeriksa autentikasi dan course, mencegah duplikasi sesi, kemudian memulai jalur provisioning sesuai layanan dan queue. |
-| **Open Workspace** | `openWorkspace` | Mengarahkan student ke workspace lab sesuai sesi yang tersedia dan aturan akses. |
-| **Stop** | `requestStop → stopLab` | Konfirmasi dilakukan sebelum lifecycle berhenti; aksi perubahan runtime ditangani backend. |
-| **Resume** | `resumeLab` | Meminta start ulang runtime sesi sesuai status dan batasannya. |
-| **Reset** | `requestReset → confirmReset` | Menampilkan konfirmasi dan meminta reset; efek pada state latihan harus diinformasikan kepada student. |
-| **Delete** | `requestDelete → confirmDelete` | Meminta konfirmasi lalu menghapus sesi/lab menurut alur backend; jangan dipakai hanya untuk screenshot. |
-| **Cancel dialog** | `cancelDelete / cancelStop / cancelReset` | Menutup dialog konfirmasi tanpa memicu operasi destruktif. |
-| **Dual Terminal** | `connectLabTerminals` | Menghubungkan terminal untuk lab yang siap, menyimpan state/kegagalan akses menurut handler. |
-
-**[Buka kode tampilan Blade — resources/views/filament/pages/my-labs.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/my-labs.blade.php)**
-
-**[Buka kode handler PHP — app/Filament/Pages/MyLabs.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/MyLabs.php)**
-
-**Penjelasan:** Blade menyajikan form, tombol, dan indikator loading; method PHP/Livewire menjalankan otorisasi, query, notifikasi, validasi, serta memanggil service atau queue ketika diperlukan. **Pengujian UI dan runtime dipisahkan** agar status keberhasilan tidak dilebihkan tanpa bukti kasus uji.
