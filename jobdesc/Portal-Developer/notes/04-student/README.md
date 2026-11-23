@@ -1,15 +1,16 @@
-# 04 — Student Panel
+# 04 — Student Panel IMNEHNET
 
-**PIC:** Malik
-**Status:** Kerangka dokumentasi
+**PIC:** Malik · **Audit final source:** 23 November 2026 · **Source:** [commit `b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf).
 
-## Daftar Modul
+## Dokumentasi Enam Modul
 
-- [Dashboard](01-dashboard.md) — draft, perlu bukti screenshot dan pengujian
-- [My Labs](02-my-labs.md) — draft, perlu bukti screenshot dan pengujian
-- [Pentest](03-pentest.md) — draft, perlu bukti screenshot dan pengujian
-- [History](04-history.md) — draft, perlu bukti screenshot dan pengujian
-- [Documentation](05-documentation.md) — draft, perlu bukti screenshot dan pengujian
-- [Profile](06-profile.md) — draft, perlu bukti screenshot dan pengujian
+| Modul | Alur yang didokumentasikan | Folder screenshot |
+|---|---|---|
+| [Dashboard](01-dashboard.md) | Statistik mahasiswa dan dashboardData PHP/Blade | [01-dashboard](../../images/04-student/01-dashboard/) |
+| [My Labs](02-my-labs.md) | Start/Stop/Reset/Delete dan sesi terminal lab | [02-my-labs](../../images/04-student/02-my-labs/) |
+| [Pentest](03-pentest.md) | Guided CTF, objective, validasi flag, progress | [03-pentest](../../images/04-student/03-pentest/) |
+| [History](04-history.md) | Riwayat sesi dan filter sesuai student | [04-history](../../images/04-student/04-history/) |
+| [Documentation](05-documentation.md) | Manual Book dan kondisi PDF tersedia/tidak | [05-documentation](../../images/04-student/05-documentation/) |
+| [Profile](06-profile.md) | Profil, avatar, penggantian password | [06-profile](../../images/04-student/06-profile/) |
 
-> Dokumen yang tersedia masih template; isi dan pengujian belum dinyatakan selesai.
+Semua enam dokumen di atas telah diganti dari template menjadi analisis source PHP/Blade bertautan ke baris asli. Status implementasi tersedia; pengujian fungsional dan screenshot harus dilampirkan menurut bukti yang benar-benar diperoleh. Jangan menampilkan kredensial, email pribadi, atau token saat mengambil screenshot.
