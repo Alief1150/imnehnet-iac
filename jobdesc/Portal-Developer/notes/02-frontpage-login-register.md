@@ -669,3 +669,46 @@ Tab login Student dan Admin memakai tautan route Filament sesuai panel.
 **[Buka kode asli `webportal/resources/views/imnehnet/auth/login.blade.php` (L18–L35)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/imnehnet/auth/login.blade.php#L18-L35)**
 
 **Keterangan pengujian:** akses situs yang berjalan mendukung keberhasilan integrasi dasar, tetapi tidak cukup untuk mengklaim seluruh skenario instalasi, autentikasi, validasi, atau otorisasi telah PASS. Catat status aktual dan bukti per kasus; tanpa bukti hasil, gunakan *belum dilampirkan*, bukan *gagal* atau *lulus*.
+
+
+## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
+
+### Alur backend registrasi: Livewire, validasi, dan penyimpanan
+
+Cuplikan berikut dibaca dari source pada branch `main`; baris pertama adalah komentar penjelasan yang hanya ditambahkan dalam dokumentasi.
+
+```php
+// CATATAN DOKUMENTASI (bukan kode produksi): Handler backend registrasi memvalidasi masukan dan tidak boleh digantikan validasi JavaScript/Blade.
+ * The role is assigned here and nowhere else. 'role' is fillable, because an
+ * administrator has to be able to create an administrator from the Users page,
+ * so a form that mass-assigned the submitted array could set it. The properties
+ * are therefore assigned one at a time and nothing from the request is ever run
+ * through fill(). There is no field for a role on this form and there is no path
+ * by which one could arrive, so a self-registered account is a student or the
+ * registration fails.
+ *
+ * The account is created active, because the specification is that a student can
+ * start practising without waiting for anyone. What that costs is bounded by the
+ * per-student environment quota rather than by an approval step.
+ *
+ * Attempts are rate limited per address and address together. Password reset
+ * covers an existing account, so this endpoint has no other throttle and an
+ * unbounded one would let anyone enumerate which addresses have accounts.
+ */
+final class RegisterStudent extends Component
+{
+    /** Attempts allowed from one address for one address before a cooldown. */
+    private const ATTEMPTS = 5;
+
+    /** Seconds before another attempt is allowed. */
+    private const DECAY_SECONDS = 3600;
+
+    public string $name = '';
+
+```
+
+**[Buka kode asli — app/Livewire/RegisterStudent.php (L25–L50)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Livewire/RegisterStudent.php#L25-L50)**
+
+**Penjelasan teknis:** Blade/Alpine mengelola tampilan serta feedback instan; `RegisterStudent` bertanggung jawab atas validasi server-side dan pembuatan akun. Kredensial dan password harus diproses oleh backend, bukan dipercayakan hanya pada UI. Status berhasil registrasi per skenario perlu bukti pengujian.
+
+**Kesimpulan verifikasi:** source sudah tersinkron di commit final. Status *implementasi tersedia* dapat dinyatakan terverifikasi lewat inspeksi kode; status *pengujian fungsi berhasil/PASS* hanya dicantumkan apabila hasil uji dan screenshot relevan telah dilampirkan. Dokumentasi ini tidak menjalankan aksi produksi untuk menghasilkan bukti palsu.
