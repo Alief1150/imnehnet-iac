@@ -268,3 +268,18 @@ class StudentHistory extends Page
 **Logika fitur:** Class StudentHistory mengatur route, label navigasi dan kebijakan `canAccess()`. Perincian sesi dan tampilannya harus ditelusuri pada Blade history, bukan diasumsikan berasal dari page PHP yang hanya mengatur konfigurasi halaman.
 
 **Pengujian:** Source tersedia di GitHub. Keberhasilan buka halaman dapat dilaporkan sebagai verifikasi akses hanya apabila telah dicoba, sedangkan keberhasilan simpan/edit/otorisasi/validasi memerlukan bukti pengujian per aksi. Jangan menandai fitur otomatis PASS karena aplikasi secara umum berjalan.
+
+## Pemetaan Kontrol History — Audit Blade Final
+
+| Kontrol | Logika saat digunakan | Bukti source |
+|---|---|---|
+| Filter **All Status / Completed / In Progress / Stopped / Failed** | `<select name="status">` mengirim form GET otomatis dengan `onchange="this.form.submit()"`; filter dibaca dari query string `status`. Nilai di luar *allowlist* `all, completed, running, stopped, failed` dikembalikan ke `all` | [Blade L55–70](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-history.blade.php#L55-L70), [L260–286](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-history.blade.php#L260-L286) |
+| Nomor halaman **1, 2, ...** | Menghasilkan URL melalui `request()->fullUrlWithQuery(['page'=>$i])`, mempertahankan filter yang ada | [Blade L406–425](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-history.blade.php#L406-L425) |
+| Panah **‹ / ›** | Maju/mundur satu halaman; tidak ditampilkan di batas pertama/terakhir | [Blade L404–426](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-history.blade.php#L404-L426) |
+| Bottom navigation | Navigasi ke halaman Student lain lewat `StudentNavigation`, bukan perubahan database | [Blade L812–820](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-history.blade.php#L812-L820) |
+
+**Keamanan dan data:** Query riwayat dibatasi pada kepemilikan user terautentikasi, dengan pengecekan nama kolom ownership pada schema. Kontrol filter/paginasi ini merupakan request GET dan bukan `wire:click`; jangan menjelaskannya sebagai perubahan state melalui Livewire.
+
+**Source kode lengkap:** [student-history.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-history.blade.php).
+
+**Matriks uji:** verifikasi lima opsi filter; input `?status=invalid`; paginasi dengan filter tetap aktif; akun tanpa histori; akun lain tidak boleh melihat riwayat pengguna pertama. Catat setiap hasil aktual, tanggal, screenshot, dan status PASS/FAIL secara terpisah.
