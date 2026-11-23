@@ -230,3 +230,83 @@ use Throwable;
 **[Buka kode asli — app/Filament/Resources/Environments/Tables/EnvironmentActions.php, baris 1–17](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Resources/Environments/Tables/EnvironmentActions.php#L1-L17)**
 
 **Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
+
+
+## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
+
+### Dua status berbeda: provisioning dan runtime
+
+```php
+// KOMENTAR DOKUMENTASI: perhatikan hak akses, data dari service, state Livewire, dan fallback error.
+                    ->badge()
+                    ->color('gray'),
+
+                TextColumn::make('status')
+                    ->label('Provisioning')
+                    ->badge()
+                    ->formatStateUsing(fn (EnvironmentStatus $state): string => $state->label())
+                    ->color(fn (EnvironmentStatus $state): string => $state->color())
+                    ->icon(fn (EnvironmentStatus $state): ?Htmlable => $state->icon()),
+
+                TextColumn::make('runtime_status')
+                    ->label('Runtime')
+                    ->badge()
+                    ->formatStateUsing(fn (RuntimeStatus $state): string => $state->label())
+                    ->color(fn (RuntimeStatus $state): string => $state->color())
+                    ->icon(fn (RuntimeStatus $state): ?Htmlable => $state->icon())
+                    ->extraAttributes(fn (LabEnvironment $record): array => $record->hasStateMismatch()
+                        ? ['title' => 'State mismatch: the record and the container disagree']
+                        : []),
+
+                TextColumn::make('tofu_workspace')
+                    ->label('Workspace')
+                    ->fontFamily('mono')
+                    ->badge()
+                    ->color('gray')
+                    ->placeholder('Not assigned'),
+
+                TextColumn::make('updated_at')
+                    ->label('Last update')
+                    ->since()
+                    ->placeholder('Never')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            // IMNEHNET_PAIR_SORT_V3
+            // Group by normalized pair identity, attacker before victim.
+            ->defaultSort(fn (Builder $query): Builder => $query
+                ->orderByRaw(
+                    "REPLACE(REPLACE(container_name, 'attacker-', ''), 'victim-', '') ASC"
+                )
+                ->orderByRaw(
+                    "CASE
+                        WHEN container_name LIKE 'attacker-%' THEN 0
+                        WHEN container_name LIKE 'victim-%' THEN 1
+                        ELSE 2
+                    END ASC"
+                )
+                ->orderBy('container_name')
+            )
+            ->filters([
+                SelectFilter::make('status')
+                    ->label('Provisioning status')
+                    ->options(collect(EnvironmentStatus::cases())
+                        ->mapWithKeys(fn (EnvironmentStatus $case): array => [$case->value => $case->label()])
+                        ->all()),
+                SelectFilter::make('runtime_status')
+                    ->label('Runtime status')
+                    ->options(collect(RuntimeStatus::cases())
+                        ->mapWithKeys(fn (RuntimeStatus $case): array => [$case->value => $case->label()])
+                        ->all()),
+                Filter::make('mismatch')
+                    ->label('State mismatch only')
+                    ->query(fn (Builder $query): Builder => $query
+                        ->where(function (Builder $query): void {
+                            $query
+```
+
+**[Buka kode asli — app/Filament/Resources/Environments/Tables/EnvironmentsTable.php (L196–L260)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Resources/Environments/Tables/EnvironmentsTable.php#L196-L260)**
+
+**Analisis implementasi:** Kolom **Provisioning** berasal dari `EnvironmentStatus`, sedangkan **Runtime** memakai `RuntimeStatus`; keduanya tidak dapat disamakan. Filter dan aksi lifecycle harus dinilai terhadap status masing-masing.
+
+**Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
