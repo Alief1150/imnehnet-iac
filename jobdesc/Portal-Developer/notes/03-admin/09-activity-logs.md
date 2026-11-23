@@ -287,3 +287,18 @@ class ListActivityLogs extends ListRecords
 **Analisis implementasi:** Tabel audit memetakan aksi, aktor, deskripsi, hasil, sumber, serta filter. Daftar log bukan bukti bahwa ekspor maupun setiap aksi audit sudah diuji end-to-end.
 
 **Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Pengujian aksi, integrasi layanan, role, kondisi error, dan perubahan data baru berstatus **PASS** jika ada bukti hasil aktual. Kode tidak diubah oleh dokumentasi.
+
+
+## Peta Interaksi dan Data Antarmuka — Audit Final
+
+| UI / aksi | Method, enum, atau komponen | Logika yang diperiksa |
+|---|---|---|
+| **Search / Filter** | `ActivityLogsTable` | Filter menyaring aktivitas menurut actor, action, result atau field yang ditentukan table. |
+| **View detail** | `ActivityLogResource` | Menampilkan rincian audit log tanpa mengubah data asal. |
+| **Export CSV/XLSX** | `ListActivityLogs` | Ekspor menyiapkan file dari hasil query sesuai opsi yang tersedia; bukan penghapusan log. |
+
+**[Buka kode tampilan/konfigurasi — app/Filament/Resources/ActivityLogs/Tables/ActivityLogsTable.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Resources/ActivityLogs/Tables/ActivityLogsTable.php)**
+
+**[Buka kode PHP/handler — app/Filament/Resources/ActivityLogs/Pages/ListActivityLogs.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Resources/ActivityLogs/Pages/ListActivityLogs.php)**
+
+**Pengujian:** pengecekan kode dan UI dapat dinyatakan telah diaudit; hasil operasi setiap tombol, pembatasan role, dan interaksi dengan backend diberi PASS hanya apabila bukti aktual tersedia. Tidak menjalankan operasi destruktif pada server produksi untuk tujuan dokumentasi.
