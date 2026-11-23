@@ -32,7 +32,7 @@ Perlu dibedakan: **Blade menampilkan elemen dan memanggil aksi**, sementara **cl
 | Carousel | [`imnehnet-login-carousel.blade.php`](../../../webportal/resources/views/components/imnehnet-login-carousel.blade.php) | Gambar poster dan navigasi carousel |
 | CSS login | [`public/imnehnet-login/login-v5.css`](../../../webportal/public/imnehnet-login/login-v5.css) | Tata letak dan gaya login |
 
-**Temuan audit:** route `/login/regist` menggunakan `Route::view(..., 'imnehnet.auth.register')`, tetapi file `resources/views/imnehnet/auth/register.blade.php` **tidak ditemukan pada repository `main` saat audit**. Komponen form Livewire ditemukan, tetapi *view pembungkus* yang dipanggil route tidak tersedia pada snapshot GitHub. Kondisi deployment aktif harus diverifikasi terpisah; jangan menyimpulkan registrasi gagal ataupun sudah berhasil hanya dari pemeriksaan ini.
+**Hasil pemeriksaan source final:** route `/login/regist` menggunakan `Route::view('/login/regist', 'imnehnet.auth.register')`. View pembungkus `resources/views/imnehnet/auth/register.blade.php` tersedia pada commit `b3370b5` dan memuat komponen `@livewire('register-student')`. Hasil pengujian runtime tetap dicatat berdasarkan bukti.
 
 ## 3. Akses Awal dan Navigasi Login
 
@@ -70,7 +70,7 @@ Route::view('/login/regist', 'imnehnet.auth.register')
 | `/login` | Redirect ke route login Student milik Filament |
 | `/student/login` | Form login Student |
 | `/admin/login` | Form login Admin |
-| `/login/regist` | View pembungkus registrasi (file target belum ditemukan dalam snapshot GitHub) |
+| `/login/regist` | View pembungkus registrasi `imnehnet.auth.register` tersedia pada source final |
 
 ![Gambar 1 — Halaman awal Webportal](../images/02-frontpage-auth/01-frontpage.png)
 
@@ -444,6 +444,46 @@ return parent::handle($request, $next);
 
 *Gambar 6. Bukti navigasi akun Student ke Student Panel atau akun Admin ke Admin Panel; gunakan akun pengujian dan jangan tampilkan data sensitif.*
 
+
+## Interaksi dan Alur Backend
+
+### View pembungkus registrasi yang digunakan
+
+View pembungkus registrasi memuat Livewire register-student dan aset tampilan.
+
+```blade
+
+<body class="imnehnet-register-body">
+
+    <div class="im-v5 im-register" data-theme="dark">
+
+        <div id="im-react-bits-ascii" aria-hidden="true"></div>
+
+        <main class="im-register-shell">
+
+            @livewire('register-student')
+
+        </main>
+
+    </div>
+
+    @vite('resources/js/imnehnet-login-ascii.jsx')
+```
+
+**[Buka kode asli `webportal/resources/views/imnehnet/auth/register.blade.php` (L30–L45)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/imnehnet/auth/register.blade.php#L30-L45)**
+
+### Pemetaan tombol, aksi, dan handler
+
+| Kontrol | Handler / state | Proses, validasi, dan hasil |
+|---|---|---|
+| **Login as Student / Admin** | `route('filament.student.auth.login') / route('filament.admin.auth.login')` | Navigasi tab menentukan panel dan route tujuan; bukan pilihan role yang langsung mengganti hak akses akun. |
+| **Sign in** | `wire:submit="authenticate"` | Mengirim form ke autentikasi Filament, menangani validasi kredensial dan redirect sesuai panel serta middleware. |
+| **Register student** | `/login/regist / RegisterStudent::register` | Mengarahkan ke form Livewire registrasi; backend memvalidasi dan menyimpan akun baru sesuai aturan. |
+| **Validasi password** | `wire:model + Alpine.js` | Indikator klien membantu pengguna, tetapi validasi penentu tetap di backend PHP. |
+
+
+**Penjelasan:** Blade menyajikan form, tombol, dan indikator loading; method PHP/Livewire menjalankan otorisasi, query, notifikasi, validasi, serta memanggil service atau queue ketika diperlukan. **Pengujian UI dan runtime dipisahkan** agar status keberhasilan tidak dilebihkan tanpa bukti kasus uji.
+
 ## 7. Pengujian dan Verifikasi
 
 ### 7.1 Pemeriksaan source dan route (tanpa mengubah data)
@@ -544,187 +584,3 @@ Dokumen ini merupakan **hasil audit source dengan contoh kode berkomentar**, buk
 
 
 ---
-
-## Lampiran Audit Final: Penyelarasan Implementasi Final Login dan Registrasi (23 November 2026)
-
-**Versi:** [`feat(portal): joh nggateli` — `b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf). Cuplikan persis dari source, dengan penjelasan di luar blok kode dan tautan tepat di bawah setiap cuplikan.
-
-### 1. web.php
-
-Route awal root diarahkan ke login Student; path /login diarahkan ke named route Filament Student; /login/regist menampilkan view registrasi. Blade login membedakan tab Student dan Admin berdasarkan panel aktif.
-
-```php
-
-Route::get('/', function () {
-    return redirect('/student/login');
-});
-
-// Named login so the landing page and the registration form have one address to
-// point at, rather than each hard-coding the panel path. The panel is the only
-// thing that authenticates; this is a redirect to it.
-Route::get('/login', function () {
-    return redirect()->route('filament.student.auth.login'); // IMNEHNET_AUTH_V6
-})->name('login');
-
-// Self-registration. Public on purpose: that is the point of it. What bounds it
-// is the per-student environment quota, the role being assigned server-side, and
-// the rate limit inside the component.
-// A view, not the component class: pointing the route straight at the Livewire
-// class makes Livewire look for a layout named "layouts", which does not exist.
-Route::view('/login/regist', 'imnehnet.auth.register')->name('register');
-
-// Compatibility route for the original Filament Student Dashboard name.
-// Redirects legacy links to the current Student Dashboard.
-Route::redirect(
-    '/student/dashboard-legacy',
-    '/student'
-)->name('filament.student.pages.dashboard');
-
-```
-
-**[Buka kode asli `webportal/routes/web.php` (L5–L30)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/routes/web.php#L5-L30)**
-
-### 2. register.blade.php
-
-View pembungkus registrasi memuat Livewire register-student dan aset tampilan.
-
-```blade
-
-<body class="imnehnet-register-body">
-
-    <div class="im-v5 im-register" data-theme="dark">
-
-        <div id="im-react-bits-ascii" aria-hidden="true"></div>
-
-        <main class="im-register-shell">
-
-            @livewire('register-student')
-
-        </main>
-
-    </div>
-
-    @vite('resources/js/imnehnet-login-ascii.jsx')
-```
-
-**[Buka kode asli `webportal/resources/views/imnehnet/auth/register.blade.php` (L30–L45)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/imnehnet/auth/register.blade.php#L30-L45)**
-
-### 3. RegisterStudent.php
-
-Handler register melakukan pemeriksaan input, proses backend, lalu membentuk akun Student; seluruh konsekuensi metode harus dibaca pada source lengkap.
-
-```php
-    public function register(ActivityLogService $activity): void
-    {
-        $email = Str::lower(trim($this->email));
-        $key = $this->throttleKey($email);
-
-        // Checked before validating, and counted on every attempt including the
-        // ones that fail. Validating first would mean a submission that never
-        // reached the limiter, so the endpoint could be driven as fast as the
-        // network allows to find out which addresses already have accounts and
-        // to create nothing at all.
-        if (RateLimiter::tooManyAttempts($key, self::ATTEMPTS)) {
-            $seconds = RateLimiter::availableIn($key);
-
-            throw ValidationException::withMessages([
-                'email' => sprintf(
-                    'Too many registration attempts from this browser. Try again in %d minutes.',
-                    (int) ceil($seconds / 60),
-                ),
-            ]);
-        }
-
-        RateLimiter::hit($key, self::DECAY_SECONDS);
-
-```
-
-**[Buka kode asli `webportal/app/Livewire/RegisterStudent.php` (L60–L82)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Livewire/RegisterStudent.php#L60-L82)**
-
-### 4. login.blade.php
-
-Tab login Student dan Admin memakai tautan route Filament sesuai panel.
-
-```blade
-                {{-- IMNEHNET_AUTH_TABS_V7: tabs navigate to distinct panel login routes. --}}
-                @php($imLoginPanel = filament()->getCurrentPanel()?->getId())
-                <nav class="im-v5-tabs" aria-label="Login role">
-                    <a href="{{ route('filament.student.auth.login') }}"
-                       class="{{ $imLoginPanel === 'student' ? 'active' : '' }}"
-                       @if($imLoginPanel === 'student') aria-current="page" @endif>
-                        <i data-lucide="user-round" aria-hidden="true"></i>
-                        Login as Student
-                    </a>
-                    <a href="{{ route('filament.admin.auth.login') }}"
-                       class="{{ $imLoginPanel === 'admin' ? 'active' : '' }}"
-                       @if($imLoginPanel === 'admin') aria-current="page" @endif>
-                        <i data-lucide="shield-check" aria-hidden="true"></i>
-                        Login as Admin
-                    </a>
-                </nav>
-
-                <form wire:submit="authenticate"
-```
-
-**[Buka kode asli `webportal/resources/views/imnehnet/auth/login.blade.php` (L18–L35)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/imnehnet/auth/login.blade.php#L18-L35)**
-
-**Keterangan pengujian:** akses situs yang berjalan mendukung keberhasilan integrasi dasar, tetapi tidak cukup untuk mengklaim seluruh skenario instalasi, autentikasi, validasi, atau otorisasi telah PASS. Catat status aktual dan bukti per kasus; tanpa bukti hasil, gunakan *belum dilampirkan*, bukan *gagal* atau *lulus*.
-
-
-## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
-
-### Alur backend registrasi: Livewire, validasi, dan penyimpanan
-
-Cuplikan berikut dibaca dari source pada branch `main`; baris pertama adalah komentar penjelasan yang hanya ditambahkan dalam dokumentasi.
-
-```php
-// CATATAN DOKUMENTASI (bukan kode produksi): Handler backend registrasi memvalidasi masukan dan tidak boleh digantikan validasi JavaScript/Blade.
- * The role is assigned here and nowhere else. 'role' is fillable, because an
- * administrator has to be able to create an administrator from the Users page,
- * so a form that mass-assigned the submitted array could set it. The properties
- * are therefore assigned one at a time and nothing from the request is ever run
- * through fill(). There is no field for a role on this form and there is no path
- * by which one could arrive, so a self-registered account is a student or the
- * registration fails.
- *
- * The account is created active, because the specification is that a student can
- * start practising without waiting for anyone. What that costs is bounded by the
- * per-student environment quota rather than by an approval step.
- *
- * Attempts are rate limited per address and address together. Password reset
- * covers an existing account, so this endpoint has no other throttle and an
- * unbounded one would let anyone enumerate which addresses have accounts.
- */
-final class RegisterStudent extends Component
-{
-    /** Attempts allowed from one address for one address before a cooldown. */
-    private const ATTEMPTS = 5;
-
-    /** Seconds before another attempt is allowed. */
-    private const DECAY_SECONDS = 3600;
-
-    public string $name = '';
-
-```
-
-**[Buka kode asli — app/Livewire/RegisterStudent.php (L25–L50)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Livewire/RegisterStudent.php#L25-L50)**
-
-**Penjelasan teknis:** Blade/Alpine mengelola tampilan serta feedback instan; `RegisterStudent` bertanggung jawab atas validasi server-side dan pembuatan akun. Kredensial dan password harus diproses oleh backend, bukan dipercayakan hanya pada UI. Status berhasil registrasi per skenario perlu bukti pengujian.
-
-**Kesimpulan verifikasi:** source sudah tersinkron di commit final. Status *implementasi tersedia* dapat dinyatakan terverifikasi lewat inspeksi kode; status *pengujian fungsi berhasil/PASS* hanya dicantumkan apabila hasil uji dan screenshot relevan telah dilampirkan. Dokumentasi ini tidak menjalankan aksi produksi untuk menghasilkan bukti palsu.
-
-
-## Peta Kontrol UI → PHP/Livewire (Audit Final)
-
-| Kontrol | Handler / state | Proses, validasi, dan hasil |
-|---|---|---|
-| **Login as Student / Admin** | `route('filament.student.auth.login') / route('filament.admin.auth.login')` | Navigasi tab menentukan panel dan route tujuan; bukan pilihan role yang langsung mengganti hak akses akun. |
-| **Sign in** | `wire:submit="authenticate"` | Mengirim form ke autentikasi Filament, menangani validasi kredensial dan redirect sesuai panel serta middleware. |
-| **Register student** | `/login/regist / RegisterStudent::register` | Mengarahkan ke form Livewire registrasi; backend memvalidasi dan menyimpan akun baru sesuai aturan. |
-| **Validasi password** | `wire:model + Alpine.js` | Indikator klien membantu pengguna, tetapi validasi penentu tetap di backend PHP. |
-
-**[Buka kode tampilan Blade — resources/views/imnehnet/auth/login.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/imnehnet/auth/login.blade.php)**
-
-**[Buka kode handler PHP — app/Filament/Auth/Pages/Login.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Auth/Pages/Login.php)**
-
-**Penjelasan:** Blade menyajikan form, tombol, dan indikator loading; method PHP/Livewire menjalankan otorisasi, query, notifikasi, validasi, serta memanggil service atau queue ketika diperlukan. **Pengujian UI dan runtime dipisahkan** agar status keberhasilan tidak dilebihkan tanpa bukti kasus uji.
