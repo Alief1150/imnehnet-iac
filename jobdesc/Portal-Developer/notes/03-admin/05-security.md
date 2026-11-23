@@ -304,3 +304,23 @@ use Illuminate\Support\Facades\Http;
 **Analisis implementasi:** State modal alert dikendalikan PHP/Livewire (`openAlerts`, `closeAlerts`, filter, pagination), bukan sekadar ikon statis. Hasil pencarian dan severity harus mengikuti data telemetri yang tersedia.
 
 **Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
+
+
+## Peta Kontrol UI → PHP/Livewire → Service (Audit Final)
+
+| Kontrol pada halaman | Handler atau state | Penjelasan alur dan hasil |
+|---|---|---|
+| **Detail KPI** | `toggleDetail` | Membuka/menutup rincian KPI pada state Livewire. |
+| **Filter severity grafik** | `toggleSev` | Memilih severity untuk membatasi data dan grafik yang disajikan. |
+| **Daftar alerts** | `openAlerts` | Membuka browser alert/modal dengan data telemetri yang tersedia. |
+| **Filter severity alert** | `setSev` | Memperbarui filter severity pada tampilan alert. |
+| **Tutup alert** | `closeAlerts` | Menutup panel alert; sumber data tidak dihapus. |
+| **Pagination alert** | `setAlertsPage` | Mengubah halaman data alert, tidak mengubah log sumber. |
+
+**Kode UI/Blade:** [Buka `resources/views/filament/pages/security.blade.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/security.blade.php).
+
+**Kode handler PHP:** [Buka `app/Filament/Pages/Security.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/Security.php).
+
+**Cara membaca interaksi:** atribut `wire:click` menjalankan method komponen Livewire melalui request server; `wire:model` mengikat input dan properti; `wire:loading` hanya mencerminkan request masih diproses. Jika terjadi error, status aktual harus mengikuti respons backend, bukan hanya perubahan tampilan.
+
+**Validasi pengujian:** hasil fungsi tertentu ditulis **PASS** hanya jika telah direkam pada akun dan data uji, termasuk kasus akses ditolak, data kosong, dan kegagalan service. Screenshot UI sendiri adalah bukti tampilan, bukan bukti seluruh backend telah diuji.
