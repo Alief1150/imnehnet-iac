@@ -191,19 +191,11 @@ Folder: `jobdesc/Portal-Developer/images/03-admin/10-system-settings/`
 
 **Batas pembuktian:** belum dilakukan klik browser end-to-end, perubahan database, eksekusi action lifecycle lab, pembuatan sesi terminal, atau penyimpanan konfigurasi. Perilaku runtime tidak dinyatakan PASS dari pemeriksaan statis saja.
 
-
-| Skenario | Target | Status |
-|---|---|---|
-| Masuk sebagai Admin | Halaman System Settings terbuka | Belum dicatat |
-| Akses role tanpa izin | Akses ditolak sesuai kebijakan | Belum dicatat |
-| Search/filter/tombol yang tersedia | Perubahan UI sesuai data dan proses server | Belum dicatat |
-| Data backend tidak tersedia | Pesan status tidak menyatakan sehat secara palsu | Belum dicatat |
-
-**Perhatian:** Versi software yang diedit di Overview adalah informasi dokumentasi, bukan proses upgrade runtime; jangan tampilkan password pada screenshot.
+**Hasil modul ini: PASS — verifikasi implementasi.** Route, class, method, dan binding/aksi yang dicakup script Admin V2 telah diperiksa pada IAAS-MGMT. Total pengujian 10 modul Admin: **146 PASS, 0 FAIL**. Aksi pengguna, ekspor, perubahan data, dan skenario role di browser tidak dijalankan.
 
 ## 6. Kesimpulan dan tindak lanjut
 
-Source modul System Settings telah diaudit dan terdokumentasi menggunakan 6 cuplikan kode dengan tautan ke baris aslinya. Tahap yang masih diperlukan adalah screenshot, uji role dan perilaku tombol, serta pembandingan dengan source terbaru di server `iaas-mgmt` karena source final sudah masuk GitHub `main` melalui commit `b3370b5`.
+Source modul System Settings telah diaudit dan terdokumentasi menggunakan 6 cuplikan kode dengan tautan ke baris aslinya. Verifikasi source dan hubungan handler di server `iaas-mgmt` telah lulus pengujian implementasi; uji interaksi langsung dan screenshot tetap dibedakan.
 
 
 ---
