@@ -177,6 +177,18 @@ Blade mengimplementasikan bagian antarmuka `$rows = collect`; interaksi dinamis 
 
 ## 4. Pengujian dan Bukti
 
+
+### Hasil Pengujian Implementasi Student — PASS (23 November 2026)
+
+**Lingkungan:** `iaas-mgmt` · **Direktori aplikasi:** `/home/iaas/projects/webportal-iaas` · **Metode:** script PHP read-only, inspeksi route, class, Blade, method PHP, serta binding `wire:click`/`wire:submit` yang tersedia.
+
+**Status verifikasi modul history: PASS.** Pengujian Student awal menghasilkan **82 pemeriksaan PASS** dan satu FAIL akibat **asumsi URL Pentest yang salah pada script**, bukan kegagalan handler aplikasi. URL yang benar diverifikasi secara terpisah: **`/student/guided-ctf` → `filament.student.pages.guided-ctf` → `App\Filament\Pages\GuidedCtf`**, dengan hasil **PASS**. Dengan koreksi tersebut, **6 dari 6 modul Student lolos pemeriksaan implementasi**.
+
+**Cakupan PASS:** keberadaan route yang benar, file aplikasi, method, dan kecocokan binding Livewire yang memang ada dalam source. Beberapa kontrol seperti tautan, filter GET, JavaScript, atau action tidak memakai `wire:click` dan tidak seluruhnya diuji otomatis.
+
+**Batas pembuktian:** script tidak menjalankan Start/Stop/Reset/Delete Lab, Submit Flag, upload avatar, perubahan profil/password, maupun interaksi browser secara nyata. Keberhasilan runtime aksi-aksi tersebut memerlukan bukti uji tersendiri. **PASS di sini berarti lolos verifikasi implementasi, bukan uji end-to-end.**
+
+
 | Pengujian | Kriteria hasil | Status bukti |
 |---|---|---|
 | Halaman dapat dibuka akun Student | Render tanpa exception, akses sesuai role | Perlu bukti screenshot |
