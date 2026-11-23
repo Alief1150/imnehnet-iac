@@ -486,66 +486,34 @@ View pembungkus registrasi memuat Livewire register-student dan aset tampilan.
 
 ## 7. Pengujian dan Verifikasi
 
+### Tujuan dan Lingkungan Pengujian
 
-### Hasil Pengujian Implementasi Autentikasi — PASS (23 November 2026)
+Memastikan implementasi modul dapat ditelusuri dari route Laravel/Filament ke class PHP, tampilan Blade, serta metode/aksi backend yang digunakan. Pengujian berlangsung di **IAAS-MGMT** pada **23 November 2026** menggunakan aplikasi `/home/iaas/projects/webportal-iaas`. Metode berupa skrip **read-only** yang melakukan bootstrap Laravel, inspeksi method/source, dan membaca database bila relevan.
 
-**Lingkungan uji:** `iaas-mgmt` · **Aplikasi:** `/home/iaas/projects/webportal-iaas` · **Metode:** script PHP read-only dengan bootstrap Laravel, pemeriksaan route, class, view, binding Livewire, aturan autentikasi, dan query database non-mutasi.
+### Tabel Hasil Pengujian
 
-| Skenario | Hasil pengujian | Bukti spesifik |
-|---|---|---|
-| Registrasi Student | **PASS** | Route `/login/regist`, wrapper Blade, `RegisterStudent::register()`, input `name/email/password/password_confirmation`, validasi email unik dan password, rate limiter, `UserRole::Student`, `UserStatus::Active`, `Hash::make`, activity log, `Auth::login`, dan redirect Student terbaca dari implementasi. |
-| Login Admin | **PASS** | `/admin/login`, `filament.admin.pages.dashboard`, form `wire:submit="authenticate"`, Filament Login, pemeriksaan `canAccessPanel`, dan middleware redirect lintas panel terverifikasi. |
-| Login Student | **PASS** | `/student/login`, dashboard Student, tab login, handler Filament dan konfigurasi `StudentPanelProvider` terverifikasi. |
-| Integrasi database | **PASS** | Tabel `users` beserta kolom wajib dapat dibaca; **10 akun (3 Admin, 7 Student)** tercatat saat pengujian. |
+| ID | Skenario pemeriksaan | Kriteria keberhasilan | Hasil aktual dari terminal | Status |
+|---|---|---|---|---|
+| AUTH-01 | Route dan halaman registrasi | Route `/login/regist` dan view `imnehnet.auth.register` tersedia | Route dan view terdeteksi pada bootstrap Laravel | PASS |
+| AUTH-02 | Form registrasi Livewire | Input nama, email, password, konfirmasi dan handler `register` terhubung | Form, `wire:submit`, dan method PHP ditemukan | PASS |
+| AUTH-03 | Validasi registrasi | Aturan email unik, password kuat, konfirmasi dan rate limiter tersedia | Aturan validasi dan rate limiter terdeteksi di `RegisterStudent.php` | PASS |
+| AUTH-04 | Kebijakan akun baru | Role Student, Active, password hashing, activity log, dan redirect disiapkan | Kebijakan dan method terkait ditemukan di source | PASS |
+| AUTH-05 | Login Admin | `/admin/login`, class Login Filament, dan handler `authenticate` tersedia | Route, Blade, handler dan pemeriksaan panel terdeteksi | PASS |
+| AUTH-06 | Login Student | `/student/login`, panel Student dan middleware terdaftar | Route, Blade, panel provider dan middleware terdeteksi | PASS |
+| AUTH-07 | Integrasi database | Tabel users dapat dibaca tanpa memodifikasi data | 10 akun: 3 Admin, 7 Student; kolom wajib terdeteksi | PASS |
 
-**Rekap asli terminal:** **57 pemeriksaan PASS, 0 FAIL**; keempat kelompok pengujian PASS, pada **23 November 2026 pukul 05:06:05** (waktu yang tercetak di terminal server).
+**Interpretasi status:** **PASS** berarti pemeriksaan implementasi yang tercantum benar-benar lolos pada terminal. Ini **bukan** hasil klik dan eksekusi operasi produksi.
 
-**Batas pembuktian:** PASS di atas menyatakan implementasi source, route, view, dan pembacaan database sudah terverifikasi. Script **tidak** mengirim password sungguhan, membuat akun baru, mengeksekusi autentikasi browser, atau membuktikan keberhasilan redirect aktual. Uji end-to-end tetap terpisah; tidak dinyatakan PASS tanpa bukti.
+### Bukti dan Pembahasan
 
-**Tautan implementasi:** [Routes](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/routes/web.php) · [Login PHP](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Auth/Pages/Login.php) · [RegisterStudent PHP](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Livewire/RegisterStudent.php).
+**Rekap lintas registrasi, login dan database:** 57 pemeriksaan **PASS**, 0 FAIL; 4 kelompok uji PASS. Waktu output terminal **05:06:05** (waktu server). Bukti terstruktur: **[Transkrip ringkas pengujian IAAS-MGMT](evidence/2026-11-23-iaas-mgmt-verification.md)**. File bukti mengutip keluaran hasil terminal yang diberikan operator, termasuk route, method, dan binding yang terdeteksi. Tautan source PHP/Blade terdapat pada bagian implementasi dan referensi dokumen ini.
 
+**Analisis:** seluruh baris yang diuji memenuhi kriteria berupa ketersediaan route, file/class, dan keterhubungan UI–handler sebagaimana cakupan script. Tidak ditemukan kegagalan di dalam pemeriksaan tersebut.
 
-### 7.1 Pemeriksaan source dan route (tanpa mengubah data)
+### Batasan dan Tindak Lanjut
 
-```bash
-cd /home/iaas/projects/webportal-iaas
+Pengujian ini **tidak** mengirim kredensial login asli, membuat akun registrasi baru, atau mengeksekusi redirect browser. Keberhasilan autentikasi/registrasi end-to-end harus diuji terpisah dengan akun uji yang diizinkan. Bukti screenshot terminal lengkap yang disensor dapat dilampirkan saat penyusunan laporan akhir.
 
-# Pastikan route penting terdaftar; hanya menampilkan informasi.
-php artisan route:list --path=login
-php artisan route:list --path=student
-php artisan route:list --path=admin
-
-# Periksa sintaks class backend yang relevan.
-php -l app/Filament/Auth/Pages/Login.php
-php -l app/Livewire/RegisterStudent.php
-php -l app/Http/Middleware/RedirectToOwnPanel.php
-
-# Pastikan view pembungkus registrasi tersedia di deployment aktif.
-test -f resources/views/imnehnet/auth/register.blade.php \
-  && echo "Registration wrapper: present" \
-  || echo "Registration wrapper: missing"
-```
-
-**Referensi file untuk pemeriksaan:** [routes/web.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/routes/web.php), [Login.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Auth/Pages/Login.php), [RegisterStudent.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Livewire/RegisterStudent.php), dan [RedirectToOwnPanel.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Http/Middleware/RedirectToOwnPanel.php). Perintah shell adalah instruksi verifikasi, bukan salinan dari satu file source.
-
-Tidak ada perintah di atas yang membuat akun, menjalankan migration, atau merestart aplikasi. **Hindari mempublikasikan `.env`, password, session cookie, atau secret dalam screenshot.**
-
-### 7.2 Matriks hasil pengujian yang terverifikasi
-
-| ID | Pemeriksaan yang dijalankan pada IAAS-MGMT | Hasil |
-|---|---|---|
-| AUTH-01 | Route registrasi `/login/regist` dan view pembungkus `imnehnet.auth.register` | **PASS** |
-| AUTH-02 | Komponen Livewire `RegisterStudent`, form dan `wire:submit="register"` | **PASS** |
-| AUTH-03 | Input registrasi, validasi email/password, rate limiter | **PASS** |
-| AUTH-04 | Logika penetapan Student/Active, hashing, activity log, login otomatis, redirect | **PASS** |
-| AUTH-05 | Route `/admin/login`, form Filament dan handler `authenticate` | **PASS** |
-| AUTH-06 | Pemeriksaan `canAccessPanel`, `isAdmin`, dan middleware panel | **PASS** |
-| AUTH-07 | Route `/student/login`, `StudentPanelProvider`, dashboard dan login Blade | **PASS** |
-| AUTH-08 | Pembacaan tabel `users`: 10 akun (3 Admin, 7 Student) | **PASS** |
-
-**Hasil:** 57/57 pemeriksaan implementasi **PASS**. Baris ini adalah hasil yang benar-benar diperiksa oleh script PHP read-only pada 23 November 2026, bukan klaim keberhasilan submit login/registrasi langsung melalui browser.
-
-**Di luar cakupan:** submit kredensial valid/tidak valid, penciptaan akun baru, pengujian role lintas panel dan tampilan responsif belum dieksekusi dalam sesi pengujian ini.
 
 ## 8. Rencana Screenshot dan Penamaan File
 
