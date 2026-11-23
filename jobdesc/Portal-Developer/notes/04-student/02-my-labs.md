@@ -25,8 +25,6 @@ Method `startLab()` perlu dibaca bersama validasi, state, dan pemanggilan servic
 
 ```php
 // PENJELASAN DOKUMENTASI (bukan bagian source): Memulai lifecycle sesi lab lewat backend; kondisi/kuota diperiksa sebelum membuat sesi.
-    }
-
     public function startLab(): void
     {
         $user = auth()->user();
@@ -54,8 +52,6 @@ Method `requestDelete()` perlu dibaca bersama validasi, state, dan pemanggilan s
 
 ```php
 // PENJELASAN DOKUMENTASI (bukan bagian source): Menampilkan/menyiapkan konfirmasi penghapusan tanpa langsung menghapus lab.
-    }
-
     public function requestDelete(): void
     {
         if ($this->currentSession() === null) {
