@@ -308,3 +308,25 @@ final class CtfControlCenter extends Page
 **Analisis implementasi:** State Livewire memisahkan current/history, filter status/course, inspector dan edit Course. Aksi penyimpanan harus dilihat bersama otorisasi serta validasi backend.
 
 **Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
+
+
+## Peta Kontrol UI → PHP/Livewire → Service (Audit Final)
+
+| Kontrol pada halaman | Handler atau state | Penjelasan alur dan hasil |
+|---|---|---|
+| **Current / History** | `switchView` | Mengubah mode daftar sesi yang disajikan. |
+| **Search, Status, Course** | `search / statusFilter / courseFilter` | Properti Livewire memfilter data dari query dashboard. |
+| **Inspect** | `inspect` | Membuka inspector sesi terpilih berdasarkan ID yang diproses PHP. |
+| **Hapus History** | `deleteHistorySession` | Aksi perubahan data permanen harus mengikuti otorisasi dan konfirmasi; jangan dieksekusi untuk screenshot. |
+| **Sebelumnya / Berikutnya** | `previousHistoryPage / nextHistoryPage` | Mengubah pagination pada riwayat. |
+| **Edit dan Save Course** | `editCourse / saveCourse` | Memuat metadata course dan menyimpan perubahan setelah pemeriksaan admin/validasi. |
+| **Edit dan Save Objective** | `editObjective / saveObjective` | Memuat objective terpilih dan memproses penyimpanannya di backend. |
+| **Cancel** | `cancelEdit` | Membatalkan state pengeditan tanpa menyimpan. |
+
+**Kode UI/Blade:** [Buka `resources/views/filament/pages/ctf-control-center.blade.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/ctf-control-center.blade.php).
+
+**Kode handler PHP:** [Buka `app/Filament/Pages/CtfControlCenter.php`](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/CtfControlCenter.php).
+
+**Cara membaca interaksi:** atribut `wire:click` menjalankan method komponen Livewire melalui request server; `wire:model` mengikat input dan properti; `wire:loading` hanya mencerminkan request masih diproses. Jika terjadi error, status aktual harus mengikuti respons backend, bukan hanya perubahan tampilan.
+
+**Validasi pengujian:** hasil fungsi tertentu ditulis **PASS** hanya jika telah direkam pada akun dan data uji, termasuk kasus akses ditolak, data kosong, dan kegagalan service. Screenshot UI sendiri adalah bukti tampilan, bukan bukti seluruh backend telah diuji.
