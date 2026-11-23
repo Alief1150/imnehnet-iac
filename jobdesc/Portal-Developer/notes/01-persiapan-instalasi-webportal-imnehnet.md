@@ -444,3 +444,44 @@ Konfigurasi web server yang tercatat pada source; kredensial atau konfigurasi lo
 **[Buka kode asli `webportal/deploy/apache/imnehnet-portal.conf` (L1–L28)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/deploy/apache/imnehnet-portal.conf#L1-L28)**
 
 **Keterangan pengujian:** akses situs yang berjalan mendukung keberhasilan integrasi dasar, tetapi tidak cukup untuk mengklaim seluruh skenario instalasi, autentikasi, validasi, atau otorisasi telah PASS. Catat status aktual dan bukti per kasus; tanpa bukti hasil, gunakan *belum dilampirkan*, bukan *gagal* atau *lulus*.
+
+
+## Penyempurnaan Dokumentasi Final — Audit Commit b3370b5
+
+### Konfigurasi Apache dan batas verifikasi deployment
+
+Cuplikan berikut dibaca dari source pada branch `main`; baris pertama adalah komentar penjelasan yang hanya ditambahkan dalam dokumentasi.
+
+```apache
+# CATATAN DOKUMENTASI (bukan konfigurasi produksi): Dokumentasi konfigurasi deployment: file vhost ini merupakan template dan tidak membuktikan bahwa Apache aktif di server.
+# IMNEHNET portal - Apache vhost
+#
+# This file is NOT active. It has to be installed by a human with sudo,
+# because /etc/apache2 is root-owned and the portal must not edit it itself.
+#
+# What it does, and why each part is here:
+#
+#   1. Serves the portal from this application's public/ directory through
+#      php-fpm. The portal is currently served by "php artisan serve", which is
+#      PHP's built-in development server: single threaded, no WebSocket support,
+#      and it does not come back after a reboot. Apache with php-fpm is what
+#      should be serving it anyway.
+#
+#   2. Proxies /terminal/<slot>/ and /embed/<slot>/ to a ttyd listener on
+#      loopback. ttyd speaks WebSocket, and WebSocket is an HTTP upgrade, so it
+#      cannot be forwarded by an ordinary reverse proxy. mod_proxy_wstunnel
+#      exists for exactly this and has to be enabled; without it the terminal
+#      page loads and then hangs. /terminal/ asks the browser for the slot's
+#      password; /embed/ takes the slot's ticket from a cookie, which is what
+#      the embedded frame uses.
+#
+# Why slots instead of one port per session:
+#
+#   A ttyd process serves exactly one shell, so every session needs its own
+```
+
+**[Buka kode asli — deploy/apache/imnehnet-portal.conf (L1–L24)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/deploy/apache/imnehnet-portal.conf#L1-L24)**
+
+**Penjelasan teknis:** File vhost menyebut kebutuhan PHP-FPM dan reverse proxy WebSocket untuk ttyd; komentarnya juga menyatakan template belum aktif. Karena itu dokumentasi instalasi harus membedakan **tersedia sebagai konfigurasi dalam source** dari **benar-benar terpasang dan aktif di host**. Akses website saja membuktikan endpoint merespons, bukan bahwa Apache/PHP-FPM tertentu yang melayani request.
+
+**Kesimpulan verifikasi:** source sudah tersinkron di commit final. Status *implementasi tersedia* dapat dinyatakan terverifikasi lewat inspeksi kode; status *pengujian fungsi berhasil/PASS* hanya dicantumkan apabila hasil uji dan screenshot relevan telah dilampirkan. Dokumentasi ini tidak menjalankan aksi produksi untuk menghasilkan bukti palsu.
