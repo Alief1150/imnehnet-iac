@@ -190,9 +190,6 @@ Upload ke folder `jobdesc/Portal-Developer/images/03-admin/03-infrastructure/`:
 **Makna hasil:** halaman, class, method dan relasi UI–handler yang diperiksa tersedia. Sinyal seperti `authorization-check`, `validation` dan `service-reference` adalah hasil pembacaan source, **bukan** eksekusi seluruh cabang logika.
 
 **Batas pembuktian:** belum dilakukan klik browser end-to-end, perubahan database, eksekusi action lifecycle lab, pembuatan sesi terminal, atau penyimpanan konfigurasi. Perilaku runtime tidak dinyatakan PASS dari pemeriksaan statis saja.
-
-**Hasil modul ini: PASS — pemeriksaan implementasi pada IAAS-MGMT.** Route, class/method, view (jika ada), dan binding/aksi yang relevan tercakup dalam pengujian Admin V2 (146 PASS, 0 FAIL untuk 10 modul). Uji klik nyata, hasil query runtime, perubahan data, dan akses lintas role tidak termasuk dalam pengujian ini.
-
 ## 6. Kesimpulan
 
 Struktur dan alur utama **Infrastructure** telah dijelaskan dengan 6 cuplikan source tertaut. Hasil verifikasi implementasi di IAAS-MGMT sudah tercatat PASS; bukti screenshot dan uji fungsional browser merupakan kategori bukti terpisah.
