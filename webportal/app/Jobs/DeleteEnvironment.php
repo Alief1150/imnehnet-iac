@@ -46,6 +46,35 @@ final class DeleteEnvironment implements ShouldQueue
             return;
         }
 
+
+        // IMNEHNET_ADMIN_DELETE_PAIR_V8
+        // Worker-side guard against an already queued individual deletion.
+        $linked = \App\Models\LabSession::query()
+            ->where(function ($query) use ($environment): void {
+                $query->where('attacker_environment_id', $environment->getKey())
+                    ->orWhere('victim_environment_id', $environment->getKey());
+            })
+            ->where('status', '!=', \App\Enums\LabSessionStatus::Deleted->value)
+            ->exists();
+
+        if ($linked) {
+            $lifecycle->fail(
+                $this->actorFor($environment),
+                $environment,
+                'delete',
+                new ProcessResult(
+                    command: [],
+                    exitCode: -1,
+                    stdout: '',
+                    stderr: 'Paired lab must be deleted through DeleteLabSession.',
+                    durationMs: 0.0,
+                    errorCode: 'paired_lab_guard'
+                )
+            );
+
+            return;
+        }
+
         $actor = $this->actorFor($environment);
 
         try {

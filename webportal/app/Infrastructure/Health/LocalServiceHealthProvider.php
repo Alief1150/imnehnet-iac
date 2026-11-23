@@ -14,12 +14,13 @@ final class LocalServiceHealthProvider implements InfrastructureHealthProvider
         private readonly string $key,
         private readonly string $label,
         private readonly array $command,
+        private readonly int $timeoutSeconds = 3,
     ) {}
 
     public function check(): ServiceHealth
     {
         $started = hrtime(true);
-        $result = $this->commands->run($this->command);
+        $result = $this->commands->run($this->command, $this->timeoutSeconds);
         $latency = (int) ((hrtime(true) - $started) / 1_000_000);
 
         return new ServiceHealth(

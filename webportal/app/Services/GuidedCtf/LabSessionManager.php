@@ -143,7 +143,7 @@ class LabSessionManager
                                 'status' => EnvironmentStatus::Provisioning,
                                 'runtime_status' => RuntimeStatus::Unknown,
                                 'cpu_limit' => (int) config('infrastructure.default_cpu_limit', 2),
-                                'memory_limit_mb' => (int) config('infrastructure.default_memory_limit_mb', 2048),
+                                'memory_limit_mb' => (int) config('infrastructure.ctf_attacker_memory_limit_mb', 1024),
                                 'disk_limit_gb' => (int) config('infrastructure.default_disk_limit_gb', 8),
                                 'tofu_workspace' => 'ctf-attacker-'.$pair['octet'],
                                 'terminal_enabled' => false,

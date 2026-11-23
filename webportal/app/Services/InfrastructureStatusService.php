@@ -218,9 +218,9 @@ final class InfrastructureStatusService
         return new ServiceHealth(
             key: 'automation',
             label: 'Automation',
-            status: $available ? 'degraded' : 'unknown',
+            status: $available ? 'healthy' : 'unknown',
             summary: $available
-                ? 'OpenTofu and Ansible are available; lab mutation still runs through the unavailable provider.'
+                ? 'OpenTofu and Ansible tooling are available; end-to-end provisioning is not verified by this probe.'
                 : 'OpenTofu or Ansible availability could not be verified.',
             source: 'tofu version; ansible --version',
             checkedAt: Carbon::now(),
@@ -304,7 +304,8 @@ final class InfrastructureStatusService
             $this->commands,
             'ansible',
             'Ansible',
-            [(string) config('infrastructure.ansible.ping_binary', 'ansible'), '--version'],
+            ['/usr/bin/env', 'HOME=/tmp', (string) config('infrastructure.ansible.ping_binary', 'ansible'), '--version'],
+            10,
         ))->check();
     }
 

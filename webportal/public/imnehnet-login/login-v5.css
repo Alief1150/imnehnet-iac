@@ -496,3 +496,569 @@ body:has(.im-v5) .fi-simple-main > * {
     position: relative;
     z-index: 2;
 }
+
+
+/* IMNEHNET_AUTH_TABS_V7: scope form-field sizing to the login card only. */
+.im-v5 .im-v5-card .im-v5-form input[type="email"],
+.im-v5 .im-v5-card .im-v5-form input[type="password"],
+.im-v5 .im-v5-card .im-v5-form input[type="text"] {
+    box-sizing: border-box;
+    min-height: 48px;
+    font-size: 14px;
+    line-height: 20px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    vertical-align: middle;
+}
+.im-v5 .im-v5-card .im-v5-form input[type="checkbox"] {
+    min-height: auto;
+}
+.im-v5 .im-v5-card .im-v5-form .fi-input-wrp {
+    min-height: 48px;
+    align-items: center;
+}
+.im-v5 .im-v5-card .im-v5-form .fi-input-wrp input {
+    min-width: 0;
+}
+.im-v5 .im-v5-card .im-v5-form .fi-input-wrp .fi-input-wrp-suffix,
+.im-v5 .im-v5-card .im-v5-form .fi-input-wrp .fi-input-wrp-prefix {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+}
+
+
+/* IMNEHNET_AUTH_UI_V8: scoped auth palette and form fixes. */
+.im-v5 .im-v5-card { color:var(--text)!important; background:var(--card)!important; }
+.im-v5 .im-v5-card .im-v5-heading h1,
+.im-v5 .im-v5-card .fi-fo-field-label,
+.im-v5 .im-v5-card .fi-fo-field-label-content,
+.im-v5 .im-v5-card .fi-checkbox-list-option-label,
+.im-v5 .im-v5-card .fi-checkbox-input,
+.im-v5 .im-v5-card .fi-fo-field-wrp { color:var(--text)!important; }
+.im-v5 .im-v5-card .im-v5-form .fi-input-wrp {
+  min-height:50px!important; background:var(--field)!important;
+  border:1px solid var(--border)!important; box-shadow:none!important;
+  display:flex; align-items:center;
+}
+.im-v5 .im-v5-card .im-v5-form .fi-input-wrp input:not([type="checkbox"]) {
+  height:48px!important; min-height:48px!important;
+  padding-top:0!important; padding-bottom:0!important;
+  line-height:normal!important; font-size:15px!important;
+  color:var(--text)!important; caret-color:var(--text)!important;
+  -webkit-text-fill-color:var(--text)!important;
+  background:transparent!important;
+}
+.im-v5 .im-v5-card .im-v5-form input:-webkit-autofill {
+  -webkit-text-fill-color:var(--text)!important;
+  transition:background-color 99999s ease-out 0s;
+}
+.im-v5 .im-v5-card .im-v5-form .fi-input-wrp-suffix,
+.im-v5 .im-v5-card .im-v5-form .fi-input-wrp-prefix { align-self:stretch; display:flex; align-items:center; }
+.im-v5 .im-v5-card .im-v5-form .fi-fo-field-wrp-error-message,
+.im-v5 .im-v5-card .im-v5-form [data-validation-error] { color:#fb7185!important; }
+.im-v5 .im-v5-tabs { border-color:var(--border)!important; }
+.im-v5[data-theme="dark"] .im-v5-tabs { background:rgba(255,255,255,.12)!important; }
+.im-v5[data-theme="light"] .im-v5-tabs { background:rgba(255,255,255,.55)!important; }
+.im-v5[data-theme="light"] .im-v5-tabs a.active { background:#fff!important; color:#14234e!important; }
+.im-v5[data-theme="dark"] .im-v5-tabs a.active { background:#34435f!important; color:#fff!important; }
+.im-v5 .im-v5-tabs a svg, .im-v5 .im-v5-brand svg,
+.im-v5 .im-v5-secure svg, .im-v5 .im-v5-benefits svg,
+.im-v5 .im-v5-next svg, .im-v5 .im-v5-theme svg { flex-shrink:0; }
+
+
+
+/* BEGIN IMNEHNET_THEME_SAFE_V2 */
+.im-v5 {
+    --im-theme-speed: 180ms;
+    transition:
+        color var(--im-theme-speed) ease,
+        background-color var(--im-theme-speed) ease,
+        border-color var(--im-theme-speed) ease;
+}
+
+.im-v5 .im-v5-card,
+.im-v5 .im-v5-tabs,
+.im-v5 .im-v5-tabs a,
+.im-v5 .im-v5-form .fi-input-wrp,
+.im-v5 .im-v5-theme {
+    transition:
+        background-color 180ms ease,
+        color 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease;
+}
+
+.im-v5[data-theme="light"] {
+    --text: #14234e;
+    --muted: #647696;
+    --card: rgba(255,255,255,.94);
+    --field: rgba(248,250,255,.92);
+    --border: #cfdef4;
+}
+
+.im-v5[data-theme="dark"] {
+    --text: #f5f7ff;
+    --muted: #b0bfd6;
+    --card: rgba(22,33,55,.95);
+    --field: rgba(34,47,71,.8);
+    --border: #42516b;
+}
+
+.im-v5[data-theme="light"] .im-v5-theme {
+    background: rgba(255,255,255,.94);
+    color: #14234e;
+    border-color: #cfdef4;
+}
+
+.im-v5[data-theme="dark"] .im-v5-theme {
+    background: rgba(22,33,55,.92);
+    color: #f5f7ff;
+    border-color: #42516b;
+}
+
+.im-v5 .im-v5-theme {
+    display: grid !important;
+    place-items: center !important;
+    z-index: 50 !important;
+}
+
+.im-v5 .im-v5-theme svg {
+    display: block !important;
+    width: 19px;
+    height: 19px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.im-v5[data-theme="light"] .im-v5-theme .im-icon-sun {
+    display: none !important;
+}
+
+.im-v5[data-theme="dark"] .im-v5-theme .im-icon-moon {
+    display: none !important;
+}
+
+.im-v5[data-theme="light"] .im-v5-card {
+    background: var(--card) !important;
+    color: var(--text) !important;
+}
+
+.im-v5[data-theme="dark"] .im-v5-card {
+    background: var(--card) !important;
+    color: var(--text) !important;
+}
+
+.im-v5 .im-v5-heading h1,
+.im-v5 .im-v5-brand strong,
+.im-v5 .im-v5-form label {
+    color: var(--text) !important;
+}
+
+.im-v5 .im-v5-heading p,
+.im-v5 .im-v5-brand span,
+.im-v5 .im-v5-secure,
+.im-v5 .im-v5-register {
+    color: var(--muted) !important;
+}
+
+.im-v5[data-theme="light"] .im-v5-tabs {
+    background: rgba(255,255,255,.55) !important;
+}
+
+.im-v5[data-theme="dark"] .im-v5-tabs {
+    background: rgba(255,255,255,.12) !important;
+}
+
+.im-v5[data-theme="light"] .im-v5-tabs a.active {
+    background: #fff !important;
+    color: #14234e !important;
+}
+
+.im-v5[data-theme="dark"] .im-v5-tabs a.active {
+    background: #34435f !important;
+    color: #fff !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .im-v5,
+    .im-v5 *,
+    .im-v5 *::before,
+    .im-v5 *::after {
+        transition-duration: 0.01ms !important;
+    }
+}
+/* END IMNEHNET_THEME_SAFE_V2 */
+
+
+/* BEGIN IMNEHNET_THEME_V3 */
+
+/* Unified theme palette */
+.im-v5 {
+    --im-panel: #f1f5ff;
+    --im-panel-text: #14234e;
+    --im-panel-muted: #52658b;
+    --im-benefit: rgba(255,255,255,.76);
+    --im-benefit-border: rgba(100,130,185,.22);
+    --im-toggle-bg: #ffffff;
+    --im-toggle-fg: #172b58;
+    --im-toggle-border: #b9cbea;
+    color-scheme: light;
+}
+
+.im-v5[data-theme="dark"] {
+    --im-panel: #19263e;
+    --im-panel-text: #ffffff;
+    --im-panel-muted: #b5c9eb;
+    --im-benefit: #303b55;
+    --im-benefit-border: rgba(255,255,255,.07);
+    --im-toggle-bg: #18263e;
+    --im-toggle-fg: #ffffff;
+    --im-toggle-border: #61718e;
+    color-scheme: dark;
+}
+
+/* Right-hand welcome panel */
+.im-v5 .im-v5-welcome {
+    background: var(--im-panel) !important;
+    color: var(--im-panel-text) !important;
+    transition:
+        background-color 180ms ease,
+        color 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease !important;
+}
+
+.im-v5 .im-v5-welcome h2,
+.im-v5 .im-v5-welcome h3 {
+    color: var(--im-panel-text) !important;
+    transition: color 180ms ease;
+}
+
+.im-v5 .im-v5-kicker,
+.im-v5 .im-v5-description,
+.im-v5 .im-v5-benefits > div,
+.im-v5 .im-v5-benefits > div span {
+    color: var(--im-panel-muted) !important;
+    transition: color 180ms ease;
+}
+
+.im-v5 .im-v5-benefits {
+    background: var(--im-benefit) !important;
+    border-color: var(--im-benefit-border) !important;
+    transition:
+        background-color 180ms ease,
+        border-color 180ms ease !important;
+}
+
+.im-v5 .im-v5-benefits svg,
+.im-v5 .im-v5-watermark {
+    color: var(--im-panel-muted) !important;
+    transition: color 180ms ease;
+}
+
+/* Theme toggle: visible, touch friendly */
+.im-v5 .im-v5-theme {
+    position: fixed !important;
+    top: max(12px, env(safe-area-inset-top)) !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
+    display: grid !important;
+    place-items: center !important;
+    overflow: hidden;
+    isolation: isolate;
+    z-index: 100 !important;
+    padding: 0 !important;
+    border: 1px solid var(--im-toggle-border) !important;
+    border-radius: 50% !important;
+    background: var(--im-toggle-bg) !important;
+    color: var(--im-toggle-fg) !important;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 4px 18px rgba(0,0,0,.15);
+    transition:
+        background-color 180ms ease,
+        color 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease,
+        transform 180ms ease !important;
+}
+
+.im-v5 .im-v5-theme:hover {
+    transform: scale(1.07);
+    box-shadow: 0 6px 22px rgba(0,0,0,.22);
+}
+
+.im-v5 .im-v5-theme:active {
+    transform: scale(.94);
+}
+
+.im-v5 .im-v5-theme:focus-visible {
+    outline: 3px solid #38bdf8 !important;
+    outline-offset: 3px;
+}
+
+/* FlyonUI-style rotating sun/moon, no plugin required */
+.im-v5 .im-v5-theme .im-icon-sun,
+.im-v5 .im-v5-theme .im-icon-moon,
+.im-v5[data-theme="light"] .im-v5-theme .im-icon-sun,
+.im-v5[data-theme="light"] .im-v5-theme .im-icon-moon,
+.im-v5[data-theme="dark"] .im-v5-theme .im-icon-sun,
+.im-v5[data-theme="dark"] .im-v5-theme .im-icon-moon {
+    position: absolute !important;
+    top: 50%;
+    left: 50%;
+    display: block !important;
+    width: 23px !important;
+    height: 23px !important;
+    stroke: currentColor !important;
+    fill: none !important;
+    transform-origin: center;
+    transition:
+        opacity 250ms ease,
+        transform 250ms cubic-bezier(.2,.8,.2,1) !important;
+}
+
+/* Dark theme: sun shown, moon hidden */
+.im-v5[data-theme="dark"] .im-v5-theme .im-icon-sun {
+    opacity: 1 !important;
+    transform: translate(-50%,-50%) rotate(0deg) scale(1);
+}
+
+.im-v5[data-theme="dark"] .im-v5-theme .im-icon-moon {
+    opacity: 0 !important;
+    transform: translate(-50%,-50%) rotate(-90deg) scale(.45);
+}
+
+/* Light theme: moon shown, sun hidden */
+.im-v5[data-theme="light"] .im-v5-theme .im-icon-sun {
+    opacity: 0 !important;
+    transform: translate(-50%,-50%) rotate(90deg) scale(.45);
+}
+
+.im-v5[data-theme="light"] .im-v5-theme .im-icon-moon {
+    opacity: 1 !important;
+    transform: translate(-50%,-50%) rotate(0deg) scale(1);
+}
+
+/* Avoid hidden icons receiving pointer events */
+.im-v5 .im-v5-theme svg {
+    pointer-events: none;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+    .im-v5 .im-v5-theme {
+        top: max(10px, env(safe-area-inset-top)) !important;
+        right: max(10px, env(safe-area-inset-right)) !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .im-v5 .im-v5-theme,
+    .im-v5 .im-v5-theme svg,
+    .im-v5 .im-v5-welcome,
+    .im-v5 .im-v5-benefits {
+        transition-duration: .01ms !important;
+    }
+}
+
+/* END IMNEHNET_THEME_V3 */
+
+
+/* IMNEHNET_POSTER_CAROUSEL_V1: scoped to the welcome panel */
+.im-v5 .im-poster-slider{position:relative;width:100%;min-width:0;margin-top:4px}
+.im-v5 .im-poster-stage{position:relative;height:260px;overflow:hidden;border-radius:22px;border:1px solid rgba(169,188,217,.25);background:#172943}
+.im-v5 .im-poster-slide{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .45s ease,visibility .45s ease;overflow:hidden}
+.im-v5 .im-poster-slide.is-active{opacity:1;visibility:visible}
+.im-v5 .im-poster-visual{position:absolute;inset:0;background-size:cover;background-position:center 35%;background-repeat:no-repeat}
+.im-v5 .im-poster-visual--one{background-image:radial-gradient(circle at 65% 20%,#1688ba 0%,transparent 44%),linear-gradient(125deg,#123354,#10203d 70%)}
+.im-v5 .im-poster-visual--two{background-image:radial-gradient(circle at 65% 25%,#3972d6 0%,transparent 48%),linear-gradient(125deg,#14264c,#111b36)}
+.im-v5 .im-poster-visual--three{background-image:radial-gradient(circle at 65% 25%,#177e92 0%,transparent 48%),linear-gradient(125deg,#142d45,#14203a)}
+.im-v5 .im-poster-visual::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(8,17,35,.94),rgba(8,17,35,.1) 95%)}
+.im-v5 .im-poster-caption{position:absolute;bottom:0;left:0;right:0;padding:24px;color:white;z-index:1}
+.im-v5 .im-poster-caption span{font-size:10px;letter-spacing:1.5px;color:#a9d8ff;font-weight:700}
+.im-v5 .im-poster-caption h3{font-size:21px;line-height:1.2;margin:8px 0;color:white;font-weight:700}
+.im-v5 .im-poster-caption p{font-size:13px;line-height:1.5;margin:0;color:#d4e5fa}
+.im-v5 .im-poster-controls{display:flex;justify-content:space-between;align-items:center;margin-top:12px;min-height:40px}
+.im-v5 .im-poster-dots{display:flex;gap:8px;align-items:center}
+.im-v5 .im-poster-dots button{height:7px;width:9px;border:0;border-radius:10px;padding:0;background:#687a98;cursor:pointer;transition:width .2s}
+.im-v5 .im-poster-dots button.is-active{width:30px;background:#e5f0ff}
+.im-v5 .im-poster-next{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1px solid #ffffff40;background:#ffffff12;color:white;font-size:20px;cursor:pointer}
+.im-v5 .im-poster-next:hover{background:#ffffff25}
+@media(max-width:900px){.im-v5 .im-poster-stage{height:230px}.im-v5 .im-poster-caption{padding:20px}}
+@media(prefers-reduced-motion:reduce){.im-v5 .im-poster-slide{transition:none}}
+
+/* IMNEHNET POSTER OVERLAY FIX V1 */
+.im-v5 .im-v5-welcome { position:relative; overflow:hidden; }
+.im-v5 .im-v5-welcome .im-poster-overlay[hidden] { display:none !important; }
+.im-v5 .im-v5-welcome .im-poster-overlay:not([hidden]) {
+ position:absolute !important; inset:0 !important; z-index:5 !important;
+ display:flex !important; align-items:center; justify-content:center;
+ background:#18253c; overflow:hidden; border-radius:inherit;
+}
+.im-v5 .im-v5-welcome .im-poster-image {
+ display:block; width:100%; height:100%; object-fit:contain; object-position:center;
+}
+/* Any previously inserted slide list must not increase panel height. */
+.im-v5 .im-v5-welcome { box-sizing:border-box; }
+
+/* IMNEHNET FINAL LOGIN FIX START */
+/* Desktop: fixed viewport composition, no overflowing slide content. */
+@media (min-width: 901px) {
+  html:has(.im-v5), body:has(.im-v5) { min-height:100% !important; height:100% !important; overflow-x:hidden !important; overflow-y:hidden !important; }
+  body:has(.im-v5) .fi-simple-layout, body:has(.im-v5) .fi-simple-main, body:has(.im-v5) .fi-simple-page,
+  body:has(.im-v5) .fi-simple-main-ctn { min-height:0 !important; }
+  .im-v5 { height:100dvh !important; min-height:0 !important; max-height:100dvh !important; overflow:hidden !important; box-sizing:border-box !important; }
+  .im-v5 .im-v5-grid { height:100% !important; min-height:0 !important; max-height:100% !important; box-sizing:border-box !important; align-items:center !important; }
+  .im-v5 .im-v5-card { max-height:calc(100dvh - 36px) !important; overflow-y:auto !important; box-sizing:border-box !important; }
+  .im-v5 .im-v5-welcome { height:calc(100dvh - 36px) !important; min-height:0 !important; max-height:calc(100dvh - 36px) !important; }
+}
+.im-v5 .im-v5-welcome { position:relative !important; overflow:hidden !important; box-sizing:border-box !important; isolation:isolate; }
+.im-v5 .im-v5-welcome .im-final-poster[hidden] { display:none !important; }
+.im-v5 .im-v5-welcome .im-final-poster:not([hidden]) {
+ position:absolute !important; inset:0 !important; z-index:100 !important;
+ display:flex !important; align-items:center !important; justify-content:center !important;
+ overflow:hidden !important; padding:12px !important; box-sizing:border-box !important;
+ background:#19263f !important; border-radius:inherit !important;
+}
+.im-v5 .im-v5-welcome .im-final-poster img {
+ display:block !important; width:100% !important; height:100% !important;
+ max-width:100% !important; max-height:100% !important;
+ object-fit:contain !important; object-position:center !important;
+ border-radius:12px !important;
+}
+.im-v5 .im-v5-welcome.im-final-has-poster > :not(.im-final-poster) { display:none !important; }
+@media (max-width:900px) {
+ html:has(.im-v5),body:has(.im-v5) { overflow-x:hidden !important; overflow-y:auto !important; }
+ .im-v5 { min-height:100dvh !important; height:auto !important; overflow:visible !important; }
+ .im-v5 .im-v5-grid { height:auto !important; max-height:none !important; }
+ .im-v5 .im-v5-welcome { height:min(80dvh,760px) !important; min-height:420px !important; max-height:none !important; }
+}
+/* IMNEHNET FINAL LOGIN FIX END */
+
+
+
+/* IMNEHNET MOBILE GAP PATCH START */
+@media (max-width: 900px) {
+  /* The page and Filament wrappers must not reserve a second viewport. */
+  html:has(.im-v5), body:has(.im-v5) {
+    height:auto !important; min-height:0 !important;
+    margin:0 !important; padding:0 !important;
+    overflow-x:hidden !important; overflow-y:auto !important;
+  }
+  body:has(.im-v5) .fi-simple-layout,
+  body:has(.im-v5) .fi-simple-main,
+  body:has(.im-v5) .fi-simple-main-ctn,
+  body:has(.im-v5) .fi-simple-page {
+    height:auto !important; min-height:0 !important; max-height:none !important;
+    margin-bottom:0 !important; padding-bottom:0 !important;
+  }
+  .im-v5 {
+    height:auto !important; min-height:0 !important; max-height:none !important;
+    padding-bottom:0 !important; margin-bottom:0 !important;
+    overflow:visible !important;
+  }
+  .im-v5 .im-v5-grid {
+    height:auto !important; min-height:0 !important; max-height:none !important;
+    padding-bottom:0 !important; margin-bottom:0 !important;
+    align-items:stretch !important;
+  }
+  /* Allow the poster panel to end at the actual image, not a fixed 80dvh/760px. */
+  .im-v5 .im-v5-welcome:has(.im-final-poster:not([hidden])) {
+    height:auto !important; min-height:0 !important; max-height:none !important;
+    aspect-ratio:auto !important; padding:0 !important;
+    margin-bottom:0 !important; overflow:hidden !important;
+  }
+  .im-v5 .im-v5-welcome:has(.im-final-poster:not([hidden])) .im-final-poster {
+    position:relative !important; inset:auto !important;
+    width:100% !important; height:auto !important;
+    display:block !important; padding:0 !important; margin:0 !important;
+    border-radius:inherit !important;
+  }
+  .im-v5 .im-v5-welcome:has(.im-final-poster:not([hidden])) .im-final-poster img {
+    display:block !important; width:100% !important; height:auto !important;
+    max-width:100% !important; max-height:none !important;
+    object-fit:contain !important; border-radius:inherit !important;
+  }
+  /* With no poster, retain the original welcome text layout. */
+  .im-v5 .im-v5-welcome:not(.im-final-has-poster) {
+    height:auto !important; min-height:0 !important;
+  }
+}
+/* IMNEHNET MOBILE GAP PATCH END */
+
+/* IMNEHNET_MOBILE_GAP_FIX_START */
+@media (max-width: 767px) {
+
+    html,
+    body {
+        min-height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    .im-v5 {
+        height: auto !important;
+        min-height: 100dvh !important;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    .im-v5-grid {
+        height: auto !important;
+        min-height: 0 !important;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+        align-items: start !important;
+    }
+
+    .im-v5-welcome {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .im-v5-welcome-content {
+        min-height: 0 !important;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    .im-v5-poster,
+    .im-v5-poster-wrap {
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    .im-v5-poster img,
+    .im-v5-poster-wrap img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+    }
+
+    .fi-simple-layout,
+    .fi-simple-main,
+    .fi-simple-page {
+        min-height: 0 !important;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+}
+/* IMNEHNET_MOBILE_GAP_FIX_END */

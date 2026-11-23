@@ -160,14 +160,35 @@ class OpenTofuWorkspaceCleanupTest extends TestCase
         $tofu->cleanupWorkspaceIfPresent($environment);
     }
 
+
+    private function validOwnedState(LabEnvironment $environment): string
+    {
+        return json_encode([
+            'version' => 4,
+            'resources' => [[
+                'mode' => 'managed',
+                'type' => 'incus_instance',
+                'name' => 'student_lab',
+                'instances' => [[
+                    'attributes' => [
+                        'name' => $environment->container_name,
+                        'remote' => (string) $environment->incus_remote,
+                        'project' => $environment->incus_project ?: 'default',
+                    ],
+                ]],
+            ]],
+        ], JSON_THROW_ON_ERROR);
+    }
+
     public function test_resource_destroy_uses_existing_workspace_without_deleting_it(): void
     {
         $environment = $this->environment();
         $workspace = $environment->tofu_workspace;
 
         $tofu = $this->fake([
-            $this->makeProcessResult(0, "default\n" . $workspace . "\n"),
+            $this->makeProcessResult(0, "default\n".$workspace."\n"),
             $this->makeProcessResult(0),
+            $this->makeProcessResult(0, $this->validOwnedState($environment)),
             $this->makeProcessResult(0),
         ]);
 
@@ -176,6 +197,7 @@ class OpenTofuWorkspaceCleanupTest extends TestCase
         $this->assertSame([
             ['workspace', 'list'],
             ['workspace', 'select', $workspace],
+            ['state', 'pull'],
             ['destroy', '-auto-approve', '-input=false', '-no-color'],
         ], $tofu->commands);
     }
@@ -207,8 +229,9 @@ class OpenTofuWorkspaceCleanupTest extends TestCase
         $workspace = $environment->tofu_workspace;
 
         $tofu = $this->fake([
-            $this->makeProcessResult(0, "default\n" . $workspace . "\n"),
+            $this->makeProcessResult(0, "default\n".$workspace."\n"),
             $this->makeProcessResult(0),
+            $this->makeProcessResult(0, $this->validOwnedState($environment)),
             $this->makeProcessResult(1),
         ]);
 
@@ -222,11 +245,12 @@ class OpenTofuWorkspaceCleanupTest extends TestCase
             );
         }
 
-        $this->assertCount(3, $tofu->commands);
-        $this->assertSame(
+        $this->assertSame([
+            ['workspace', 'list'],
+            ['workspace', 'select', $workspace],
+            ['state', 'pull'],
             ['destroy', '-auto-approve', '-input=false', '-no-color'],
-            $tofu->commands[2]
-        );
+        ], $tofu->commands);
     }
 
     public function test_resource_destroy_inventory_failure_runs_no_destroy(): void
@@ -249,6 +273,71 @@ class OpenTofuWorkspaceCleanupTest extends TestCase
             ['workspace', 'list'],
         ], $tofu->commands);
     }
+
+
+    public function test_invalid_state_refuses_destroy(): void
+    {
+        $environment = $this->environment();
+        $workspace = $environment->tofu_workspace;
+
+        $tofu = $this->fake([
+            $this->makeProcessResult(0, "default\n".$workspace."\n"),
+            $this->makeProcessResult(0),
+            $this->makeProcessResult(0, '{"invalid":true}'),
+        ]);
+
+        try {
+            $tofu->destroyWorkspaceResourcesIfPresent($environment);
+            $this->fail('Expected invalid state refusal.');
+        } catch (\Throwable $exception) {
+            $this->assertNotEmpty($exception->getMessage());
+        }
+
+        $this->assertSame([
+            ['workspace', 'list'],
+            ['workspace', 'select', $workspace],
+            ['state', 'pull'],
+        ], $tofu->commands);
+    }
+
+    public function test_foreign_container_refuses_destroy(): void
+    {
+        $environment = $this->environment();
+        $workspace = $environment->tofu_workspace;
+
+        $state = json_decode(
+            $this->validOwnedState($environment),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+
+        $state['resources'][0]['instances'][0]['attributes']['name']
+            = 'another-students-container';
+
+        $tofu = $this->fake([
+            $this->makeProcessResult(0, "default\n".$workspace."\n"),
+            $this->makeProcessResult(0),
+            $this->makeProcessResult(
+                0,
+                json_encode($state, JSON_THROW_ON_ERROR)
+            ),
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('ownership mismatch');
+
+        try {
+            $tofu->destroyWorkspaceResourcesIfPresent($environment);
+        } finally {
+            $this->assertSame([
+                ['workspace', 'list'],
+                ['workspace', 'select', $workspace],
+                ['state', 'pull'],
+            ], $tofu->commands);
+        }
+    }
+
 
 }
 

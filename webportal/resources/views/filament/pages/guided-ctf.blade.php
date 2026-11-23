@@ -231,7 +231,7 @@
                 @if ($course === null)
                     <section class="pc-glass"><h2>Course belum tersedia</h2><p>Hubungi administrator.</p></section>
                 @elseif ($session === null)
-                    <section class="pc-glass"><h2>{{ $course->title }}</h2><p>{{ $course->summary }}</p><a class="pc-primary" href="{{ url('/student/my-labs') }}">Buka My Labs untuk membuat lab</a></section>
+                    <section class="pc-glass im-sh-pentest-empty"><h2>{{ $course->title }}</h2><p>{{ $course->summary }}</p><a class="pc-primary" href="{{ url('/student/my-labs') }}">Buat Lab</a></section>
                 @elseif ($building)
                     <section class="pc-glass"><h2>{{ $this->headline($session) }}</h2><p>Environment sedang diproses. Pantau status melalui My Labs.</p><a class="pc-primary" href="{{ url('/student/my-labs') }}">Lihat Status Lab</a></section>
                 @elseif ($session->status === \App\Enums\LabSessionStatus::Failed)

@@ -13,6 +13,7 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
 
 class UsersTable
 {
@@ -65,11 +66,64 @@ class UsersTable
                     ->color(fn (User $record): string => $record->environments()->count() === 0 ? 'warning' : 'success')
                     ->toggleable(),
 
+                // Presence and Last Seen share one compact column.
                 TextColumn::make('presence')
                     ->label('Presence')
-                    ->state(fn (User $record): string => \App\Support\UserPresence::online((int)$record->getKey()) ? 'Online' : 'Offline')
-                    ->badge()
-                    ->color(fn (User $record): string => \App\Support\UserPresence::online((int)$record->getKey()) ? 'success' : 'gray'),
+                    ->state(function (User $record): HtmlString {
+                        $online = \App\Support\UserPresence::online(
+                            (int) $record->getKey()
+                        );
+
+                        $lastSeen = $record->last_seen_at;
+
+                        $badge = $online ? 'Online' : 'Offline';
+
+                        $time = $online
+                            ? 'Now'
+                            : ($lastSeen
+                                ? $lastSeen->diffForHumans(
+                                    null, null, true
+                                )
+                                : 'Never');
+
+                        $tooltip = $lastSeen
+                            ? 'Last seen: '.$lastSeen->format('d M Y, H:i:s T')
+                            : 'No activity recorded';
+
+                        $style = $online
+                            ? 'background:rgba(34,197,94,.12);'
+                                .'color:#22c55e;'
+                                .'border:1px solid rgba(34,197,94,.3);'
+                            : 'background:rgba(148,163,184,.12);'
+                                .'color:#94a3b8;'
+                                .'border:1px solid rgba(148,163,184,.25);';
+
+                        return new HtmlString(
+                            '<div style="display:flex;'
+                            .'flex-direction:column;'
+                            .'align-items:center;'
+                            .'gap:3px;">'
+
+                            .'<span style="display:inline-flex;'
+                            .'padding:2px 7px;'
+                            .'border-radius:5px;'
+                            .'font-size:11px;'
+                            .'font-weight:600;'
+                            .$style.'">'
+                            .e($badge)
+                            .'</span>'
+
+                            .'<span title="'.e($tooltip).'" '
+                            .'style="font-size:10px;'
+                            .'color:#94a3b8;'
+                            .'white-space:nowrap;">'
+                            .e($time)
+                            .'</span>'
+
+                            .'</div>'
+                        );
+                    })
+                    ->html(),
 
                 TextColumn::make('last_login_at')
                     ->label('Last login')

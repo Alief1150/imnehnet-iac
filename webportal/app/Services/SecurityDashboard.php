@@ -28,8 +28,8 @@ final class SecurityDashboard
      * is listed after these as an unmapped reporter.
      */
     public const NODES = [
-        ['agent' => 'Linux-Mint-Host', 'node' => 'server-imnehnet', 'role' => 'Physical host'],
-        ['agent' => 'iaas-mgmt', 'node' => 'IAAS-MGMT', 'role' => 'Management plane'],
+        ['agent' => 'wazuh.manager', 'node' => 'wazuh.manager', 'role' => 'SIEM manager'],
+        ['agent' => 'imnehnet', 'node' => 'imnehnet', 'role' => 'Physical host'],
         ['agent' => 'LAB-ENV', 'node' => 'LAB-ENV', 'role' => 'Defender lab plane'],
         ['agent' => 'LAB-ATK', 'node' => 'LAB-ATK', 'role' => 'Attacker lab plane'],
     ];
@@ -53,13 +53,12 @@ final class SecurityDashboard
         $indexedDay = is_array($indexed['day'] ?? null) ? $indexed['day'] : null;
         $indexedAgents = is_array($indexed['agents_24h'] ?? null) ? $indexed['agents_24h'] : [];
 
-        if ($indexedDay !== null) {
-            $day = $indexedDay;
-        }
+        // Keep the headline KPI consistent with the severity chart
+        // and environment coverage, which use the Wazuh alert log.
+        // Indexer aggregates remain available for historical charts.
+        // Do not silently substitute Indexer totals into file KPIs.
 
-        $alertsSpark = $indexedHourly !== []
-            ? $this->indexedTotals($indexedHourly)
-            : $this->hourlyTotals($alerts['hourly'] ?? []);
+        $alertsSpark = $this->hourlyTotals($alerts['hourly'] ?? []);
 
         $agentsSpark = $indexedHourly !== []
             ? $this->indexedAgents($indexedHourly)
@@ -73,7 +72,7 @@ final class SecurityDashboard
             'alerts' => [
                 'detail' =>                 array (
                 'what' => 'Jumlah alert yang masuk ke SIEM dalam 24 jam terakhir.',
-                'source' => 'Wazuh indexer (OpenSearch), level aturan 0-15: 0-6 informasi, 7-11 peringatan, 12-15 kritis.',
+                'source' => 'Wazuh alerts.json (24h). Same source as severity and environment coverage. Indexer historical totals may differ.',
                 'indicator' => 'Naik berarti ada aktivitas atau ancaman baru; turun berarti SIEM sedang tenang.',
                 ),
                 'label' => 'Active Alerts',
@@ -81,7 +80,7 @@ final class SecurityDashboard
                 'icon' => 'shield-alert',
                 'value' => is_array($day) ? ($day['total'] ?? null) : null,
                 'unit' => null,
-                'subtitle' => 'SIEM alerts in 24h',
+                'subtitle' => 'Wazuh log alerts in 24h',
                 'delta' => $this->deltaCounts((int) ($alerts['day']['total'] ?? 0), (int) ($alerts['prev_day_total'] ?? 0), $alerts['file_span'] ?? []),
                 'spark' => $alertsSpark,
                 'state' => ($alerts['ok'] ?? false) ? 'ready' : 'unknown',
@@ -89,15 +88,19 @@ final class SecurityDashboard
             'agents' => [
                 'detail' =>                 array (
                 'what' => 'Jumlah agen berbeda yang melapor ke SIEM dalam 24 jam terakhir.',
-                'source' => 'Nama agen pada log alert Wazuh: physical host, management plane, dan kedua lab plane.',
+                'source' => 'Distinct agent names reporting alerts during the last 24 hours, including the Wazuh manager. This is not the active-agent count from the Wazuh API.',
                 'indicator' => 'Turun berarti ada agen yang diam - cek apakah agennya masih hidup dan terhubung ke manager.',
                 ),
-                'label' => 'Wazuh Agents',
+                'label' => 'Reporting Sources',
                 'tint' => 'teal',
                 'icon' => 'activity',
                 'value' => $agentCount,
                 'unit' => null,
-                'subtitle' => 'distinct reporters in 24h',
+                'subtitle' => sprintf(
+                    '%d agent reporter(s) + %d SIEM manager · 24h',
+                    max(0, (int) $agentCount - (in_array('wazuh.manager', $indexedAgents !== [] ? $indexedAgents : ($alerts['agents_24h'] ?? []), true) ? 1 : 0)),
+                    in_array('wazuh.manager', $indexedAgents !== [] ? $indexedAgents : ($alerts['agents_24h'] ?? []), true) ? 1 : 0
+                ),
                 'delta' => ['value' => null, 'label' => 'point-in-time set'],
                 'spark' => $agentsSpark,
                 'state' => ($alerts['ok'] ?? false) ? 'ready' : 'unknown',
@@ -451,6 +454,10 @@ final class SecurityDashboard
      */
     public function coverage(array $telemetry): array
     {
+        // SECURITY_COVERAGE_24H_FIX
+        // Coverage uses the reconciled 24h alert snapshot.
+        $telemetry['trend'] = [];
+
         $alerts = $telemetry['alerts'] ?? null;
         $ok = is_array($alerts) && ($alerts['ok'] ?? false);
         $byAgent = $ok && isset($alerts['by_agent']) && is_array($alerts['by_agent']) ? $alerts['by_agent'] : [];

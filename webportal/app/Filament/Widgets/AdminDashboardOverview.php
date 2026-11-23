@@ -167,21 +167,41 @@ final class AdminDashboardOverview extends Widget
     }
 
     /**
-     * @return array{label: string, percentage: ?int}
+     * Aggregate real infrastructure health into one dashboard status.
+     *
+     * The automation roll-up is excluded to avoid double counting
+     * OpenTofu and Ansible, which have individual probes.
+     *
+     * @return array{label: string, description: string, color: string}
      */
     private function systemHealth(): array
     {
+        $result = static fn (
+            string $label,
+            string $description,
+            string $color
+        ): array => compact('label', 'description', 'color');
+
         try {
             $summary = app(InfrastructureStatusService::class)->summary();
 
             if ($summary === []) {
-                return [
-                    'label' => 'Not verified',
-                    'percentage' => null,
-                ];
+                return $result(
+                    'Unknown',
+                    'Health checks are unavailable',
+                    '#94a3b8'
+                );
             }
 
-            $healthyStates = [
+            $core = [
+                'iaas_mgmt',
+                'database',
+                'lab_env',
+                'incus_atk',
+                'incus',
+            ];
+
+            $healthy = [
                 'healthy',
                 'up',
                 'online',
@@ -192,33 +212,102 @@ final class AdminDashboardOverview extends Widget
                 'available',
             ];
 
-            $verified = collect($summary)
-                ->filter(fn (array $service): bool => filled($service['status'] ?? null));
+            // The automation entry duplicates individual tool checks.
+            // All other returned services contribute once.
+            unset($summary['automation']);
 
-            if ($verified->isEmpty()) {
-                return [
-                    'label' => 'Not verified',
-                    'percentage' => null,
-                ];
+            $unhealthy = 0;
+            $unknown = 0;
+            $coreProblems = 0;
+            $coreOffline = false;
+
+            foreach ($core as $key) {
+                if (! array_key_exists($key, $summary)) {
+                    $unknown++;
+                    $coreProblems++;
+                }
             }
 
-            $healthy = $verified->filter(function (array $service) use ($healthyStates): bool {
-                $status = strtolower((string) ($service['status'] ?? ''));
+            foreach ($summary as $key => $service) {
+                $status = strtolower(trim(
+                    (string) ($service['status'] ?? 'unknown')
+                ));
 
-                return in_array($status, $healthyStates, true);
-            })->count();
+                if (in_array($status, $healthy, true)) {
+                    continue;
+                }
 
-            $percentage = (int) round(($healthy / $verified->count()) * 100);
+                if (in_array($key, $core, true)) {
+                    $coreProblems++;
+                }
 
-            return [
-                'label' => $percentage === 100 ? 'Operational' : 'Attention needed',
-                'percentage' => $percentage,
-            ];
+                if (
+                    in_array($key, ['iaas_mgmt', 'database'], true)
+                    && $status === 'offline'
+                ) {
+                    $coreOffline = true;
+                }
+
+                if (
+                    in_array($status, [
+                        'unknown',
+                        'not_configured',
+                        'not_checked',
+                        'unavailable',
+                    ], true)
+                ) {
+                    $unknown++;
+                } else {
+                    $unhealthy++;
+                }
+            }
+
+            if ($coreOffline) {
+                return $result(
+                    'Offline',
+                    'Core platform services unavailable',
+                    '#ef4444'
+                );
+            }
+
+            if ($coreProblems >= 2) {
+                return $result(
+                    'Critical',
+                    'Major infrastructure disruption',
+                    '#f97316'
+                );
+            }
+
+            if ($unhealthy === 0 && $unknown === 0) {
+                return $result(
+                    'Healthy',
+                    'All monitored services operational',
+                    '#22c55e'
+                );
+            }
+
+            // Unknown checks must never produce Healthy.
+            if ($unhealthy === 0 && $unknown === count($summary)) {
+                return $result(
+                    'Unknown',
+                    'Health could not be verified',
+                    '#94a3b8'
+                );
+            }
+
+            return $result(
+                'Degraded',
+                $unknown > 0
+                    ? 'Some services unavailable or unverified'
+                    : 'Some services are experiencing issues',
+                '#eab308'
+            );
         } catch (Throwable) {
-            return [
-                'label' => 'Not verified',
-                'percentage' => null,
-            ];
+            return $result(
+                'Unknown',
+                'Health checks are unavailable',
+                '#94a3b8'
+            );
         }
     }
 

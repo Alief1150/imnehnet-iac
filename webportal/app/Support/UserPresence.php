@@ -12,7 +12,30 @@ final class UserPresence
 
     public static function heartbeat(int $id): void
     {
-        Cache::put('imnehnet:user:online:'.$id, true, now()->addMinutes(3));
+        // Online presence expires after three minutes without a heartbeat.
+        Cache::put(
+            'imnehnet:user:online:'.$id,
+            true,
+            now()->addMinutes(3)
+        );
+
+        // Last Seen persists after the online cache expires.
+        // Query Builder prevents unnecessary model observer events.
+        try {
+            \Illuminate\Support\Facades\DB::table('users')
+                ->where('id', $id)
+                ->update([
+                    'last_seen_at' => now(),
+                ]);
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::warning(
+                'Unable to update last seen',
+                [
+                    'user_id' => $id,
+                    'exception' => get_class($exception),
+                ]
+            );
+        }
     }
 
     public static function script(): string

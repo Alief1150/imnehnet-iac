@@ -1,3 +1,4 @@
+{{-- admin-terminal-scoped-loading-v1 --}}
 {{--
     The administrative console.
 
@@ -89,6 +90,26 @@
                             </div>
                         </a>
 
+                        {{-- Admin terminal: independent browser tab, no credentials in URL. --}}
+                        {{-- Open the ttyd console itself, not the Filament page. --}}
+                        @if ($isSelected && $frameSrc)
+                            <a
+                                href="{{ $frameSrc }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                data-testid="admin-terminal-new-tab-link"
+                                class="mt-1.5 inline-flex h-8 w-full items-center justify-center gap-2 rounded-lg border border-teal-600/30 bg-teal-600/10 px-3 text-xs font-semibold text-teal-700 hover:bg-teal-600/20 dark:text-teal-300"
+                            >
+                                Open Terminal Fullscreen ↗
+                            </a>
+                        @else
+                            <span
+                                class="mt-1.5 inline-flex h-8 w-full items-center justify-center rounded-lg border border-gray-200 px-3 text-xs text-gray-400 dark:border-white/10"
+                            >
+                                {{ $isSelected ? 'Open shell first' : 'Select node for fullscreen' }}
+                            </span>
+                        @endif
+
                         {{-- Beside the card, never inside it: a button in a button is
                              invalid markup, and the inner click would also select. One
                              click opens that node's shell directly, so a shell never
@@ -96,20 +117,24 @@
                         <button type="button" wire:click="openAdminSessionFor('{{ $target['key'] }}')"
                                 wire:key="admin-terminal-open-{{ $target['key'] }}"
                                 wire:loading.attr="disabled"
+                                wire:target="openAdminSessionFor('{{ $target['key'] }}')"
                                 title="Open a shell on {{ $target['name'] }} now"
                                 class="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-teal-600/30 bg-teal-600/10 px-3 text-[11px] font-semibold text-teal-700 hover:bg-teal-600/20 disabled:opacity-60 dark:text-teal-300 dark:hover:bg-teal-500/20">
                             {!! \App\Support\Lucide::html('terminal') !!}
-                            Open shell
+                            <span wire:loading.remove wire:target="openAdminSessionFor('{{ $target['key'] }}')">Open shell</span>
+                            <span wire:loading wire:target="openAdminSessionFor('{{ $target['key'] }}')">Connecting...</span>
                         </button>
 
                         @if ($this->hasAdminSession($target['key']))
                             <button type="button" wire:click="closeAdminSessionFor('{{ $target['key'] }}')"
                                     wire:key="admin-terminal-close-{{ $target['key'] }}"
                                     wire:loading.attr="disabled"
+                                    wire:target="closeAdminSessionFor('{{ $target['key'] }}')"
                                     title="Close the shell on {{ $target['name'] }}"
                                     class="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:border-white/15 dark:text-gray-300 dark:hover:bg-white/5">
                                 {!! \App\Support\Lucide::html('trash') !!}
-                                Close
+                                <span wire:loading.remove wire:target="closeAdminSessionFor('{{ $target['key'] }}')">Close</span>
+                                <span wire:loading wire:target="closeAdminSessionFor('{{ $target['key'] }}')">Closing...</span>
                             </button>
                         @endif
                     </div>
@@ -247,10 +272,18 @@
                          queued when the session opened, which is why there is no
                          password on this page to copy. --}}
                     <div class="bg-[#0b1118]">
-                        <iframe src="{{ $frameSrc }}" title="Administrative shell on {{ $selected['name'] }}"
-                                class="block w-full border-0 bg-[#0b1118]"
-                                style="height: min(72vh, 44rem);"
-                                allow="clipboard-read; clipboard-write"></iframe>
+                        {{-- admin-terminal-stable-iframe-v1 --}}
+                        <div wire:key="admin-console-{{ $selected['key'] }}-{{ $session?->id }}">
+                            <div wire:ignore>
+                                <iframe
+                                    src="{{ $frameSrc }}"
+                                    title="Administrative shell on {{ $selected['name'] }}"
+                                    class="block w-full border-0 bg-[#0b1118]"
+                                    style="height: min(72vh, 44rem);"
+                                    allow="clipboard-read; clipboard-write"
+                                ></iframe>
+                            </div>
+                        </div>
                     </div>
                     <div class="border-t border-slate-800 bg-[#0b1118] px-5 py-3">
                         <p class="text-[11px] leading-relaxed text-slate-500">
@@ -272,8 +305,20 @@
                                      counts from there. The initial text is the server's
                                      own figure, so nothing depends on script running. --}}
                                 <p class="text-xs font-semibold text-gray-700 dark:text-gray-200"
-                                   x-data="{ start: {{ $session->created_at->timestamp }}, now: Math.floor(Date.now() / 1000) }"
-                                   x-init="setInterval(() => { now = Math.floor(Date.now() / 1000) }, 1000)"
+                                   wire:key="admin-session-duration-{{ $session->id }}"
+                                   x-data="{
+                                       start: {{ $session->created_at->timestamp }},
+                                       now: Math.floor(Date.now() / 1000),
+                                       ticker: null,
+                                       init() {
+                                           this.ticker = window.setInterval(() => {
+                                               this.now = Math.floor(Date.now() / 1000);
+                                           }, 1000);
+                                       },
+                                       destroy() {
+                                           if (this.ticker !== null) window.clearInterval(this.ticker);
+                                       }
+                                   }"
                                    x-text="(() => { const s = Math.max(0, now - start); const p = (n) => String(n).padStart(2, '0'); return p(Math.floor(s / 3600)) + ':' + p(Math.floor(s % 3600 / 60)) + ':' + p(s % 60); })()">{{ $state['duration'] }}</p>
                             @else
                                 <p class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{ $state['duration'] }}</p>

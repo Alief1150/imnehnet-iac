@@ -50,7 +50,7 @@ class Login extends BaseLogin
 
     protected function isUserAllowedToAccessPanel(Authenticatable $user): bool
     {
-        return true;
+        return ($panel = \Filament\Facades\Filament::getCurrentPanel()) !== null && $user instanceof \App\Models\User && $user->canAccessPanel($panel);
     }
 
     /**

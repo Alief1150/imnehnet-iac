@@ -211,11 +211,11 @@ class TerminalService
                 (string) config('infrastructure.incus_binary', 'incus'),
                 'exec', rtrim($environment->incus_remote, ':').':'.$environment->container_name,
                 '--', 'sh', '-ec',
-                'if ! id student >/dev/null 2>&1; then useradd -m -U -s /bin/bash student; fi; '.
-                'test "$(id -u student)" -gt 0; test "$(id -g student)" -gt 0; '.
-                'test -x /bin/bash; test -d /home/student; '.
-                'test "$(getent passwd student | cut -d: -f6)" = /home/student; '.
-                'for g in $(id -nG student); do case "$g" in root|sudo|wheel|docker|lxd|incus-admin) exit 23;; esac; done',
+                'if ! id '.escapeshellarg($this->account()).' >/dev/null 2>&1; then useradd -m -U -s /bin/bash '.escapeshellarg($this->account()).'; fi; '.
+                'test "$(id -u '.escapeshellarg($this->account()).')" -gt 0; test "$(id -g '.escapeshellarg($this->account()).')" -gt 0; '.
+                'test -x /bin/bash; test -d /home/'.$this->account().'; '.
+                'test "$(getent passwd '.escapeshellarg($this->account()).' | cut -d: -f6)" = /home/'.$this->account().'; '.
+                'for g in $(id -nG '.escapeshellarg($this->account()).'); do case "$g" in root|sudo|wheel|docker|lxd|incus-admin) exit 23;; esac; done',
             ]);
             $bootstrap->setEnv($this->environment());
             $bootstrap->setTimeout(30);
@@ -436,8 +436,19 @@ class TerminalService
         $reaped = 0;
 
         TerminalSession::query()
-            ->where(fn ($query) => $query->whereNull('closed_at')->where('expires_at', '<=', now()))
-            ->orWhere(fn ($query) => $query->whereNull('closed_at')->whereNotNull('pid'))
+            // IMNEHNET_ADMIN_PAIR_REAPER_ISOLATION_V1
+            // Admin container shells have a separate lifecycle manager.
+            ->where(fn ($query) => $query
+                ->whereNull('purpose')
+                ->orWhere('purpose', '!=', 'admin_pair'))
+            // IMNEHNET_ADMIN_PAIR_REAPER_GROUPING_V1
+            ->where(fn ($query) => $query
+                ->where(fn ($q) => $q
+                    ->whereNull('closed_at')
+                    ->where('expires_at', '<=', now()))
+                ->orWhere(fn ($q) => $q
+                    ->whereNull('closed_at')
+                    ->whereNotNull('pid')))
             ->get()
             ->each(function (TerminalSession $session) use (&$reaped): void {
                 $expired = $session->hasExpired();
@@ -453,6 +464,9 @@ class TerminalService
         // Recover processes left running after their database sessions
         // were marked closed. Never interfere with a usable session.
         TerminalSession::query()
+            ->where(fn ($query) => $query
+                ->whereNull('purpose')
+                ->orWhere('purpose', '!=', 'admin_pair'))
             ->whereNotNull('closed_at')
             ->whereNotNull('pid')
             ->get()
@@ -640,7 +654,12 @@ class TerminalService
     private function enforceSessionLimit(User $user): void
     {
         $live = TerminalSession::query()
+            // IMNEHNET_ADMIN_PAIR_SESSION_LIMIT_ISOLATION_V1
+            // Never count admin-container sessions as student sessions.
             ->where('user_id', $user->id)
+            ->where(fn ($query) => $query
+                ->whereNull('purpose')
+                ->orWhere('purpose', '!=', 'admin_pair'))
             ->usable()
             ->orderByDesc('created_at')
             ->get();

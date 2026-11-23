@@ -141,6 +141,48 @@
 .im-profile-summary{display:flex;align-items:center;gap:18px;padding:24px;margin-bottom:22px}.im-profile-avatar{width:60px;height:60px;border-radius:16px;background:rgba(66,169,230,.16);display:flex;align-items:center;justify-content:center;color:var(--im-profile-blue);flex-shrink:0;overflow:hidden}.im-profile-avatar svg{width:30px;height:30px}.im-profile-avatar img{width:100%;height:100%;object-fit:cover}.im-profile-avatar-large{width:70px;height:70px}.im-profile-summary h2{margin:0;font-size:20px}.im-profile-pills{display:flex;gap:8px;margin-top:7px}.im-profile-pills span{background:rgba(30,151,245,.12);color:var(--im-profile-blue);border-radius:6px;padding:3px 10px;font-size:12px}.im-profile-summary-caption{margin-left:auto;text-align:right;display:grid;gap:5px}.im-profile-summary-caption strong{font-size:11px;color:var(--im-profile-blue)}.im-profile-summary-caption small{color:var(--im-profile-muted)}
 .im-profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}.im-profile-card{overflow:hidden}.im-profile-card-head{padding:23px;border-bottom:1px solid var(--im-profile-border);display:flex;justify-content:space-between;gap:12px}.im-profile-card-head h2{margin:0 0 5px;font-size:20px}.im-profile-card-head>svg{color:var(--im-profile-blue)}.im-profile-card-body{padding:22px;display:flex;flex-direction:column;gap:13px}.im-profile-upload{display:flex;gap:14px;align-items:center;border:1px solid var(--im-profile-border);border-radius:12px;padding:14px}.im-profile-upload>div:last-child{min-width:0}.im-profile-upload label{display:block;font-weight:600;margin-bottom:8px}.im-profile-upload input{display:block;max-width:100%;font-size:12px}.im-profile-upload small{display:block;margin-top:8px;color:var(--im-profile-muted)}.im-profile-form label{font-weight:600;font-size:13px}.im-profile-form input:not([type=file]){width:100%;background:var(--im-profile-field);color:var(--im-profile-ink);border:1px solid var(--im-profile-border);border-radius:9px;min-height:46px;padding:11px 13px;outline:none}.im-profile-form input:focus{border-color:var(--im-profile-blue);box-shadow:0 0 0 3px rgba(43,152,245,.12)}.im-profile-email-confirm{display:grid;gap:10px}.im-profile-password{position:relative}.im-profile-password input{padding-right:50px!important}.im-profile-password button{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--im-profile-muted);padding:7px}.im-profile-password svg{width:18px;height:18px}.im-profile-btn{border:1px solid var(--im-profile-border);border-radius:9px;padding:10px 15px;background:var(--im-profile-field);color:var(--im-profile-ink);font-weight:600;cursor:pointer}.im-profile-btn:hover{filter:brightness(1.08)}.im-profile-primary{background:#168efa;color:white;border-color:transparent}.im-profile-danger{color:#ff647a}.im-profile-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.im-profile-rules{display:grid;gap:7px;font-size:12px;color:var(--im-profile-muted);margin-top:5px}.im-profile-rules span{display:block}.im-profile-error{color:#ff647a;font-size:12px}.im-profile-alert{border:1px solid #37bda4;border-radius:10px;padding:12px;margin-bottom:16px;color:var(--im-profile-ink);background:rgba(55,189,164,.1)}
 @media(max-width:900px){.im-profile-grid{grid-template-columns:1fr}.im-profile-summary-caption{display:none}}@media(max-width:600px){.im-profile-heading h1{font-size:24px}.im-profile-summary{align-items:flex-start;flex-direction:column}.im-profile-card-body{padding:17px}.im-profile-card-head{padding:17px}}
+/* IMNEHNET_STUDENT_CONTRAST_V6: canonical profile palette (kept in the existing profile stylesheet). */
+#im-v4[data-theme="light"]{
+  --im-profile-ink:#182c4b;
+  --im-profile-muted:#506a8b;
+  --im-profile-card:#ffffff;
+  --im-profile-field:#ffffff;
+  --im-profile-border:#cbd6e6;
+  --im-profile-blue:#086dd1;
+}
+#im-v4[data-theme="dark"]{
+  --im-profile-ink:#eaf2ff;
+  --im-profile-muted:#b6c6e2;
+  --im-profile-card:#202e49;
+  --im-profile-field:#15213a;
+  --im-profile-border:#425574;
+  --im-profile-blue:#70b8ff;
+}
+#im-v4 .im-profile,
+#im-v4 .im-profile-summary,
+#im-v4 .im-profile-card,
+#im-v4 .im-profile h1,
+#im-v4 .im-profile h2,
+#im-v4 .im-profile h3,
+#im-v4 .im-profile label,
+#im-v4 .im-profile-upload label{
+  color:var(--im-profile-ink)!important;
+}
+#im-v4 .im-profile :is(p,small,.im-profile-rules,.im-profile-card-head p,.im-profile-summary p){
+  color:var(--im-profile-muted)!important;
+}
+#im-v4 .im-profile :is(input,textarea,select){
+  color:var(--im-profile-ink)!important;
+  background:var(--im-profile-field)!important;
+  border-color:var(--im-profile-border)!important;
+}
+#im-v4 .im-profile :is(input,textarea)::placeholder{color:var(--im-profile-muted)!important;opacity:.86}
+#im-v4 .im-profile :is(.im-profile-summary,.im-profile-card){
+  background:var(--im-profile-card)!important;border-color:var(--im-profile-border)!important;
+}
+#im-v4 .im-profile .im-profile-primary{color:#fff!important;background:#168efa!important}
+#im-v4 .im-profile .im-profile-error,#im-v4 .im-profile .im-profile-danger{color:#db3e58!important}
+
 </style>
 <script id="imnehnet-profile-eye-v1">document.addEventListener('click',function(e){const b=e.target.closest('[data-im-profile-eye]');if(!b)return;const i=b.parentElement.querySelector('input');if(!i)return;i.type=i.type==='password'?'text':'password';b.setAttribute('aria-label',i.type==='password'?'Tampilkan password':'Sembunyikan password')});</script>
 

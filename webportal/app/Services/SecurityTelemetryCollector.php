@@ -69,6 +69,8 @@ final class SecurityTelemetryCollector
         $alerts = $this->collectAlerts($read, $now);
 
         if ($alerts !== null) {
+            Cache::put('security.alert_rows.v1', $alerts['retained_rows'], now()->addMinutes(5));
+            unset($alerts['retained_rows']);
             $telemetry['alerts'] = $alerts;
         } else {
             $telemetry['alerts'] = $this->staled($telemetry['alerts'] ?? null, 'The Wazuh alert log could not be read.');
@@ -112,6 +114,7 @@ final class SecurityTelemetryCollector
             $telemetry['trend'] = $this->staled($telemetry['trend'] ?? null, 'The thirty-day curve could not be built.');
         }
 
+        $telemetry = $this->reconcileIndexer24h($telemetry, $now);
         $telemetry['collected_at'] = $now;
 
         Cache::put('security.telemetry.v1', $telemetry);
@@ -147,6 +150,213 @@ final class SecurityTelemetryCollector
     /**
      * @return array<string, mixed>|null
      */
+
+    /**
+     * Reconcile the rolling 24-hour alert window against Wazuh Indexer.
+     * Historical trend data remains separate.
+     */
+    private function reconcileIndexer24h(array $telemetry, int $now): array
+    {
+        $url = rtrim((string) config('infrastructure.wazuh_indexer_url', ''), '/');
+        $user = (string) config('infrastructure.wazuh_indexer_username', '');
+        $pass = (string) config('infrastructure.wazuh_indexer_password', '');
+
+        if ($url === '' || $user === '' || $pass === '') {
+            return $telemetry;
+        }
+
+        $query = [
+            'size' => 0,
+            'track_total_hits' => true,
+            'query' => [
+                'range' => [
+                    'timestamp' => [
+                        'gte' => 'now-24h',
+                        'lt' => 'now',
+                    ],
+                ],
+            ],
+            'aggs' => [
+                'severity' => [
+                    'range' => [
+                        'field' => 'rule.level',
+                        'ranges' => [
+                            ['key' => 'low', 'to' => 7],
+                            ['key' => 'med', 'from' => 7, 'to' => 12],
+                            ['key' => 'high', 'from' => 12],
+                        ],
+                    ],
+                ],
+                'reporters' => [
+                    'terms' => ['field' => 'agent.name', 'size' => 100],
+                    'aggs' => [
+                        'last_seen' => ['max' => ['field' => 'timestamp']],
+                    ],
+                ],
+                'hours' => [
+                    'date_histogram' => [
+                        'field' => 'timestamp',
+                        'fixed_interval' => '1h',
+                        'min_doc_count' => 0,
+                    ],
+                    'aggs' => [
+                        'severity' => [
+                            'range' => [
+                                'field' => 'rule.level',
+                                'ranges' => [
+                                    ['key' => 'low', 'to' => 7],
+                                    ['key' => 'med', 'from' => 7, 'to' => 12],
+                                    ['key' => 'high', 'from' => 12],
+                                ],
+                            ],
+                        ],
+                        'reporters' => [
+                            'terms' => [
+                                'field' => 'agent.name',
+                                'size' => 100,
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(15)
+                ->withOptions(['verify' => false])
+                ->withBasicAuth($user, $pass)
+                ->post($url.'/wazuh-alerts-*/_search', $query);
+
+            if (!$response->successful()) {
+                return $telemetry;
+            }
+
+            $json = $response->json();
+
+            if (!is_array($json)
+                || ($json['timed_out'] ?? true)
+                || (int) data_get($json, '_shards.failed', 0) > 0
+                || !is_numeric(data_get($json, 'hits.total.value'))
+                || data_get($json, 'hits.total.relation') !== 'eq') {
+                return $telemetry;
+            }
+
+            $total = (int) data_get($json, 'hits.total.value');
+            $severity = [];
+
+            foreach (data_get($json, 'aggregations.severity.buckets', []) as $b) {
+                $severity[$b['key']] = (int) $b['doc_count'];
+            }
+
+            $day = [
+                'total' => $total,
+                'low' => $severity['low'] ?? 0,
+                'med' => $severity['med'] ?? 0,
+                'high' => $severity['high'] ?? 0,
+            ];
+
+            if (array_sum([
+                $day['low'], $day['med'], $day['high'],
+            ]) !== $total) {
+                return $telemetry;
+            }
+
+            $reporters = [];
+            $byAgent = [];
+            $reporterSum = 0;
+
+            $oldByAgent = $telemetry['alerts']['by_agent'] ?? [];
+
+            foreach (data_get($json, 'aggregations.reporters.buckets', []) as $b) {
+                $name = (string) $b['key'];
+                $count = (int) $b['doc_count'];
+
+                $reporters[] = $name;
+                $reporterSum += $count;
+
+                $previous = $oldByAgent[$name] ?? [];
+
+                $byAgent[$name] = array_merge([
+                    'total' => 0,
+                    'low' => 0,
+                    'med' => 0,
+                    'high' => 0,
+                    'last' => 0,
+                    'ip' => null,
+                    'last_rule' => '',
+                    'last_desc' => '',
+                    'last_sev' => 'low',
+                ], $previous, [
+                    'total' => $count,
+                    'last' => is_numeric(data_get($b, 'last_seen.value'))
+                        ? (int) (data_get($b, 'last_seen.value') / 1000)
+                        : ($previous['last'] ?? 0),
+                ]);
+            }
+
+            // Do not publish incomplete per-reporter accounting.
+            if ($reporterSum !== $total) {
+                return $telemetry;
+            }
+
+            $hourly = [];
+            $hourlySum = 0;
+
+            foreach (data_get($json, 'aggregations.hours.buckets', []) as $b) {
+                $counts = [];
+                foreach (data_get($b, 'severity.buckets', []) as $s) {
+                    $counts[$s['key']] = (int) $s['doc_count'];
+                }
+
+                $hourAgents = [];
+                foreach (data_get($b, 'reporters.buckets', []) as $r) {
+                    $hourAgents[] = (string) $r['key'];
+                }
+
+                $count = (int) $b['doc_count'];
+                $hourlySum += $count;
+
+                $hourly[] = [
+                    (int) ($b['key'] / 1000),
+                    [
+                        'total' => $count,
+                        'low' => $counts['low'] ?? 0,
+                        'med' => $counts['med'] ?? 0,
+                        'high' => $counts['high'] ?? 0,
+                        'agents' => $hourAgents,
+                    ],
+                ];
+            }
+
+            if ($hourlySum !== $total) {
+                return $telemetry;
+            }
+
+            $telemetry['alerts']['day'] = $day;
+            $telemetry['alerts']['by_agent'] = $byAgent;
+            $telemetry['alerts']['agents_24h'] = $reporters;
+            $telemetry['alerts']['hourly'] = $hourly;
+            $telemetry['alerts']['source'] = 'indexer-24h';
+
+            // Preserve historical daily and hourly Indexer series.
+            // Only replace current-window aggregates, which must not
+            // contain totals from a one-year historical query.
+            if (is_array($telemetry['trend'] ?? null)) {
+                $telemetry['trend']['day'] = $day;
+                $telemetry['trend']['agents_24h'] = $reporters;
+            }
+
+            return $telemetry;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning(
+                'Wazuh Indexer 24h reconciliation failed.',
+                ['exception' => get_class($e)]
+            );
+
+            return $telemetry;
+        }
+    }
+
     private function collectAlerts(callable $read, int $now): ?array
     {
         $content = $read(self::ALERTS_FILE);
@@ -298,6 +508,7 @@ final class SecurityTelemetryCollector
             'by_agent' => $byAgent,
             'hourly' => $hourly,
             'recent' => $recent,
+            'retained_rows' => array_slice(array_reverse($day), 0, 500),
         ];
     }
 

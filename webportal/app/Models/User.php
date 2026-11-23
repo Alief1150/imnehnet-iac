@@ -55,6 +55,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             'status' => UserStatus::class,
             'must_change_password' => 'boolean',
             'last_login_at' => 'datetime',
+            'last_seen_at' => 'datetime',
         ];
     }
 

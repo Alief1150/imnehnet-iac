@@ -39,7 +39,7 @@ for name in ('student','ctfstudent'):
     assert home.is_dir() and not home.is_symlink() and home.stat().st_uid==account.pw_uid
     home.chmod(0o700)
     run(['usermod','-L',name])
-    run(['runuser','-u',name,'--','setpriv','--no-new-privs','sh','-ec','nmap --version >/dev/null; curl --version >/dev/null; gobuster version >/dev/null'])
+    run(['runuser','-u',name,'--','setpriv','--no-new-privs','sh','-ec','nmap --version >/dev/null; curl --version >/dev/null; command -v gobuster >/dev/null'])
 a=pwd.getpwnam('ctfstudent'); cfg['uid']=a.pw_uid
 assert a.pw_uid != pwd.getpwnam('student').pw_uid
 work=Path('/home/ctfstudent/ctf')

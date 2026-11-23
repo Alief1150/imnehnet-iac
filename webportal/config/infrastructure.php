@@ -32,6 +32,11 @@ return [
 
     'protected_containers' => ['lab-tofu-test'],
 
+    // IMNEHNET_BTRFS_P2_V1: 0 disables the Btrfs experiment.
+    // This is not a student-controlled parameter; only the specified user ID
+    // creates attacker/victim root disks on the benchmark Btrfs pools.
+    'btrfs_benchmark_user_id' => (int) env('IMNEHNET_BTRFS_BENCHMARK_USER_ID', 0),
+
     /*
      * OpenTofu drives the container lifecycle.
      *
@@ -143,7 +148,12 @@ return [
      */
     'default_cpu_limit' => (int) env('DEFAULT_CPU_LIMIT', 2),
     'default_memory_limit_mb' => (int) env('DEFAULT_MEMORY_LIMIT_MB', 2048),
+    'ctf_attacker_memory_limit_mb' => (int) env('CTF_ATTACKER_MEMORY_LIMIT_MB', 1024),
     'default_disk_limit_gb' => (int) env('DEFAULT_DISK_LIMIT_GB', 8),
+
+    // Golden Images used when creating new lab environments.
+    'lab_image' => env('LAB_IMAGE', 'imnehnet-gi-victim-v1'),
+    'attacker_image' => env('ATTACKER_IMAGE', 'imnehnet-gi-attacker-v1'),
 
     // Management plane (this host) and compute plane (LAB-ENV) are probed
     // separately so an operator can tell which side of the split is failing.

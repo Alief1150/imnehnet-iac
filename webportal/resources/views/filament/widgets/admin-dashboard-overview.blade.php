@@ -80,38 +80,39 @@
                 </div>
             </section>
 
-            {{-- System Health --}}
-            <section class="card min-w-0 border border-base-content/10 border-b-4 shadow-sm {{ $systemHealth['percentage'] === 100 ? 'border-b-success' : ($systemHealth['percentage'] === null ? 'border-b-neutral' : 'border-b-warning') }}">
+            {{-- System Health: aggregated status --}}
+            <section
+                class="card min-w-0 border border-base-content/10 border-b-4 shadow-sm"
+                style="border-bottom-color: {{ $systemHealth['color'] }}"
+            >
                 <div class="card-body gap-3 p-5">
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0">
                             <p class="text-sm font-medium text-base-content/70">
                                 System Health
                             </p>
-                            <p class="mt-2 text-3xl font-semibold tabular-nums text-base-content">
-                                {{ $systemHealth['percentage'] === null ? '—' : $systemHealth['percentage'].'%' }}
+
+                            <p
+                                class="mt-2 text-3xl font-semibold"
+                                style="color: {{ $systemHealth['color'] }}"
+                                role="status"
+                                aria-live="polite"
+                            >
+                                {{ $systemHealth['label'] }}
                             </p>
                         </div>
 
-                        <div class="flex size-11 shrink-0 items-center justify-center rounded-lg {{ $systemHealth['percentage'] === 100 ? 'bg-success/10 text-success' : ($systemHealth['percentage'] === null ? 'bg-neutral/10 text-neutral' : 'bg-warning/10 text-warning') }}">
+                        <div
+                            class="flex size-11 shrink-0 items-center justify-center rounded-lg"
+                            style="color: {{ $systemHealth['color'] }}; background-color: color-mix(in srgb, {{ $systemHealth['color'] }} 12%, transparent)"
+                        >
                             {!! \App\Support\Lucide::html('activity') !!}
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-1.5 text-xs">
-                        @if ($systemHealth['percentage'] !== null)
-                            <span class="font-semibold tabular-nums {{ $systemHealth['percentage'] === 100 ? 'text-success' : 'text-warning' }}">
-                                {{ $systemHealth['percentage'] }}%
-                            </span>
-                            <span class="text-base-content/55">
-                                of services healthy
-                            </span>
-                        @else
-                            <span class="font-medium text-base-content/60">
-                                Health not verified
-                            </span>
-                        @endif
-                    </div>
+                    <p class="text-xs text-base-content/60">
+                        {{ $systemHealth['description'] }}
+                    </p>
                 </div>
             </section>
         </div>

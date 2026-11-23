@@ -248,10 +248,19 @@ class LabScenario
     {
         $this->must($session, 'start the lab web service', ['systemctl', 'enable', '--now', 'ctf-http']);
 
-        // systemd retries a failing unit quickly and repeatedly, so a pause is needed
-        // before asking whether it came up. Without it the first question is asked of a
-        // service that has not finished starting, and the answer is a race.
-        sleep(4);
+        // IMNEHNET_P2_OPTIMIZE_V1: replace fixed 4s wait with bounded application-level readiness.
+        // Preserve the final assertServing() validation in apply().
+        // Probe only loopback inside this victim; never skip verification on timeout.
+        for ($attempt = 0; $attempt < 20; $attempt++) {
+            $probe = $this->inVictim($session, [
+                'python3', '-c',
+                'import urllib.request; print(urllib.request.urlopen("http://127.0.0.1/robots.txt", timeout=2).status)',
+            ], 5);
+            if ($probe['successful'] && str_contains($probe['stdout'], '200')) {
+                return;
+            }
+            usleep(200_000);
+        }
     }
 
     /**

@@ -54,7 +54,7 @@
                 <article class="card im-v4-stat"><span class="im-v4-stat-icon teal">{!! $svg('server') !!}</span><p>Total Labs</p><strong>{{ $d['total'] }}</strong><small>Aktif &amp; sudah dihapus</small></article>
                 <article class="card im-v4-stat"><span class="im-v4-stat-icon blue">{!! $svg('activity') !!}</span><p>Active Lab</p><strong>{{ $d['active'] }}</strong><small>{{ $d['active'] > 0 ? 'Running / Ready' : 'No active labs' }}</small></article>
                 <article class="card im-v4-stat"><span class="im-v4-stat-icon violet">{!! $svg('circle-check') !!}</span><p>CTF Progress</p><strong>{{ $completed }} / {{ $objectives }}</strong><small>{{ $d['course_name'] }} · latest attempt</small></article>
-                <article class="card im-v4-stat"><span class="im-v4-stat-icon amber">{!! $svg('clock') !!}</span><p>Total Lab Time</p><strong id="imnehnet-lab-time-v3" data-seconds="{{ (int) ($d['lab_time_seconds'] ?? 0) }}" data-live="{{ (int) ($d['lab_time_active_count'] ?? 0) }}">{{ sprintf('%02d:%02d', intdiv((int) ($d['lab_time_seconds'] ?? 0), 3600), intdiv(((int) ($d['lab_time_seconds'] ?? 0)) % 3600, 60)) }}</strong><small>Akumulasi waktu lab</small></article>
+                <article class="card im-v4-stat"><span class="im-v4-stat-icon amber">{!! $svg('clock') !!}</span><p>Total Lab Time</p><strong id="imnehnet-lab-time-v3" data-seconds="{{ (int) ($d['lab_time_seconds'] ?? 0) }}" data-live="{{ (int) ($d['lab_time_active_count'] ?? 0) }}">{{ intdiv(max(0, (int) ($d['lab_time_seconds'] ?? 0)), 60) }}</strong><small>Akumulasi waktu lab</small></article>
             </section>
             <div class="im-v4-section-head"><h2>Usage Statistics</h2><span class="im-v4-period badge">Last 7 Days</span></div>
             <section class="im-v4-charts" aria-label="Usage charts">
@@ -90,28 +90,17 @@
 </div>
     <!-- IMNEHNET_LAB_TIME_V3: only visual ticker; duration calculation stays server-side. -->
     <script data-imnehnet-lab-time-v3>
-    (function () {
-        function mount() {
-            const el = document.getElementById('imnehnet-lab-time-v3');
-            if (!el || el.dataset.mounted === '1') return;
-            el.dataset.mounted = '1';
-            const base = Math.max(0, Number(el.dataset.seconds) || 0);
-            const active = Math.max(0, Number(el.dataset.live) || 0);
-            const start = performance.now();
-            const update = () => {
-                if (!el.isConnected) { clearInterval(ticker); return; }
-                const elapsed = Math.floor((performance.now() - start) / 1000);
-                const secs = Math.floor(base + active * elapsed);
-                el.textContent = String(Math.floor(secs / 3600)).padStart(2, '0') + ':'
-                    + String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
-            };
-            const ticker = setInterval(update, 1000);
-            update();
-        }
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, {once: true});
-        else mount();
-    })();
-    </script>
+(function(){
+ function mount(){const el=document.getElementById('imnehnet-lab-time-v3');if(!el||el.dataset.minuteMounted==='1')return;
+   el.dataset.minuteMounted='1';const base=Math.max(0,Number(el.dataset.seconds)||0),active=Math.max(0,Number(el.dataset.live)||0),start=performance.now();
+   function update(){if(!el.isConnected){clearInterval(t);return}const seconds=Math.floor(base+active*(performance.now()-start)/1000);
+     const minutes=Math.floor(seconds/60);el.textContent=minutes===0?'0':minutes>=60?(Math.floor(minutes/60)+' jam'):(minutes+' menit');}
+   const t=setInterval(update,5000);update();
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+ document.addEventListener('livewire:navigated',mount);
+})();
+</script>
 @include('filament.pages.partials.student-shell-global')
 </x-filament-panels::page>
 

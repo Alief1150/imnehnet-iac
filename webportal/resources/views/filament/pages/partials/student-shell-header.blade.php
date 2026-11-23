@@ -18,7 +18,7 @@
         <div class="im-sh-control">
             <button type="button" class="btn btn-square im-v4-icon-btn im-sh-trigger" data-sh-toggle="notifications" aria-label="Notifications" aria-expanded="false" aria-haspopup="menu">{!! \App\Support\StudentNavigation::icon('bell') !!}<span class="im-sh-unread" data-sh-unread hidden></span></button>
             <div class="im-sh-panel im-sh-notification-panel" data-sh-panel="notifications" role="menu" hidden>
-                <div class="im-sh-panel-head"><strong>Notifications</strong><button type="button" data-sh-readall>Mark all read</button></div>
+                <div class="im-sh-panel-head"><strong>Notifications</strong><button type="button" data-sh-readall>Tandai semua dibaca</button></div>
                 <div class="im-sh-notification-items" data-sh-items><p class="im-sh-empty">Loading...</p></div>
             </div>
         </div>

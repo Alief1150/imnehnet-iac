@@ -20,7 +20,7 @@ final class MonitoringHostService
 
     private const QUERIES = [
 
-        'cpu' => '100 * (1 - avg(rate(node_cpu_seconds_total{job="imnehnet_host",instance="192.168.100.1:9100",mode="idle"}[2m])))',
+        'cpu' => 'clamp_min(clamp_max(100 * (1 - avg(rate(node_cpu_seconds_total{job="imnehnet_host",instance="192.168.100.1:9100",mode="idle"}[2m])) - avg(rate(node_cpu_seconds_total{job="imnehnet_host",instance="192.168.100.1:9100",mode="iowait"}[2m])) - avg(rate(node_cpu_seconds_total{job="imnehnet_host",instance="192.168.100.1:9100",mode="steal"}[2m]))), 100), 0)',
 
         'memory' => '100 * (1 - node_memory_MemAvailable_bytes{job="imnehnet_host",instance="192.168.100.1:9100"} / node_memory_MemTotal_bytes{job="imnehnet_host",instance="192.168.100.1:9100"})',
 

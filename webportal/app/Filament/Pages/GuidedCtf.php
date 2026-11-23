@@ -40,6 +40,17 @@ use Livewire\Attributes\Locked;
  */
 class GuidedCtf extends Page
 {
+    public static function shouldRegisterNavigation(): bool
+    {
+        return \Filament\Facades\Filament::getCurrentPanel()?->getId() === 'student';
+    }
+
+    public static function canAccess(): bool
+    {
+        return \Filament\Facades\Filament::getCurrentPanel()?->getId() === 'student';
+    }
+
+
     protected static ?string $navigationLabel = 'CTF Management';
 
     protected static ?string $title = 'Guided CTF';

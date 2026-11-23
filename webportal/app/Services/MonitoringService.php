@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
+// IMNEHNET_VM_JOB_SPLIT_V14
 final class MonitoringService
 {
     /**
@@ -20,13 +21,13 @@ final class MonitoringService
      * @var array<string, string>
      */
     private const QUERIES = [
-        'cpu' => 'avg(100 * (1 - avg by (host) (rate(node_cpu_seconds_total{job="imnehnet_vm",mode="idle"}[2m])))) and on() (count(100 * (1 - avg by (host) (rate(node_cpu_seconds_total{job="imnehnet_vm",mode="idle"}[2m])))) == 3)',
-        'memory' => 'avg(100 * (1 - (node_memory_MemAvailable_bytes{job="imnehnet_vm"} / node_memory_MemTotal_bytes{job="imnehnet_vm"}))) and on() (count(node_memory_MemTotal_bytes{job="imnehnet_vm"}) == 3)',
-        'storage' => 'avg(100 * (1 - (node_filesystem_avail_bytes{job="imnehnet_vm",mountpoint="/",fstype!="rootfs"} / node_filesystem_size_bytes{job="imnehnet_vm",mountpoint="/",fstype!="rootfs"}))) and on() (count(node_filesystem_size_bytes{job="imnehnet_vm",mountpoint="/",fstype!="rootfs"}) == 3)',
-        'storage_total' => 'sum(node_filesystem_size_bytes{job="imnehnet_vm",mountpoint="/",fstype!="rootfs"})',
+        'cpu' => 'avg(clamp_min(clamp_max(100 * (1 - avg by (host)(rate(node_cpu_seconds_total{job=~"iaas_mgmt|lab_env|lab_atk",mode="idle"}[2m])) - avg by (host)(rate(node_cpu_seconds_total{job=~"iaas_mgmt|lab_env|lab_atk",mode="iowait"}[2m])) - avg by (host)(rate(node_cpu_seconds_total{job=~"iaas_mgmt|lab_env|lab_atk",mode="steal"}[2m]))), 100), 0)) and on() (count(clamp_min(clamp_max(100 * (1 - avg by (host)(rate(node_cpu_seconds_total{job=~"iaas_mgmt|lab_env|lab_atk",mode="idle"}[2m])) - avg by (host)(rate(node_cpu_seconds_total{job=~"iaas_mgmt|lab_env|lab_atk",mode="iowait"}[2m])) - avg by (host)(rate(node_cpu_seconds_total{job=~"iaas_mgmt|lab_env|lab_atk",mode="steal"}[2m]))), 100), 0)) == 3) and on() (count(up{job=~"iaas_mgmt|lab_env|lab_atk"} == 1) == 3)',
+        'memory' => 'avg(100 * (1 - (node_memory_MemAvailable_bytes{job=~"iaas_mgmt|lab_env|lab_atk"} / node_memory_MemTotal_bytes{job=~"iaas_mgmt|lab_env|lab_atk"}))) and on() (count(node_memory_MemTotal_bytes{job=~"iaas_mgmt|lab_env|lab_atk"}) == 3)',
+        'storage' => 'avg(100 * (1 - (node_filesystem_avail_bytes{job=~"iaas_mgmt|lab_env|lab_atk",mountpoint="/",fstype!="rootfs"} / node_filesystem_size_bytes{job=~"iaas_mgmt|lab_env|lab_atk",mountpoint="/",fstype!="rootfs"}))) and on() (count(node_filesystem_size_bytes{job=~"iaas_mgmt|lab_env|lab_atk",mountpoint="/",fstype!="rootfs"}) == 3)',
+        'storage_total' => 'sum(node_filesystem_size_bytes{job=~"iaas_mgmt|lab_env|lab_atk",mountpoint="/",fstype!="rootfs"})',
         'containers' => 'count(count by (name) (container_last_seen{name!=""}))',
-        'network_rx' => 'sum(rate(node_network_receive_bytes_total{device!~"lo|veth.*|docker.*|br-.*"}[2m])) * 8',
-        'network_tx' => 'sum(rate(node_network_transmit_bytes_total{device!~"lo|veth.*|docker.*|br-.*"}[2m])) * 8',
+        'network_rx' => 'sum(rate(node_network_receive_bytes_total{job=~"imnehnet_host|iaas_mgmt|lab_env|lab_atk",device!~"lo|veth.*|docker.*|br-.*"}[2m])) * 8',
+        'network_tx' => 'sum(rate(node_network_transmit_bytes_total{job=~"imnehnet_host|iaas_mgmt|lab_env|lab_atk",device!~"lo|veth.*|docker.*|br-.*"}[2m])) * 8',
     ];
 
     /**

@@ -8,12 +8,13 @@ use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /** Read-only Prometheus history; no VM series is invented when a target is missing. */
+// IMNEHNET_VM_JOB_SPLIT_V14
 final class MonitoringVmSeriesService
 {
     private const EXPRESSIONS = [
-        'cpu' => '100 * (1 - avg by (host) (rate(node_cpu_seconds_total{job="imnehnet_vm",mode="idle"}[2m])))',
-        'memory' => '100 * (1 - (node_memory_MemAvailable_bytes{job="imnehnet_vm"} / node_memory_MemTotal_bytes{job="imnehnet_vm"}))',
-        'storage' => '100 * (1 - (node_filesystem_avail_bytes{job="imnehnet_vm",mountpoint="/",fstype!="rootfs"} / node_filesystem_size_bytes{job="imnehnet_vm",mountpoint="/",fstype!="rootfs"}))',
+        'cpu' => 'clamp_min(clamp_max(100 * (1 - avg by (host)(rate(node_cpu_seconds_total{job=~"iaas_mgmt|lab_env|lab_atk",mode="idle"}[2m])) - avg by (host)(rate(node_cpu_seconds_total{job=~"iaas_mgmt|lab_env|lab_atk",mode="iowait"}[2m])) - avg by (host)(rate(node_cpu_seconds_total{job=~"iaas_mgmt|lab_env|lab_atk",mode="steal"}[2m]))), 100), 0)',
+        'memory' => '100 * (1 - (node_memory_MemAvailable_bytes{job=~"iaas_mgmt|lab_env|lab_atk"} / node_memory_MemTotal_bytes{job=~"iaas_mgmt|lab_env|lab_atk"}))',
+        'storage' => '100 * (1 - (node_filesystem_avail_bytes{job=~"iaas_mgmt|lab_env|lab_atk",mountpoint="/",fstype!="rootfs"} / node_filesystem_size_bytes{job=~"iaas_mgmt|lab_env|lab_atk",mountpoint="/",fstype!="rootfs"}))',
     ];
 
     /** @return array<string, mixed> */

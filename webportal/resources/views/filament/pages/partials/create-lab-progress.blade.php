@@ -4,6 +4,7 @@
                         ['session', 'Creating lab session'],
                         ['victim', 'Creating victim container (LAB-ENV)'],
                         ['attacker', 'Creating attacker container (LAB-ATK)'],
+                        ['tools', 'Checking tools & CTF evidence'],
                         ['network', 'Applying security policy'],
                         ['scenario', 'Configuring environment'],
                         ['ready', 'Finalizing setup'],
@@ -12,12 +13,14 @@
                     $started = [];
                     foreach ($events as $event) {
                         $phase = $event['stage'] ?? '';
-                        if (in_array($phase, ['session','victim','attacker','network','scenario','ready'], true)) {
+                        if (in_array($phase, ['session','victim','attacker','tools','network','scenario','ready'], true)) {
                             $started[$phase] = true;
                             if (($event['level'] ?? '') === 'success') $done[$phase] = true;
                         }
                         if ($phase === 'queued') $done['session'] = true;
                     }
+                    // IMNEHNET_P2_URGENT_FIX_V2: transition to network proves tools completed.
+                    if (isset($started['network'])) $done['tools'] = true;
                     // Scenario has no separate success event; READY proves it completed.
                     if (isset($done['ready'])) $done['scenario'] = true;
                     // Worker started is proof that the session was created.
@@ -45,3 +48,18 @@
                     </section>
                     <div class="im-create-actions"><span>Proses provisioning dijalankan oleh queue worker. Status berasal dari event backend.</span></div>
                 </div>
+
+{{-- IMNEHNET_P2_URGENT_FIX_V2: recovery when Livewire polling leaves the progress DOM stale. --}}
+<script>
+(() => {
+  if (window.__imnehnetP2UrgentV2) return;
+  window.__imnehnetP2UrgentV2 = true;
+  window.setTimeout(() => {
+    if (document.querySelector('.im-create') && document.visibilityState === 'visible') {
+      window.location.reload();
+    } else {
+      window.__imnehnetP2UrgentV2 = false;
+    }
+  }, 10000);
+})();
+</script>

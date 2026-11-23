@@ -61,6 +61,15 @@ class CreateUser extends CreateRecord
 
     private function generatePassword(): string
     {
-        return Str::password(12, symbols: false);
+        do {
+            $password = Str::password(16, symbols: true);
+        } while (
+            ! preg_match('/[A-Z]/', $password)
+            || ! preg_match('/[a-z]/', $password)
+            || ! preg_match('/[0-9]/', $password)
+            || ! preg_match('/[^A-Za-z0-9]/', $password)
+        );
+
+        return $password;
     }
 }

@@ -137,6 +137,7 @@ final class ProvisionLabSession implements ShouldQueue
                 $cpu = (int) $victim->cpu_limit;
                 $megabytes = (int) $victim->memory_limit_mb;
 
+                $p2Start_victim = microtime(true); // IMNEHNET_P2_OPTIMIZE_V1
                 ProvisioningTimeline::record($this->sessionId, 'victim', 'Starting LAB-ENV victim provisioning through OpenTofu.');
                 // --- 1. victim -----------------------------------------------------
                 $this->applyInstance(
@@ -154,6 +155,8 @@ final class ProvisionLabSession implements ShouldQueue
                 );
 
                 ProvisioningTimeline::record($this->sessionId, 'victim', 'LAB-ENV victim provisioning completed.', 'success');
+                \Illuminate\Support\Facades\Log::info('IMNEHNET_P2_OPTIMIZE_V1', ['session_id' => $this->sessionId, 'phase' => 'victim', 'ms' => round((microtime(true) - $p2Start_victim) * 1000, 1)]);
+                $p2Start_attacker = microtime(true); // IMNEHNET_P2_OPTIMIZE_V1
                 ProvisioningTimeline::record($this->sessionId, 'attacker', 'Starting LAB-ATK attacker provisioning through OpenTofu.');
                 // --- 2. attacker ---------------------------------------------------
         $this->applyInstance(
@@ -208,22 +211,30 @@ final class ProvisionLabSession implements ShouldQueue
                     'success'
                 );
 
+                $p2Start_tools = microtime(true); // IMNEHNET_P2_OPTIMIZE_V1
                 ProvisioningTimeline::record($this->sessionId, 'tools', 'Installing and checking Nmap, curl, Gobuster and wordlist.');
                 app(AttackerTools::class)->ensure($session->refresh());
+                \Illuminate\Support\Facades\Log::info('IMNEHNET_P2_OPTIMIZE_V1', ['session_id' => $this->sessionId, 'phase' => 'tools_and_evidence', 'ms' => round((microtime(true) - $p2Start_tools) * 1000, 1)]);
                 ProvisioningTimeline::record($this->sessionId, 'tools', 'Attacker tools verified as student.', 'success');
                 ProvisioningTimeline::record($this->sessionId, 'attacker', 'LAB-ATK attacker provisioning completed.', 'success');
+                \Illuminate\Support\Facades\Log::info('IMNEHNET_P2_OPTIMIZE_V1', ['session_id' => $this->sessionId, 'phase' => 'attacker', 'ms' => round((microtime(true) - $p2Start_attacker) * 1000, 1)]);
+                $p2Start_firewall = microtime(true); // IMNEHNET_P2_OPTIMIZE_V1
                 ProvisioningTimeline::record($this->sessionId, 'network', 'Applying paired network access policy.');
                 // --- 3. permit the pair --------------------------------------------
                 $firewall->permit($session->refresh());
 
                 ProvisioningTimeline::record($this->sessionId, 'network', 'Paired network access policy applied.', 'success');
+                \Illuminate\Support\Facades\Log::info('IMNEHNET_P2_OPTIMIZE_V1', ['session_id' => $this->sessionId, 'phase' => 'firewall', 'ms' => round((microtime(true) - $p2Start_firewall) * 1000, 1)]);
+                $p2Start_scenario = microtime(true); // IMNEHNET_P2_OPTIMIZE_V1
                 ProvisioningTimeline::record($this->sessionId, 'scenario', 'Configuring Web Server Breach scenario.');
                 // --- 4. the scenario ----------------------------------------------
                 $session->forceFill(['status' => LabSessionStatus::Configuring])->save();
 
                 $scenario->apply($session->refresh());
+                \Illuminate\Support\Facades\Log::info('IMNEHNET_P2_OPTIMIZE_V1', ['session_id' => $this->sessionId, 'phase' => 'scenario', 'ms' => round((microtime(true) - $p2Start_scenario) * 1000, 1)]);
 
                 $sessions->markReady($session->refresh());
+                \Illuminate\Support\Facades\Log::info('IMNEHNET_P2_OPTIMIZE_V1', ['session_id' => $this->sessionId, 'phase' => 'ready', 'timestamp' => now()->toIso8601String()]);
                 ProvisioningTimeline::record($this->sessionId, 'ready', 'Both containers are ready. Guided CTF is available.', 'success');
 
                 // Notify the student that the lab is ready.
@@ -393,6 +404,22 @@ final class ProvisionLabSession implements ShouldQueue
 
         if ($acl !== '') {
             $variables['security_acls'] = $acl;
+        }
+
+        // IMNEHNET_BTRFS_P2_V1: limit Btrfs to one server-controlled user ID.
+        // Match exact container names so only that user's Guided CTF pair is affected.
+        // DIR remains the OpenTofu default for everyone else.
+        $benchmarkUserId = (int) config('infrastructure.btrfs_benchmark_user_id', 0);
+        if ($benchmarkUserId > 0 && in_array($name, [
+            'attacker-user-'.$benchmarkUserId,
+            'victim-user-'.$benchmarkUserId,
+        ], true)) {
+            $variables['storage_pool'] = 'imnehnet-btrfs-test';
+
+            // IMNEHNET_P2_PREBUILT_IMAGE_V1: Kaneki attacker only.
+            if ($name === 'attacker-user-'.$benchmarkUserId) {
+                $variables['container_image'] = 'imnehnet-gi-attacker-p3';
+            }
         }
 
         $tofu->withDirectoryLock(function () use (

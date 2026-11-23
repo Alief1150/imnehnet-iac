@@ -63,6 +63,10 @@ return Application::configure(basePath: dirname(__DIR__))
           // Fill the infrastructure caches every minute so page renders rarely pay
           // for a cold recompute. See WarmInfrastructureCacheCommand for why the
           // TTLs stay short instead.
+          $schedule->command('security:collect')
+              ->everyMinute()
+              ->withoutOverlapping();
+
           $schedule->command('infrastructure:warm')
               ->everyMinute()
               ->withoutOverlapping();

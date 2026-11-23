@@ -46,10 +46,16 @@ final class RedirectToOwnPanel extends Authenticate
         $user = $request->user();
 
         if ($user !== null && ! $user->canAccessPanel(Filament::getCurrentOrDefaultPanel())) {
-            $own = $user->isAdmin() ? 'admin' : 'student';
+            // IMNEHNET_AUTH_V6: follow panel policy, including Lecturer.
+            $own = $user->canAccessPanel(Filament::getPanel('admin'))
+                ? 'admin'
+                : ($user->canAccessPanel(Filament::getPanel('student')) ? 'student' : null);
+            if ($own === null) {
+                return parent::handle($request, $next);
+            }
 
             if ($user->canAccessPanel(Filament::getPanel($own))) {
-                return redirect()->route("filament.{$own}.pages.dashboard");
+                return redirect($own === 'admin' ? '/admin' : '/student');
             }
         }
 
