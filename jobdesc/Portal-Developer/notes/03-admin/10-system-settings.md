@@ -192,4 +192,44 @@ Folder: `jobdesc/Portal-Developer/images/03-admin/10-system-settings/`
 
 ## 6. Kesimpulan dan tindak lanjut
 
-Source modul System Settings telah diaudit dan terdokumentasi menggunakan 6 cuplikan kode dengan tautan ke baris aslinya. Tahap yang masih diperlukan adalah screenshot, uji role dan perilaku tombol, serta pembandingan dengan source terbaru di server `iaas-mgmt` karena sebagian perubahan lokal belum masuk GitHub `main`.
+Source modul System Settings telah diaudit dan terdokumentasi menggunakan 6 cuplikan kode dengan tautan ke baris aslinya. Tahap yang masih diperlukan adalah screenshot, uji role dan perilaku tombol, serta pembandingan dengan source terbaru di server `iaas-mgmt` karena source final sudah masuk GitHub `main` melalui commit `b3370b5`.
+
+
+---
+
+## Audit Revisi Final — Commit `b3370b5` (23 November 2026)
+
+Halaman membedakan metadata aplikasi, pengaturan profil, dan perubahan kata sandi.
+
+Cuplikan source aktual:
+
+```php
+<?php
+
+namespace App\Filament\Pages;
+
+use App\Services\ActivityLogService;
+use App\Support\Lucide;
+use App\Support\ProjectOverview;
+use Filament\Facades\Filament;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Livewire\WithFileUploads;
+
+final class SystemSettings extends Page
+{
+    use WithFileUploads;
+
+    protected static ?string $navigationLabel = 'System Settings';
+    protected static string|\UnitEnum|null $navigationGroup = 'OPERATIONS';
+    protected static ?int $navigationSort = 99;
+```
+
+**[Buka kode asli app/Filament/Pages/SystemSettings.php — baris 1–24](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/SystemSettings.php#L1-L24)**
+
+**Evaluasi:** Implementasi tersedia di kode final. Halaman yang berjalan merupakan bukti integrasi dasar, tetapi pengujian aksi, keamanan role, ekspor, dan respons kesalahan memerlukan hasil uji/screenshot khusus. Tabel skenario lama tidak dianggap otomatis PASS atau FAIL.
