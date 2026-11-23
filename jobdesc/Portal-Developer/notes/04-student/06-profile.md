@@ -59,8 +59,6 @@ Kode di bawah menangani bagian method php — saveavatar(). Perhatikan argumen, 
 
 ```php
 // PENJELASAN DOKUMENTASI (bukan bagian source): Memproses berkas avatar dan memperbarui profil bila valid.
-    }
-
     public function saveAvatar(): void
     {
         $user = auth()->user();
@@ -93,8 +91,6 @@ Kode di bawah menangani bagian method php — changepassword(). Perhatikan argum
 
 ```php
 // PENJELASAN DOKUMENTASI (bukan bagian source): Memvalidasi kredensial lama dan password baru sebelum menyimpan hash.
-    }
-
     public function changePassword(): void
     {
         $user = auth()->user();
