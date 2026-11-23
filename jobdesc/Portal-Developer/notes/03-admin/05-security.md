@@ -195,3 +195,38 @@ Upload ke `jobdesc/Portal-Developer/images/03-admin/05-security/`. Nama file di 
 ## 7. Kesimpulan
 
 Source Security telah diaudit dan dapat ditelusuri melalui 6 tautan langsung. Hasil pengujian runtime, screenshot, dan sinkronisasi dengan server aktif tetap perlu dilengkapi sebelum status dokumen final.
+
+
+---
+
+## Pembaruan Audit Source Final — 23 November 2026
+
+**Basis versi:** commit [`b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf) (`feat(portal): joh nggateli`). Contoh berikut adalah cuplikan source terbaru; penjelasan ditempatkan di luar kode agar tidak disalahartikan sebagai baris asli.
+
+### Implementasi yang diverifikasi melalui source
+
+Collector memproses telemetri keamanan; angka alert bergantung sumber, waktu koleksi, dan normalisasi event.
+
+```php
+<?php
+
+namespace App\Services;
+
+use App\Infrastructure\Health\CommandRunner;
+use App\Models\ActivityLog;
+use App\Models\LabSession;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+
+/**
+ * What the SIEM and the packet filter report, read by the host account.
+ *
+ * ── Why this runs as iaas, not as the web ────────────────────────────────────
+ *
+ * The alert log lives under a root-owned docker volume the web server may not
+```
+
+**[Buka kode asli — app/Services/SecurityTelemetryCollector.php, baris 1–17](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Services/SecurityTelemetryCollector.php#L1-L17)**
+
+**Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
