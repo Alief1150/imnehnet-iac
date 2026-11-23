@@ -190,8 +190,48 @@ Upload ke `jobdesc/Portal-Developer/images/03-admin/07-users/`. Nama file di baw
 | 03 | Search/filter/sort (jika tersedia) | Hasil sesuai data | Belum diuji |
 | 04 | Aksi pada data uji | Validasi dan perubahan backend benar | Belum diuji |
 
-**Risiko:** Pada source GitHub main, Presence belum identik dengan patch Last Seen terbaru yang terbukti menyimpan timestamp di server. Jangan unggah screenshot berisi data pribadi tanpa disensor.
+**Risiko:** Source terbaru sudah menyertakan migrasi Last Seen; hasil UI perlu diverifikasi. Jangan unggah screenshot berisi data pribadi tanpa disensor.
 
 ## 7. Kesimpulan
 
 Source Users telah diaudit dan dapat ditelusuri melalui 6 tautan langsung. Hasil pengujian runtime, screenshot, dan sinkronisasi dengan server aktif tetap perlu dilengkapi sebelum status dokumen final.
+
+
+---
+
+## Audit Revisi Final — Commit `b3370b5` (23 November 2026)
+
+Presence menangani indikator aktivitas; timestamp Last Seen tersedia melalui migrasi users terbaru.
+
+Cuplikan source aktual:
+
+```php
+<?php
+namespace App\Support;
+
+use Illuminate\Support\Facades\Cache;
+
+final class UserPresence
+{
+    public static function online(int $id): bool
+    {
+        return Cache::has('imnehnet:user:online:'.$id);
+    }
+
+    public static function heartbeat(int $id): void
+    {
+        // Online presence expires after three minutes without a heartbeat.
+        Cache::put(
+            'imnehnet:user:online:'.$id,
+            true,
+            now()->addMinutes(3)
+        );
+
+        // Last Seen persists after the online cache expires.
+        // Query Builder prevents unnecessary model observer events.
+        try {
+```
+
+**[Buka kode asli app/Support/UserPresence.php — baris 1–24](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Support/UserPresence.php#L1-L24)**
+
+**Evaluasi:** Implementasi tersedia di kode final. Halaman yang berjalan merupakan bukti integrasi dasar, tetapi pengujian aksi, keamanan role, ekspor, dan respons kesalahan memerlukan hasil uji/screenshot khusus. Tabel skenario lama tidak dianggap otomatis PASS atau FAIL.
