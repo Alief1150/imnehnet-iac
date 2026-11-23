@@ -28,6 +28,8 @@ Hasil pengujian ini berasal dari output terminal `iaas@iaas-mgmt` pada direktori
 
 **Definisi PASS:** sukses pada *pemeriksaan implementasi secara read-only*, bukan keberhasilan semua alur operasional. Browser login nyata, pembuatan akun baru, klik tombol yang memodifikasi data, terminal session, lab lifecycle, dan penyimpanan settings **tidak dilakukan** oleh script ini. Output terminal asli diberikan operator dalam percakapan pengujian; **belum disimpan sebagai artefak bukti tersendiri di repository**. Jangan menulis `PASS end-to-end` tanpa hasil pelaksanaan dan dokumentasi aktual.
 
+- **Arsip bukti terminal (ringkasan output operator):** [Verifikasi IAAS-MGMT 23 November 2026](evidence/2026-11-23-iaas-mgmt-verification.md). Semua dokumen modul menggunakan tabel kasus uji dengan ID, kriteria, hasil aktual, status PASS, dan pembahasan/batasan.
+
 ## Penanda Khusus
 
 **System Health:** lima kemungkinan keluaran `Healthy / Degraded / Critical / Offline / Unknown` berdasarkan service checks, bukan KPI persentase. **Terminal:** Open shell memanggil Livewire/backend, berbeda dengan membuka tab fullscreen. **Users:** Presence dan Last Seen didokumentasikan berdasarkan source final.
