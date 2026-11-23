@@ -192,16 +192,32 @@ Kode di bawah menangani bagian blade — @if($manualbookready). Perhatikan argum
 
 ## 4. Matriks Pengujian
 
+### Tujuan dan Metode Pengujian
 
-### Hasil Pengujian Implementasi Student — PASS (23 November 2026)
+Pengujian bertujuan memverifikasi kesesuaian route, class PHP, antarmuka Blade, dan interaksi/handler yang dapat diperiksa di source modul. Lingkungan pengujian: server **IAAS-MGMT**, proyek `/home/iaas/projects/webportal-iaas`, **23 November 2026**. Metode: skrip PHP CLI Laravel **read-only** tanpa mutasi database atau infrastruktur.
 
-**Lingkungan:** `iaas-mgmt` · **Direktori aplikasi:** `/home/iaas/projects/webportal-iaas` · **Metode:** script PHP read-only, inspeksi route, class, Blade, method PHP, serta binding `wire:click`/`wire:submit` yang tersedia.
+### Tabel Hasil Pengujian
 
-**Status verifikasi modul documentation: PASS.** Pengujian Student awal menghasilkan **82 pemeriksaan PASS** dan satu FAIL akibat **asumsi URL Pentest yang salah pada script**, bukan kegagalan handler aplikasi. URL yang benar diverifikasi secara terpisah: **`/student/guided-ctf` → `filament.student.pages.guided-ctf` → `App\Filament\Pages\GuidedCtf`**, dengan hasil **PASS**. Dengan koreksi tersebut, **6 dari 6 modul Student lolos pemeriksaan implementasi**.
+| ID | Skenario pemeriksaan | Kriteria keberhasilan | Hasil aktual dari terminal | Status |
+|---|---|---|---|---|
+| ST-DOC-01 | Route dokumentasi | Halaman Student tersedia | GET `/student/documentation` ditemukan | PASS |
+| ST-DOC-02 | Class dan Blade | Implementasi PHP/Blade tersedia | `StudentDocumentation` dan view ditemukan | PASS |
+| ST-DOC-03 | Kontrol akses | Method akses didefinisikan | `canAccess()` ditemukan | PASS |
+| ST-DOC-04 | Ketersediaan manual | State file manual dirujuk Blade | Referensi `manualBookReady` terdeteksi | PASS |
 
-**Cakupan PASS:** keberadaan route yang benar, file aplikasi, method, dan kecocokan binding Livewire yang memang ada dalam source. Beberapa kontrol seperti tautan, filter GET, JavaScript, atau action tidak memakai `wire:click` dan tidak seluruhnya diuji otomatis.
+### Bukti dan Analisis
 
-**Batas pembuktian:** script tidak menjalankan Start/Stop/Reset/Delete Lab, Submit Flag, upload avatar, perubahan profil/password, maupun interaksi browser secara nyata. Keberhasilan runtime aksi-aksi tersebut memerlukan bukti uji tersendiri. **PASS di sini berarti lolos verifikasi implementasi, bukan uji end-to-end.**
+**Rekap Student:** 82 pemeriksaan PASS pada skrip awal; 1 FAIL disebabkan asumsi URL Pentest yang salah dan telah diperbaiki dengan pemeriksaan ulang route `/student/guided-ctf` (PASS). Keenam modul lolos verifikasi implementasi.
+
+**Bukti terminal:** [Ringkasan transkrip hasil pengujian IAAS-MGMT](../evidence/2026-11-23-iaas-mgmt-verification.md). Cuplikan bukti berasal dari output yang diserahkan operator dan dikaitkan dengan source modul pada bagian implementasi dokumen ini.
+
+**Analisis:** pada skenario yang diuji, route, class, method dan/atau hubungan binding yang relevan berhasil ditemukan. Status **PASS** pada tabel menyatakan *verifikasi implementasi*, bukan kepastian setiap operasi tombol berhasil dieksekusi secara runtime.
+
+### Batasan Pengujian
+
+Pengujian belum mengeksekusi klik browser, pembuatan/penghentian lab, Submit Flag, penyimpanan profil maupun perubahan password, dan belum membuktikan pembatasan akses lintas akun melalui sesi nyata. Hasil operasi tersebut harus dicatat melalui skenario end-to-end tersendiri. Untuk laporan akhir, tambahkan screenshot terminal asli yang telah disensor jika disyaratkan dosen.
+
+
 ## 5. Screenshot
 
 Upload ke [`images/04-student/05-documentation/`](../../images/04-student/05-documentation/).
