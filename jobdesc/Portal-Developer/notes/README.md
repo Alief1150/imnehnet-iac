@@ -16,6 +16,18 @@
 - **Implementasi source:** tersedia dan diaudit; **keberhasilan pengujian runtime:** hanya dinyatakan PASS bila ada langkah, hasil aktual dan bukti. Website yang dapat diakses adalah bukti integrasi awal, bukan bukti keseluruhan skenario.
 - Screenshot disimpan pada [images/](../images/) dan harus disensor bila berisi data sensitif.
 
+## Hasil Pengujian IAAS-MGMT — 23 November 2026
+
+Hasil pengujian ini berasal dari output terminal `iaas@iaas-mgmt` pada direktori aplikasi `/home/iaas/projects/webportal-iaas`. Hasil telah ditempatkan di **bagian pengujian utama** setiap dokumen, bukan sebagai lampiran audit yang berulang.
+
+| Area | Rekap terverifikasi | Cakupan |
+|---|---|---|
+| Admin Panel, 10 modul | **PASS — 146 pemeriksaan, 0 FAIL** | Route, class/method, Blade, `wire:click`/`wire:submit`, deklarasi action Filament, dan penanda validasi/otorisasi/service; terminal V2 pukul **05:04:41** |
+| Student Panel, 6 modul | **PASS — 82 pemeriksaan berhasil + 1 koreksi route terverifikasi** | Pemeriksaan awal memiliki satu FAIL akibat script mencari `/student/pentest`; route sebenarnya `/student/guided-ctf` dan sudah diverifikasi PASS pada pengujian ulang |
+| Registrasi Student, Login Admin, Login Student, database | **PASS — 57 pemeriksaan, 0 FAIL** | Verifikasi source, auth routes, Livewire, validasi, role, hashing, middleware, dan query read-only tabel `users` pada pukul **05:06:05**; database saat uji: **3 admin, 7 student** |
+
+**Definisi PASS:** sukses pada *pemeriksaan implementasi secara read-only*, bukan keberhasilan semua alur operasional. Browser login nyata, pembuatan akun baru, klik tombol yang memodifikasi data, terminal session, lab lifecycle, dan penyimpanan settings **tidak dilakukan** oleh script ini. Output terminal asli diberikan operator dalam percakapan pengujian; **belum disimpan sebagai artefak bukti tersendiri di repository**. Jangan menulis `PASS end-to-end` tanpa hasil pelaksanaan dan dokumentasi aktual.
+
 ## Penanda Khusus
 
 **System Health:** lima kemungkinan keluaran `Healthy / Degraded / Critical / Offline / Unknown` berdasarkan service checks, bukan KPI persentase. **Terminal:** Open shell memanggil Livewire/backend, berbeda dengan membuka tab fullscreen. **Users:** Presence dan Last Seen didokumentasikan berdasarkan source final.
