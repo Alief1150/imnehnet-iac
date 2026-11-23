@@ -7,7 +7,7 @@
 **Status:** Source diaudit, dokumentasi implementasi tersedia; screenshot dan uji fungsional perlu dilengkapi  
 **Acuan:** Repository `Alief1150/imnehnet-iac`, branch `main`, diperiksa 23 November 2026
 
-> Dokumen ini menjelaskan kode yang ditemukan pada repository dan memisahkan hasil implementasi pada server yang belum disinkronkan ke GitHub. Contoh kode diberi komentar tambahan untuk pembelajaran; komentar tersebut tidak harus sudah ada dalam source. Tidak ada kode aplikasi yang diubah oleh dokumen ini.
+> Dokumen ini menjelaskan kode yang ditemukan pada repository dan mengacu pada pembaruan server yang telah disinkronkan ke GitHub melalui commit `b3370b5`. Contoh kode diberi komentar tambahan untuk pembelajaran; komentar tersebut tidak harus sudah ada dalam source. Tidak ada kode aplikasi yang diubah oleh dokumen ini.
 
 ## 1. Deskripsi Pekerjaan
 
