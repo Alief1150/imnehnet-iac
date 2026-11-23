@@ -158,16 +158,33 @@ Folder: `jobdesc/Portal-Developer/images/03-admin/09-activity-logs/`
 
 ## 5. Pemeriksaan dan pengujian
 
+### Tujuan dan Metode Pengujian
 
-### Hasil Pengujian Implementasi Admin — PASS (23 November 2026)
+Pengujian bertujuan memverifikasi kesesuaian route, class PHP, antarmuka Blade, dan interaksi/handler yang dapat diperiksa di source modul. Lingkungan pengujian: server **IAAS-MGMT**, proyek `/home/iaas/projects/webportal-iaas`, **23 November 2026**. Metode: skrip PHP CLI Laravel **read-only** tanpa mutasi database atau infrastruktur.
 
-**Server:** `iaas-mgmt` · **Project:** `/home/iaas/projects/webportal-iaas` · **Metode:** verifikasi PHP read-only terhadap Laravel GET routes, class/method, Blade, binding `wire:click`/`wire:submit`, deklarasi aksi Filament Resource, dan indikasi validasi/otorisasi/pemanggilan service.
+### Tabel Hasil Pengujian
 
-**Hasil pada modul activity-logs: PASS.** Seluruh **10 dari 10 modul Admin PASS**, dengan **146 pemeriksaan PASS dan 0 FAIL** pada script *Admin Panel Deep Verification V2*, dieksekusi **23 November 2026 pukul 05:04:41** (waktu tercetak di terminal server). Angka 146 merupakan **total lintas 10 modul**, bukan 146 pengujian khusus modul ini.
+| ID | Skenario pemeriksaan | Kriteria keberhasilan | Hasil aktual dari terminal | Status |
+|---|---|---|---|---|
+| AD-LOG-01 | Route Activity Logs | Route resource terdaftar | GET `/admin/activity-logs` ditemukan | PASS |
+| AD-LOG-02 | Resource dan class | Resource dapat dimuat | `ActivityLogResource` tersedia | PASS |
+| AD-LOG-03 | Daftar aktivitas | Method `table()` tersedia | Method terdeteksi dari class resource | PASS |
+| AD-LOG-04 | Detail dan navigasi | Method `infolist()` dan `getPages()` ada | Kedua method terdeteksi | PASS |
+| AD-LOG-05 | Table dan akses | Konfigurasi tabel dan pemeriksaan akses ditemukan | `ActivityLogsTable::configure()` dan `canAccess()` tersedia | PASS |
 
-**Makna hasil:** halaman, class, method dan relasi UI–handler yang diperiksa tersedia. Sinyal seperti `authorization-check`, `validation` dan `service-reference` adalah hasil pembacaan source, **bukan** eksekusi seluruh cabang logika.
+### Bukti dan Analisis
 
-**Batas pembuktian:** belum dilakukan klik browser end-to-end, perubahan database, eksekusi action lifecycle lab, pembuatan sesi terminal, atau penyimpanan konfigurasi. Perilaku runtime tidak dinyatakan PASS dari pemeriksaan statis saja.
+**Rekap Admin V2:** 10/10 modul PASS, 146 pemeriksaan PASS, 0 FAIL, pada 23 November 2026 pukul 05:04:41 menurut output terminal. Angka 146 merupakan total lintas Admin, bukan hanya modul ini.
+
+**Bukti terminal:** [Ringkasan transkrip hasil pengujian IAAS-MGMT](../evidence/2026-11-23-iaas-mgmt-verification.md). Cuplikan bukti berasal dari output yang diserahkan operator dan dikaitkan dengan source modul pada bagian implementasi dokumen ini.
+
+**Analisis:** pada skenario yang diuji, route, class, method dan/atau hubungan binding yang relevan berhasil ditemukan. Status **PASS** pada tabel menyatakan *verifikasi implementasi*, bukan kepastian setiap operasi tombol berhasil dieksekusi secara runtime.
+
+### Batasan Pengujian
+
+Pengujian belum mengklik kontrol browser secara nyata, mengeksekusi aksi infrastruktur, membuka sesi terminal, memodifikasi course/user/settings, atau menguji seluruh kebijakan akses dengan akun berbeda. Hasil operasi tersebut harus dicatat melalui skenario end-to-end tersendiri. Untuk laporan akhir, tambahkan screenshot terminal asli yang telah disensor jika disyaratkan dosen.
+
+
 ## 6. Kesimpulan dan tindak lanjut
 
 Source modul Activity Logs telah diaudit dan terdokumentasi menggunakan 5 cuplikan kode dengan tautan ke baris aslinya. Verifikasi source dan hubungan handler di server `iaas-mgmt` telah lulus pengujian implementasi; uji interaksi langsung dan screenshot tetap dibedakan.
