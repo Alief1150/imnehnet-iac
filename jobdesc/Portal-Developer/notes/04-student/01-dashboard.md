@@ -101,6 +101,26 @@ Blade menggunakan ekspresi PHP/komponen dan atribut Livewire untuk merender data
 
 **[Buka kode asli: `resources/views/filament/pages/student-dashboard.blade.php` baris 46–65](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/student-dashboard.blade.php#L46-L65)**
 
+
+## Interaksi dan Alur Backend
+
+**Referensi handler dashboard terbaru:** **[Buka kode asli — app/Filament/Pages/StudentDashboard.php (L51–L83)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/StudentDashboard.php#L51-L83)**
+
+### Pemetaan tombol, aksi, dan handler
+
+| Elemen UI | Perilaku riil | Kode dan logika |
+|---|---|---|
+| Total Labs | Menampilkan jumlah sesi lab mahasiswa | `StudentDashboard::dashboardData()` mengumpulkan sesi yang terikat `auth()->id()`; card hanya menampilkan nilai, bukan tombol |
+| Active Lab | Menampilkan jumlah sesi aktif | Data berasal dari query backend, bukan angka statis |
+| CTF Progress | Menampilkan objective selesai dibanding objective course pada *latest attempt* | Query progress di class PHP; Blade menggunakan `$completed` dan `$objectives` |
+| Total Lab Time | Menampilkan akumulasi durasi lab | Blade mengisi atribut `data-seconds` dan `data-live` untuk penghitungan/tampilan waktu di sisi klien; backend tetap sumber data awal |
+| Lab Session Activity, Pentest Objective Progress, Terminal Usage | Merender tiga grafik statistik | Payload `days/activity/usage/completed/objectives` diproses pada sisi view/asset JavaScript; grafik bukan kontrol untuk memodifikasi sesi |
+| **Lihat Semua** pada History | Membuka `/student/my-labs` | Ini navigasi melalui `href`, **bukan** operasi Livewire maupun halaman `/student/history` |
+| Bottom navigation (Dashboard, Labs, Pentest, History, Documentation) | Pindah halaman | URL dihasilkan `StudentNavigation::items()`; `aria-current` menandai menu aktif |
+
+
+**Uji yang harus dicatat:** buka dashboard sebagai Student; cocokkan angka statistik dengan data sesi milik akun uji; cek keadaan akun tanpa sesi; tekan Lihat Semua dan pastikan URL mengarah ke My Labs; periksa grafik dan pergantian menu mobile. Status PASS hanya boleh diisi setelah hasil aktual dan bukti tersimpan.
+
 ## 4. Perilaku yang Perlu Diverifikasi
 
 | Aspek | Hasil audit | Bukti runtime |
@@ -140,70 +160,3 @@ Dokumen mengacu langsung ke implementasi pada commit final, dengan pemisahan tan
 
 - [PHP — app/Filament/Pages/StudentDashboard.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/StudentDashboard.php)
 - [Blade — resources/views/filament/pages/student-dashboard.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/pages/student-dashboard.blade.php)
-
-
-## Audit Final Implementasi — Commit b3370b5
-
-### Dashboard personal student
-
-Berikut cuplikan PHP asli dari repository terbaru; satu baris komentar dokumentasi ditambahkan untuk menjelaskan alur.
-
-```php
-// KOMENTAR DOKUMENTASI: pemrosesan terjadi di backend; periksa guard, state, dan hasil aksi.
-    public function dashboardData(): array
-    {
-        $uid = auth()->id();
-        $days = collect(range(6, 0))->map(fn ($i) => now()->startOfDay()->subDays($i));
-        $empty = [
-            'total' => 0, 'active' => 0, 'completed' => 0, 'objectives' => 0,
-            'hours' => 0, 'activity' => array_fill(0, 7, 0),
-            'usage' => array_fill(0, 7, 0), 'history' => collect(),
-            'days' => $days->map(fn ($day) => $day->format('D'))->all(),
-            'course_name' => 'Web Server Breach',
-        ];
-        if (! $uid) {
-            return $empty;
-        }
-
-        $sessions = LabSession::query()->where('user_id', $uid)
-            ->with('course')->orderByDesc('id')->get();
-        $active = $sessions->filter(fn ($s) => in_array(
-            $s->status?->value ?? $s->status, ['READY', 'RUNNING'], true
-        ))->count();
-
-        // The course is identified by its persisted slug, not by session count.
-        // Prefer the student's most recent course, otherwise use the MVP course.
-        $course = $sessions->first()?->course
-            ?? \App\Models\Course::webServerBreach();
-        $courseSessions = $course
-            ? $sessions->where('course_id', $course->id)
-            : collect();
-        $latestAttempt = $courseSessions->first();
-        $objectives = $course?->objectives()->count() ?? 0;
-        $completed = $latestAttempt
-            ? min($objectives, $latestAttempt->progress()
-                ->where('status', \App\Enums\ObjectiveStatus::Completed->value)
-```
-
-**[Buka kode asli — app/Filament/Pages/StudentDashboard.php (L51–L83)](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/StudentDashboard.php#L51-L83)**
-
-**Logika fitur:** `dashboardData()` menggunakan `auth()->id()` untuk membatasi data per user, menyediakan fallback ketika belum terautentikasi, dan mengumpulkan sesi lab untuk KPI/riwayat. Data grafik bukan angka dummy global.
-
-**Pengujian dan hasil:** Source sudah diverifikasi terpasang pada commit final. Akses panel membuktikan halaman dapat diakses pada kondisi pengguna yang diuji, tetapi tidak otomatis memverifikasi semua skenario. Catat PASS pada kasus yang benar-benar sudah diuji beserta screenshot dan outputnya; jangan membuat data hasil uji yang tidak terlampir.
-
-## Pemetaan Interaksi Dashboard Student — Audit Blade Final
-
-| Elemen UI | Perilaku riil | Kode dan logika |
-|---|---|---|
-| Total Labs | Menampilkan jumlah sesi lab mahasiswa | `StudentDashboard::dashboardData()` mengumpulkan sesi yang terikat `auth()->id()`; card hanya menampilkan nilai, bukan tombol |
-| Active Lab | Menampilkan jumlah sesi aktif | Data berasal dari query backend, bukan angka statis |
-| CTF Progress | Menampilkan objective selesai dibanding objective course pada *latest attempt* | Query progress di class PHP; Blade menggunakan `$completed` dan `$objectives` |
-| Total Lab Time | Menampilkan akumulasi durasi lab | Blade mengisi atribut `data-seconds` dan `data-live` untuk penghitungan/tampilan waktu di sisi klien; backend tetap sumber data awal |
-| Lab Session Activity, Pentest Objective Progress, Terminal Usage | Merender tiga grafik statistik | Payload `days/activity/usage/completed/objectives` diproses pada sisi view/asset JavaScript; grafik bukan kontrol untuk memodifikasi sesi |
-| **Lihat Semua** pada History | Membuka `/student/my-labs` | Ini navigasi melalui `href`, **bukan** operasi Livewire maupun halaman `/student/history` |
-| Bottom navigation (Dashboard, Labs, Pentest, History, Documentation) | Pindah halaman | URL dihasilkan `StudentNavigation::items()`; `aria-current` menandai menu aktif |
-
-**Source UI:** [student-dashboard.blade.php L50–L85](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-dashboard.blade.php#L50-L85)  
-**Source data:** [StudentDashboard.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/StudentDashboard.php).
-
-**Uji yang harus dicatat:** buka dashboard sebagai Student; cocokkan angka statistik dengan data sesi milik akun uji; cek keadaan akun tanpa sesi; tekan Lihat Semua dan pastikan URL mengarah ke My Labs; periksa grafik dan pergantian menu mobile. Status PASS hanya boleh diisi setelah hasil aktual dan bukti tersimpan.
