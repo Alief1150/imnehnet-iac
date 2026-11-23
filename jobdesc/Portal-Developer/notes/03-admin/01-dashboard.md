@@ -61,6 +61,8 @@ public function getWidgets(): array
 }
 ```
 
+**Kode asli:** [Dashboard.php — getWidgets()](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Dashboard.php).
+
 **Penjelasan:** `auth()->user()` mengambil akun yang login, `?->` menghindari error jika tidak ada user, dan `isAdmin()` menguji role. Daftar class widget memberi tahu Filament komponen yang harus ditampilkan. Pada Student Panel, halaman dashboard aktual didaftarkan terpisah melalui `StudentPanelProvider` dan `StudentDashboard`, sehingga percabangan ini tidak boleh dianggap sebagai keseluruhan implementasi dashboard Student.
 
 ## 4. Pengolahan Data pada AdminDashboardOverview.php
@@ -86,6 +88,8 @@ $runningContainers = $containersAvailable
 // Eloquent menghitung akun yang tersimpan pada tabel users.
 $totalUsers = User::query()->count();
 ```
+
+**Kode asli:** [AdminDashboardOverview.php — getViewData()](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php).
 
 | Variabel | Fungsi |
 |---|---|
@@ -114,6 +118,8 @@ return [
     // Kode asli juga mengirim recentActivity dari ActivityLog.
 ];
 ```
+
+**Kode asli:** [AdminDashboardOverview.php — return view data](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php).
 
 Contohnya, key `'totalUsers'` membuat variabel `$totalUsers` tersedia pada file Blade widget. Blade tidak perlu melakukan query MySQL sendiri untuk menampilkan jumlah pengguna.
 
@@ -144,6 +150,8 @@ Contohnya, key `'totalUsers'` membuat variabel `$totalUsers` tersedia pada file 
     </div>
 </section>
 ```
+
+**Kode asli:** [admin-dashboard-overview.blade.php — KPI Running Containers](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/widgets/admin-dashboard-overview.blade.php).
 
 Cuplikan di atas disederhanakan dari markup lengkap agar logika mudah dipahami. **`{{ ... }}` melakukan output ter-escape**, sedangkan `@if` merupakan percabangan kondisional pada Blade. Nilai berasal dari widget PHP, bukan dari perhitungan browser.
 
@@ -183,6 +191,8 @@ Kartu **Total Users** menampilkan `number_format($totalUsers)`. Di bagian bawah,
 </div>
 ```
 
+**Kode asli:** [admin-dashboard-overview.blade.php — Lab Activity chart/filter](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/widgets/admin-dashboard-overview.blade.php); [AdminDashboardOverview.php — labActivity()](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php).
+
 **Mengapa ada pilihan Last 7/30/90 Days?** Agar administrator dapat membandingkan aktivitas sesi lab dalam beberapa periode tanpa membuka halaman laporan yang lain. Nilai `activityDays` diperiksa lagi pada backend; hanya `7`, `30`, atau `90` yang diterima. Fungsi `labActivity()` menyusun label tanggal beserta jumlah sesi yang dimulai, lalu JavaScript menggambarkannya.
 
 **Arti direktif:** `wire:model.live` mengirim pembaruan property Livewire, `wire:key` membantu mengidentifikasi ulang elemen ketika periode berubah, `x-init` menjalankan inisialisasi JavaScript dari Alpine, `x-ref` menandai node grafik, dan `wire:ignore` menghindari Livewire menimpa DOM yang dikelola pustaka grafik.
@@ -190,6 +200,59 @@ Kartu **Total Users** menampilkan `number_format($totalUsers)`. Di bagian bawah,
 ### 5.4 Course Status
 
 Kartu **Course Status** mengambil array dari method `courseProgress()`, dengan empat nilai: `completed`, `inProgress`, `notStarted`, dan `total`. Grafik menggunakan `window.createImnehnetCourseChart()`. Method menghitung status **berdasarkan mahasiswa**, bukan jumlah semua percobaan lab: pengguna dianggap completed jika minimal satu sesinya selesai, in progress jika memiliki sesi tanpa completed, dan not started jika belum memiliki sesi terkait course.
+
+
+
+### 5.4.1 Penjelasan kode Course Status — PHP
+
+```php
+// Penjelasan: menghitung progres per student, bukan sekadar total sesi.
+    private function courseProgress(): array
+    {
+        $course = Course::webServerBreach();
+
+        $studentIds = User::query()
+            ->where('role', 'student')
+            ->pluck('id');
+
+        $total = $studentIds->count();
+
+        if ($course === null || $total === 0) {
+            return [
+                'completed' => 0,
+                'inProgress' => 0,
+                'notStarted' => $total,
+                'total' => $total,
+            ];
+        }
+```
+
+**Kode asli:** [AdminDashboardOverview.php — courseProgress() baris 99–116](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php#L99-L116).
+
+**Logika:** method `courseProgress()` mengambil course, lalu daftar `user_id` yang berperan sebagai Student. Untuk setiap akun yang mempunyai sesi, status dibedakan menjadi `completed`, `inProgress`, dan `notStarted` berdasarkan riwayat `LabSession`. Variabel `$total` adalah jumlah mahasiswa yang diperiksa; `$sessionsByStudent` berisi sesi yang dikelompokkan berdasarkan pemilik.
+
+### 5.4.2 Penjelasan kode Course Status — Blade
+
+```blade
+{{-- Penjelasan: data PHP dikirim ke pembuat grafik Course Status di JavaScript. --}}
+                                        $courseProgress['completed'],
+                                        $courseProgress['inProgress'],
+                                        $courseProgress['notStarted'],
+                                    ]),
+                                    {{ $courseProgress['total'] }}
+                                );
+
+                                $cleanup(() => instance?.destroy());
+                            "
+                            class="min-w-0"
+                        >
+                            <div
+                                x-ref="chart"
+```
+
+**Kode asli:** [admin-dashboard-overview.blade.php — Course Chart baris 184–196](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/widgets/admin-dashboard-overview.blade.php#L184-L196).
+
+**Logika:** `@js(...)` mengirim array kategori untuk grafik, sementara `$courseProgress['total']` menjadi total pembanding. `wire:ignore` menjaga agar elemen grafik tidak rusak saat Livewire memperbarui komponen.
 
 ### 5.5 Recent Activity
 
@@ -201,6 +264,8 @@ Kartu **Course Status** mengambil array dari method `courseProgress()`, dengan e
     ->limit(5)             // Ambil lima aktivitas terbaru.
     ->get(),
 ```
+
+**Kode asli:** [AdminDashboardOverview.php — recentActivity query](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php).
 
 ```blade
 {{-- Source menampilkan data pada tabel lengkap Time, Event,
@@ -225,6 +290,8 @@ Kartu **Course Status** mengambil array dari method `courseProgress()`, dengan e
 </div>
 ```
 
+**Kode asli:** [admin-dashboard-overview.blade.php — Recent Activity](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/widgets/admin-dashboard-overview.blade.php). Cuplikan dokumentasi diringkas.
+
 `@forelse` merupakan perulangan dengan kondisi ketika daftar kosong. `$activity->actor?->name` mengambil nama pelaku dari relasi model, sedangkan `diffForHumans()` mengubah tanggal menjadi relatif (misalnya *3 minutes ago*). Contoh ini disingkat; tabel asli juga membedakan jenis event menggunakan badge dan label yang berasal dari action.
 
 ## 6. System Health — Perbedaan Source GitHub dan Implementasi Server
@@ -246,6 +313,8 @@ return [
     'percentage' => $percentage,
 ];
 ```
+
+**Kode asli:** [AdminDashboardOverview.php — systemHealth() versi GitHub main](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php). Patch empat status di server belum tercermin pada source ini.
 
 ### 6.2 Perubahan terbaru di server `iaas-mgmt` (belum ditemukan di GitHub)
 
@@ -304,6 +373,8 @@ test -f resources/views/filament/widgets/admin-dashboard-overview.blade.php   &&
 # Lihat nama route Dashboard terdaftar.
 php artisan route:list --path=admin
 ```
+
+**Referensi kode yang diperiksa:** [Dashboard.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Pages/Dashboard.php), [AdminDashboardOverview.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Widgets/AdminDashboardOverview.php), [admin-dashboard-overview.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/resources/views/filament/widgets/admin-dashboard-overview.blade.php). Perintah terminal adalah instruksi audit, bukan source aplikasi.
 
 ### 8.2 Daftar skenario pengujian
 
