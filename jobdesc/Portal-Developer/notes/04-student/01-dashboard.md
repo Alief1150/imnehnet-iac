@@ -190,3 +190,20 @@ Berikut cuplikan PHP asli dari repository terbaru; satu baris komentar dokumenta
 **Logika fitur:** `dashboardData()` menggunakan `auth()->id()` untuk membatasi data per user, menyediakan fallback ketika belum terautentikasi, dan mengumpulkan sesi lab untuk KPI/riwayat. Data grafik bukan angka dummy global.
 
 **Pengujian dan hasil:** Source sudah diverifikasi terpasang pada commit final. Akses panel membuktikan halaman dapat diakses pada kondisi pengguna yang diuji, tetapi tidak otomatis memverifikasi semua skenario. Catat PASS pada kasus yang benar-benar sudah diuji beserta screenshot dan outputnya; jangan membuat data hasil uji yang tidak terlampir.
+
+## Pemetaan Interaksi Dashboard Student — Audit Blade Final
+
+| Elemen UI | Perilaku riil | Kode dan logika |
+|---|---|---|
+| Total Labs | Menampilkan jumlah sesi lab mahasiswa | `StudentDashboard::dashboardData()` mengumpulkan sesi yang terikat `auth()->id()`; card hanya menampilkan nilai, bukan tombol |
+| Active Lab | Menampilkan jumlah sesi aktif | Data berasal dari query backend, bukan angka statis |
+| CTF Progress | Menampilkan objective selesai dibanding objective course pada *latest attempt* | Query progress di class PHP; Blade menggunakan `$completed` dan `$objectives` |
+| Total Lab Time | Menampilkan akumulasi durasi lab | Blade mengisi atribut `data-seconds` dan `data-live` untuk penghitungan/tampilan waktu di sisi klien; backend tetap sumber data awal |
+| Lab Session Activity, Pentest Objective Progress, Terminal Usage | Merender tiga grafik statistik | Payload `days/activity/usage/completed/objectives` diproses pada sisi view/asset JavaScript; grafik bukan kontrol untuk memodifikasi sesi |
+| **Lihat Semua** pada History | Membuka `/student/my-labs` | Ini navigasi melalui `href`, **bukan** operasi Livewire maupun halaman `/student/history` |
+| Bottom navigation (Dashboard, Labs, Pentest, History, Documentation) | Pindah halaman | URL dihasilkan `StudentNavigation::items()`; `aria-current` menandai menu aktif |
+
+**Source UI:** [student-dashboard.blade.php L50–L85](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-dashboard.blade.php#L50-L85)  
+**Source data:** [StudentDashboard.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/StudentDashboard.php).
+
+**Uji yang harus dicatat:** buka dashboard sebagai Student; cocokkan angka statistik dengan data sesi milik akun uji; cek keadaan akun tanpa sesi; tekan Lihat Semua dan pastikan URL mengarah ke My Labs; periksa grafik dan pergantian menu mobile. Status PASS hanya boleh diisi setelah hasil aktual dan bukti tersimpan.
