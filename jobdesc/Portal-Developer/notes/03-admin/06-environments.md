@@ -195,3 +195,38 @@ Upload ke `jobdesc/Portal-Developer/images/03-admin/06-environments/`. Nama file
 ## 7. Kesimpulan
 
 Source Environments telah diaudit dan dapat ditelusuri melalui 6 tautan langsung. Hasil pengujian runtime, screenshot, dan sinkronisasi dengan server aktif tetap perlu dilengkapi sebelum status dokumen final.
+
+
+---
+
+## Pembaruan Audit Source Final — 23 November 2026
+
+**Basis versi:** commit [`b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf) (`feat(portal): joh nggateli`). Contoh berikut adalah cuplikan source terbaru; penjelasan ditempatkan di luar kode agar tidak disalahartikan sebagai baris asli.
+
+### Implementasi yang diverifikasi melalui source
+
+Aksi lingkungan memisahkan perubahan runtime dari provisioning; operasi pada container dijalankan melalui handler yang terotorisasi.
+
+```php
+<?php
+
+namespace App\Filament\Resources\Environments\Tables;
+
+use App\Contracts\LifecycleDriver;
+use App\Models\LabEnvironment;
+use App\Models\AdminEnvironmentPair;
+use App\Services\EnvironmentLifecycleService;
+use App\Support\Lucide;
+use DomainException;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
+use Throwable;
+
+/**
+ * The lifecycle actions offered on each environment row.
+ *
+```
+
+**[Buka kode asli — app/Filament/Resources/Environments/Tables/EnvironmentActions.php, baris 1–17](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/app/Filament/Resources/Environments/Tables/EnvironmentActions.php#L1-L17)**
+
+**Status implementasi:** TERSEDIA DALAM SOURCE `main`. **Status pengujian:** keberadaan kode dan koneksi halaman tidak cukup untuk menyatakan seluruh skenario PASS; pengujian role, interaksi, error path, dan screenshot dinyatakan **perlu bukti hasil uji** bila belum dilampirkan. Dengan demikian tabel pengujian terdahulu adalah daftar verifikasi, bukan bukti kegagalan fitur.
