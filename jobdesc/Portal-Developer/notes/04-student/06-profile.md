@@ -263,3 +263,20 @@ Cuplikan PHP dari repository final, dengan komentar penjelasan yang ditambahkan 
 **Logika fitur:** `saveProfile()` memvalidasi data profil dan memperbarui akun terautentikasi. Avatar serta perubahan password memiliki handler berbeda sehingga tidak boleh disatukan sebagai satu aksi generik.
 
 **Pengujian:** Source tersedia di GitHub. Keberhasilan buka halaman dapat dilaporkan sebagai verifikasi akses hanya apabila telah dicoba, sedangkan keberhasilan simpan/edit/otorisasi/validasi memerlukan bukti pengujian per aksi. Jangan menandai fitur otomatis PASS karena aplikasi secara umum berjalan.
+
+
+## Peta Kontrol UI → PHP/Livewire (Audit Final)
+
+| Kontrol | Handler / state | Proses, validasi, dan hasil |
+|---|---|---|
+| **Save Profile** | `saveProfile` | Memvalidasi nama/email dan memproses perubahan pengguna yang sedang login. |
+| **Avatar upload** | `avatarUpload / saveAvatar` | Upload terjadi pada input Livewire, penyimpanan diselesaikan oleh handler; cek format, ukuran dan penyimpanan. |
+| **Remove Avatar** | `removeAvatar` | Menghapus avatar sesuai aturan dan state profil. |
+| **Change Password** | `changePassword` | Memvalidasi password saat ini serta konfirmasi password baru sebelum pembaruan kredensial. |
+| **Email confirmation** | `emailPassword` | Field password konfirmasi untuk perubahan email sesuai handler backend; tidak boleh hanya validasi sisi klien. |
+
+**[Buka kode tampilan Blade — resources/views/filament/pages/student-profile.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/student-profile.blade.php)**
+
+**[Buka kode handler PHP — app/Filament/Student/Pages/StudentProfile.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Student/Pages/StudentProfile.php)**
+
+**Penjelasan:** Blade menyajikan form, tombol, dan indikator loading; method PHP/Livewire menjalankan otorisasi, query, notifikasi, validasi, serta memanggil service atau queue ketika diperlukan. **Pengujian UI dan runtime dipisahkan** agar status keberhasilan tidak dilebihkan tanpa bukti kasus uji.
