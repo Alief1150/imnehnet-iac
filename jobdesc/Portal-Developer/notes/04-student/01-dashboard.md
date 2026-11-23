@@ -24,6 +24,7 @@ Komentar penjelas berada di luar cuplikan agar baris kode tetap persis sama deng
 Method `dashboardData()` perlu dibaca bersama validasi, state, dan pemanggilan service setelah cuplikan; perhatikan parameter, guard, serta pemutakhiran state.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Mengambil data ringkasan untuk Dashboard Student; output dikonsumsi oleh tampilan.
     }
 
     public function dashboardData(): array
@@ -52,6 +53,7 @@ Method `dashboardData()` perlu dibaca bersama validasi, state, dan pemanggilan s
 Method `canAccess()` perlu dibaca bersama validasi, state, dan pemanggilan service setelah cuplikan; perhatikan parameter, guard, serta pemutakhiran state.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Memeriksa akses halaman sesuai autentikasi dan role Student.
 
 
     public static function canAccess(): bool
@@ -76,6 +78,7 @@ Method `canAccess()` perlu dibaca bersama validasi, state, dan pemanggilan servi
 Blade menggunakan ekspresi PHP/komponen dan atribut Livewire untuk merender data. Elemen markup hanya tampilan; operasi sesungguhnya berada di method PHP yang dipanggil.
 
 ```blade
+{{-- PENJELASAN DOKUMENTASI (bukan bagian source): Blade adalah lapisan presentasi: tampilkan state, lakukan binding event, jangan menaruh otorisasi hanya di markup. --}}
 <div id="im-v4" class="im-v4" data-theme="dark" data-im-v4-root wire:ignore.self>
     <div class="im-v4-ambient" aria-hidden="true"></div>
     @include('filament.pages.partials.student-shell-sidebar')
