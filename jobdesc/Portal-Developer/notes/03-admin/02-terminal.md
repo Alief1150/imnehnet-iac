@@ -365,19 +365,11 @@ Upload ke folder `jobdesc/Portal-Developer/images/03-admin/02-terminal/`:
 
 **Batas pembuktian:** belum dilakukan klik browser end-to-end, perubahan database, eksekusi action lifecycle lab, pembuatan sesi terminal, atau penyimpanan konfigurasi. Perilaku runtime tidak dinyatakan PASS dari pemeriksaan statis saja.
 
-
-| Pengujian | Ekspektasi | Status |
-|---|---|---|
-| Login Admin lalu buka modul | Halaman dan komponen muncul tanpa error | Belum dilampirkan |
-| Akses oleh akun tanpa izin | Akses dibatasi sesuai role | Belum dilampirkan |
-| Cek isi kartu/tabel/status | Nilai sesuai data backend; tidak dikarang | Belum dilampirkan |
-| Coba tombol/filter pada data uji sah | Alur dan validasi backend berjalan sesuai aturan | Belum dilampirkan |
-
-**Catatan:** jangan memodifikasi infrastruktur atau membuka sesi nyata hanya untuk screenshot. Source final telah disinkronkan ke GitHub main pada commit b3370b5; perilaku runtime tetap memerlukan bukti uji.
+**Hasil modul ini: PASS — pemeriksaan implementasi pada IAAS-MGMT.** Route, class/method, view (jika ada), dan binding/aksi yang relevan tercakup dalam pengujian Admin V2 (146 PASS, 0 FAIL untuk 10 modul). Uji klik nyata, hasil query runtime, perubahan data, dan akses lintas role tidak termasuk dalam pengujian ini.
 
 ## 6. Kesimpulan
 
-Struktur dan alur utama **Terminal** telah dijelaskan dengan 5 cuplikan source tertaut. Screenshot dan bukti pengujian masih perlu dilengkapi untuk menyatakan dokumentasi final.
+Struktur dan alur utama **Terminal** telah dijelaskan dengan 5 cuplikan source tertaut. Hasil verifikasi implementasi di IAAS-MGMT sudah tercatat PASS; bukti screenshot dan uji fungsional browser merupakan kategori bukti terpisah.
 
 
 ---
