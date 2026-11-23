@@ -277,3 +277,18 @@ final class InfrastructureStatusService
 **Analisis implementasi:** `statusSummary()` dan `topology()` mengambil ringkasan probe serta peta topologi dari service. Tampilan harus membedakan kondisi berhasil, gagal, dan tidak teramati; nilai status adalah data runtime bukan deklarasi statis.
 
 **Status verifikasi:** kode implementasi diperiksa di commit `b3370b5` dan sudah tersedia pada source. Tampilan halaman dapat diobservasi saat screenshot, tetapi pengujian aksi, integrasi layanan, pembatasan role, kondisi error, dan perubahan data baru berstatus **PASS** jika dicatat bukti input, keluaran aktual, serta hasilnya. Kode tidak diubah oleh dokumentasi.
+
+
+## Peta Interaksi dan Data Antarmuka — Audit Final
+
+| UI / aksi | Method, enum, atau komponen | Logika yang diperiksa |
+|---|---|---|
+| **Status probes** | `statusSummary` | Mengambil status terkini melalui InfrastructureStatusService, tidak menentukan kondisi dari tampilan statis. |
+| **Host topology** | `topology` | Membaca relasi node, host dan VM dari service topology. |
+| **Refresh probes** | `getHeaderActions` | Refresh memicu pemeriksaan yang ditentukan action Filament; label waktu bukan bukti seluruh node sehat. |
+
+**[Buka kode tampilan/konfigurasi — resources/views/filament/pages/infrastructure.blade.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/resources/views/filament/pages/infrastructure.blade.php)**
+
+**[Buka kode PHP/handler — app/Filament/Pages/Infrastructure.php](https://github.com/Alief1150/imnehnet-iac/blob/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf/webportal/app/Filament/Pages/Infrastructure.php)**
+
+**Pengujian:** pengecekan kode dan UI dapat dinyatakan telah diaudit; hasil operasi setiap tombol, pembatasan role, dan interaksi dengan backend diberi PASS hanya apabila bukti aktual tersedia. Tidak menjalankan operasi destruktif pada server produksi untuk tujuan dokumentasi.
