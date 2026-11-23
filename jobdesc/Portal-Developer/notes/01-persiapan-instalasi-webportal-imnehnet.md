@@ -322,7 +322,7 @@ Berdasarkan audit proyek yang tersedia:
 
 - **25 September 2026:** PHP 8.3, PHP-FPM, Apache, MySQL, dan Git tersedia pada lingkungan IAAS-MGMT; direktori project Webportal saat itu masih kosong.
 - **26 September 2026:** source Laravel/Filament sudah tersedia di direktori aplikasi. Audit mencatat Laravel **13.33.0**, Filament **5.8.4**, build frontend berhasil, pengujian **42 tests / 154 assertions**, dan migrasi awal selesai pada saat tersebut.
-- **22 November 2026:** perubahan source Webportal sebanyak **74 file** tercatat dalam [commit `658b8cd`](https://github.com/Alief1150/imnehnet-iac/commit/658b8cd2e82375f015450250f87b1a1158aee66f) pada branch `main`. Commit ini adalah bukti sinkronisasi pengembangan, bukan bukti instalasi pertama setiap package.
+- **23 November 2026:** perubahan source Webportal sebanyak **74 file** tercatat dalam [commit `658b8cd`](https://github.com/Alief1150/imnehnet-iac/commit/658b8cd2e82375f015450250f87b1a1158aee66f) pada branch `main`. Commit ini adalah bukti sinkronisasi pengembangan, bukan bukti instalasi pertama setiap package.
 
 Secara teknis, resource yang disiapkan menjadi fondasi bagi backend Laravel, panel Filament, database MySQL, build aset frontend, HTTP server, dan sistem pekerjaan asynchronous. Hasil audit historis tidak menggantikan pemeriksaan versi dan status layanan pada lingkungan saat ini.
 
@@ -347,3 +347,100 @@ Tahap lanjutan dalam dokumentasi **Portal Developer** adalah **02 — Pembuatan 
 - [Konfigurasi Apache — `deploy/`](../../../webportal/deploy/)
 - [Catatan jaringan dan Cloudflare WARP](../../../docs/networking.md)
 - [Audit implementasi proyek](../../../docs/status.md)
+
+
+---
+
+## Lampiran Audit Final: Konfirmasi Dependensi dan Struktur Final (23 November 2026)
+
+**Versi:** [`feat(portal): joh nggateli` — `b3370b5`](https://github.com/Alief1150/imnehnet-iac/commit/b3370b58f5cda76e6b982cc788a1cf42ef75ecdf). Cuplikan persis dari source, dengan penjelasan di luar blok kode dan tautan tepat di bawah setiap cuplikan.
+
+### 1. composer.json
+
+Paket backend dalam composer.json menjadi dasar Laravel/Filament aktual; composer.lock mengunci versi resolusi yang tepat. File .env tidak disimpan dalam repository. Pemasangan produksi tidak dijalankan ulang hanya untuk kebutuhan dokumentasi.
+
+```json
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "filament/filament": "^5.0",
+        "laravel/framework": "^13.17",
+        "laravel/tinker": "^3.0"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.23",
+        "laravel/boost": "^2.2",
+        "laravel/pail": "^1.2.5",
+        "laravel/pao": "^1.0.6",
+        "laravel/pint": "^1.27",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.6",
+        "pestphp/pest": "^4.7",
+        "pestphp/pest-plugin-laravel": "^4.1"
+```
+
+**[Buka kode asli `webportal/composer.json` (L7–L23)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/composer.json#L7-L23)**
+
+### 2. package.json
+
+Node/npm, Vite, Tailwind, dan skrip build frontend.
+
+```json
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.3",
+    "flyonui": "^2.4.1",
+    "laravel-vite-plugin": "^3.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.0.0"
+  },
+  "optionalDependencies": {
+```
+
+**[Buka kode asli `webportal/package.json` (L3–L18)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/package.json#L3-L18)**
+
+### 3. imnehnet-portal.conf
+
+Konfigurasi web server yang tercatat pada source; kredensial atau konfigurasi lokal aktif tidak dibuktikan hanya oleh template.
+
+```apache
+# IMNEHNET portal - Apache vhost
+#
+# This file is NOT active. It has to be installed by a human with sudo,
+# because /etc/apache2 is root-owned and the portal must not edit it itself.
+#
+# What it does, and why each part is here:
+#
+#   1. Serves the portal from this application's public/ directory through
+#      php-fpm. The portal is currently served by "php artisan serve", which is
+#      PHP's built-in development server: single threaded, no WebSocket support,
+#      and it does not come back after a reboot. Apache with php-fpm is what
+#      should be serving it anyway.
+#
+#   2. Proxies /terminal/<slot>/ and /embed/<slot>/ to a ttyd listener on
+#      loopback. ttyd speaks WebSocket, and WebSocket is an HTTP upgrade, so it
+#      cannot be forwarded by an ordinary reverse proxy. mod_proxy_wstunnel
+#      exists for exactly this and has to be enabled; without it the terminal
+#      page loads and then hangs. /terminal/ asks the browser for the slot's
+#      password; /embed/ takes the slot's ticket from a cookie, which is what
+#      the embedded frame uses.
+#
+# Why slots instead of one port per session:
+#
+#   A ttyd process serves exactly one shell, so every session needs its own
+#   listener. Apache resolves ProxyPass targets statically and cannot look a port
+#   up in the portal's database, so the ports have to be declared here in
+#   advance. Each slot is a fixed port the portal lends out. The number of slots
+#   below is therefore the number of terminals that can exist at once; raising
+```
+
+**[Buka kode asli `webportal/deploy/apache/imnehnet-portal.conf` (L1–L28)](https://github.com/Alief1150/imnehnet-iac/blob/main/webportal/deploy/apache/imnehnet-portal.conf#L1-L28)**
+
+**Keterangan pengujian:** akses situs yang berjalan mendukung keberhasilan integrasi dasar, tetapi tidak cukup untuk mengklaim seluruh skenario instalasi, autentikasi, validasi, atau otorisasi telah PASS. Catat status aktual dan bukti per kasus; tanpa bukti hasil, gunakan *belum dilampirkan*, bukan *gagal* atau *lulus*.
