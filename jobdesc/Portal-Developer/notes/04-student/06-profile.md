@@ -17,13 +17,14 @@ Profile menangani pemutakhiran nama/email, avatar, dan password. Validasi dan ot
 
 ## 3. Analisis Implementasi PHP dan Blade
 
-Cuplikan berikut diambil dari source asli; seluruh penjelasan sengaja berada di luar cuplikan, sehingga tautan pada setiap blok bisa dibandingkan baris demi baris.
+Cuplikan memuat source asli dan komentar dokumentasi yang ditandai secara eksplisit, dan tautan pada setiap blok menunjuk ke baris kode asli (tanpa komentar tambahan).
 
 ### 3.1 Method PHP — saveProfile()
 
 Kode di bawah menangani bagian method php — saveprofile(). Perhatikan argumen, validasi, pengembalian status, dan dependensi. Kode PHP menjalankan logika domain sedangkan Blade hanya menyusun tampilan serta interaksi yang disediakan.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Memvalidasi dan menyimpan perubahan profil milik pengguna yang login.
     public function getHeading(): string { return ''; }
 
     public function saveProfile(): void
@@ -57,6 +58,7 @@ Kode di bawah menangani bagian method php — saveprofile(). Perhatikan argumen,
 Kode di bawah menangani bagian method php — saveavatar(). Perhatikan argumen, validasi, pengembalian status, dan dependensi. Kode PHP menjalankan logika domain sedangkan Blade hanya menyusun tampilan serta interaksi yang disediakan.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Memproses berkas avatar dan memperbarui profil bila valid.
     }
 
     public function saveAvatar(): void
@@ -90,6 +92,7 @@ Kode di bawah menangani bagian method php — saveavatar(). Perhatikan argumen, 
 Kode di bawah menangani bagian method php — changepassword(). Perhatikan argumen, validasi, pengembalian status, dan dependensi. Kode PHP menjalankan logika domain sedangkan Blade hanya menyusun tampilan serta interaksi yang disediakan.
 
 ```php
+// PENJELASAN DOKUMENTASI (bukan bagian source): Memvalidasi kredensial lama dan password baru sebelum menyimpan hash.
     }
 
     public function changePassword(): void
@@ -121,6 +124,7 @@ Kode di bawah menangani bagian method php — changepassword(). Perhatikan argum
 Kode di bawah menangani bagian blade — wire:model. Perhatikan argumen, validasi, pengembalian status, dan dependensi. Kode PHP menjalankan logika domain sedangkan Blade hanya menyusun tampilan serta interaksi yang disediakan.
 
 ```blade
+{{-- PENJELASAN DOKUMENTASI (bukan bagian source): Blade adalah lapisan presentasi: tampilkan state, lakukan binding event, jangan menaruh otorisasi hanya di markup. --}}
                                 <small>JPG, PNG, atau WebP · maksimal 2 MB · otomatis tersimpan setelah dipilih.</small>
                                 <small wire:loading wire:target="avatarUpload,saveAvatar" role="status">Memproses foto...</small>
                                 <input id="im-avatar-file" class="im-avatar-flyon-input" type="file" wire:model="avatarUpload" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" aria-label="Pilih gambar avatar" />
@@ -152,6 +156,7 @@ Kode di bawah menangani bagian blade — wire:model. Perhatikan argumen, validas
 Kode di bawah menangani bagian blade — @include. Perhatikan argumen, validasi, pengembalian status, dan dependensi. Kode PHP menjalankan logika domain sedangkan Blade hanya menyusun tampilan serta interaksi yang disediakan.
 
 ```blade
+{{-- PENJELASAN DOKUMENTASI (bukan bagian source): Blade adalah lapisan presentasi: tampilkan state, lakukan binding event, jangan menaruh otorisasi hanya di markup. --}}
 <div id="im-v4" class="im-v4" data-theme="dark" data-im-v4-root wire:ignore.self>
     <div class="im-v4-ambient" aria-hidden="true"></div>
     @include('filament.pages.partials.student-shell-sidebar')
