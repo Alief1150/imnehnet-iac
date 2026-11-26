@@ -406,19 +406,29 @@ final class ProvisionLabSession implements ShouldQueue
             $variables['security_acls'] = $acl;
         }
 
-        // IMNEHNET_BTRFS_P2_V1: limit Btrfs to one server-controlled user ID.
-        // Match exact container names so only that user's Guided CTF pair is affected.
-        // DIR remains the OpenTofu default for everyone else.
-        $benchmarkUserId = (int) config('infrastructure.btrfs_benchmark_user_id', 0);
-        if ($benchmarkUserId > 0 && in_array($name, [
-            'attacker-user-'.$benchmarkUserId,
-            'victim-user-'.$benchmarkUserId,
-        ], true)) {
-            $variables['storage_pool'] = 'imnehnet-btrfs-test';
-
-            // IMNEHNET_P2_PREBUILT_IMAGE_V1: Kaneki attacker only.
-            if ($name === 'attacker-user-'.$benchmarkUserId) {
-                $variables['container_image'] = 'imnehnet-gi-attacker-p3';
+        // Rollout only applies to NEW student CTF pairs, never arbitrary Incus
+        // instances. The selected pool/image is passed at CREATE time only;
+        // existing instances are not migrated by this feature.
+        $isAttacker = $remote === 'lab-atk' && preg_match('/^attacker-user-[0-9]+$/D', $name) === 1;
+        $isVictim = $remote === 'lab-env' && preg_match('/^victim-user-[0-9]+$/D', $name) === 1;
+        if ((bool) config('infrastructure.ctf_btrfs_rollout_enabled', false)
+            && ($isAttacker || $isVictim)) {
+            $variables['storage_pool'] = (string) config('infrastructure.ctf_btrfs_pool', 'imnehnet-btrfs-prod');
+            $variables['container_image'] = (string) config(
+                $isAttacker ? 'infrastructure.ctf_attacker_image' : 'infrastructure.ctf_victim_image'
+            );
+        } else {
+            // Preserve the pre-existing single-user Btrfs/P3 pilot while rollout
+            // is disabled. Everyone else continues to use their stored image/DIR.
+            $benchmarkUserId = (int) config('infrastructure.btrfs_benchmark_user_id', 0);
+            if ($benchmarkUserId > 0 && in_array($name, [
+                'attacker-user-'.$benchmarkUserId,
+                'victim-user-'.$benchmarkUserId,
+            ], true)) {
+                $variables['storage_pool'] = 'imnehnet-btrfs-test';
+                if ($name === 'attacker-user-'.$benchmarkUserId) {
+                    $variables['container_image'] = 'imnehnet-gi-attacker-p3';
+                }
             }
         }
 
