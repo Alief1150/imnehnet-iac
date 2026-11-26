@@ -84,7 +84,9 @@ final class LiveLifecycleDriver implements LifecycleDriver
                 return $selected;
             }
 
-            $destroyed = $tofu->destroy();
+            // Use the persisted image/pool for teardown as well; OpenTofu
+            // requires container_image and must not infer a new root pool.
+            $destroyed = $tofu->destroy($this->variables($environment));
 
             if (! $destroyed->successful()) {
                 return $destroyed;
@@ -104,7 +106,9 @@ final class LiveLifecycleDriver implements LifecycleDriver
                 return $selected;
             }
 
-            $destroyed = $tofu->destroy();
+            // Use the persisted image/pool for teardown as well; OpenTofu
+            // requires container_image and must not infer a new root pool.
+            $destroyed = $tofu->destroy($this->variables($environment));
 
             if (! $destroyed->successful()) {
                 return $destroyed;
