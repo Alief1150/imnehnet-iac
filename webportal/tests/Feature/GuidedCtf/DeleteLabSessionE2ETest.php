@@ -105,6 +105,8 @@ class DeleteLabSessionE2ETest extends TestCase
         bool $liveContainer = false
     ): PairedLabTeardownService {
         $tofu = Mockery::mock(OpenTofuService::class);
+        // Teardown reconciles the tracked workspace before inspecting state.
+        $tofu->shouldReceive('reconcilePairedWorkspace')->andReturnNull();
         $tofu->shouldReceive('workspaceFor')
             ->andReturnUsing(
                 fn (LabEnvironment $env) => (string) $env->tofu_workspace
