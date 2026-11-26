@@ -7,11 +7,13 @@ use App\Infrastructure\Health\CommandRunner;
 use App\Jobs\DeleteLabSession;
 use App\Models\LabEnvironment;
 use App\Models\LabSession;
+use App\Models\User;
 use App\Services\GuidedCtf\ContainerAbsenceVerifier;
 use App\Services\GuidedCtf\LabFirewall;
 use App\Services\GuidedCtf\PairedLabTeardownService;
 use App\Services\OpenTofuService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
@@ -19,12 +21,18 @@ use Tests\TestCase;
 
 class DeleteLabSessionE2ETest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         config()->set('infrastructure.environment_connection', 'sqlite');
         config()->set('cache.default', 'array');
+
+        // ProvisioningTimeline resolves the session owner through the portal DB.
+        // A real owner avoids false E2E failures caused by missing users fixtures.
+        User::factory()->create(['id' => 77]);
 
         Schema::connection('sqlite')->dropIfExists('lab_sessions');
         Schema::connection('sqlite')->dropIfExists('lab_environments');
