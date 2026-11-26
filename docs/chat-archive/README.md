@@ -5,10 +5,10 @@ Direktori ini adalah **handoff lintas chat** untuk proyek PBL IMNEHNET. Tujuanny
 ## Urutan baca wajib untuk chat baru
 
 1. [AGENTS.md](../../AGENTS.md) — kebijakan keamanan dan pembagian OpenTofu/Ansible.
-2. [Checkpoint terbaru: 2026-11-26](./2026-11-26-admin-environment-handoff.md) — kondisi terakhir yang diketahui.
-3. [docs/status.md](../status.md) — bukti historis terverifikasi; cek tanggal pembaruan, tidak otomatis menggambarkan runtime sekarang.
-4. [docs/architecture.md](../architecture.md), [docs/networking.md](../networking.md), [docs/decisions.md](../decisions.md), [docs/runbook.md](../runbook.md) sesuai kebutuhan.
-5. Inspeksi **repository dan server IAAS-MGMT aktual** sebelum perubahan; portal server mempunyai perubahan lokal besar yang belum tentu ada di GitHub.
+2. [Checkpoint terbaru: Btrfs P3 / Student Portal, 2026-11-26](./2026-11-26-btrfs-p3-student-portal-handoff.md) — prioritas implementasi terkini.\n3. [Checkpoint Admin Environment, 2026-11-26](./2026-11-26-admin-environment-handoff.md) — pekerjaan terpisah yang masih relevan.
+4. [docs/status.md](../status.md) — bukti historis terverifikasi; cek tanggal pembaruan, tidak otomatis menggambarkan runtime sekarang.
+5. [docs/architecture.md](../architecture.md), [docs/networking.md](../networking.md), [docs/decisions.md](../decisions.md), [docs/runbook.md](../runbook.md) sesuai kebutuhan.
+6. Inspeksi **repository dan server IAAS-MGMT aktual** sebelum perubahan; portal server mempunyai perubahan lokal besar yang belum tentu ada di GitHub.
 
 ## Protokol pembaruan (setiap milestone)
 
