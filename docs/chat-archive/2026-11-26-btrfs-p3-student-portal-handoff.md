@@ -46,3 +46,14 @@ Lanjutkan **Golden Image P3 + pool Btrfs pada Student Portal**, bukan cleanup Ad
 - Tes belum berjalan karena guard awal mensyaratkan `git branch --show-current` bernilai nama feature, sedangkan output kosong mengindikasikan kemungkinan *detached HEAD*.
 - **Perbaikan committed** ke feature branch: `a6c1dea140c6fe0fde09ab193bd64b826707ee0a`, guard baru menerima detached HEAD jika SHA `HEAD` tepat sama dengan `origin/feature/ctf-btrfs-p3-staged-rollout` yang telah di-fetch dan file tracked bersih. Tidak mengubah production.
 - Instruksi operator: ulangi `git fetch origin feature/ctf-btrfs-p3-staged-rollout && git merge --ff-only FETCH_HEAD && bash scripts/test-btrfs-p3-isolated.sh` di worktree DEV, kirim hasil tes. Sebelum production deployment, audit diff lokal dan database terlebih dulu; feature flag tetap OFF sampai staging web E2E PASS.
+
+## Update 2026-11-26 — targeted tests fail-safe regression
+
+Operator ran `a6c1dea` in DEV worktree. **Targeted suite: 10 passed, 2 errors, 1 risky (55 assertions).** Production unchanged, SSH session closed after `exit 1`.
+
+Root cause examined in feature branch:
+- `DeleteLabSession::handle()` invokes `PairedLabTeardownService::teardown()` directly; infrastructure errors propagate out of direct `handle()`. The Laravel queue calls `failed()` separately on terminal failure. Previous tests incorrectly expected direct `handle()` to swallow exceptions and fill `last_error`.
+- Fail-closed invariant `Container exists but its OpenTofu workspace is missing.` remains **required**. Never weaken production teardown to make a test green.
+- `MyLabsLifecycleTest::test_stopped_lab_cannot_open_workspace` previously had no assertions.
+- **Commits on feature branch:** `7142d0a` adjusts teardown tests to assert propagated exception and unchanged quota/rows; `ba0ce3a` asserts no redirect for stopped lab; `c8b6c75` fixes PHP RuntimeException namespace syntax.
+- **No server test run yet for these new commits.** Next operator action: fetch/fast-forward DEV then `bash scripts/test-btrfs-p3-isolated.sh`. Do not deploy production until test result and separate live diff audit. Feature flag remains OFF.
