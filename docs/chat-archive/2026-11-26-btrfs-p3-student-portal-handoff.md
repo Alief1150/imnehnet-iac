@@ -57,3 +57,11 @@ Root cause examined in feature branch:
 - `MyLabsLifecycleTest::test_stopped_lab_cannot_open_workspace` previously had no assertions.
 - **Commits on feature branch:** `7142d0a` adjusts teardown tests to assert propagated exception and unchanged quota/rows; `ba0ce3a` asserts no redirect for stopped lab; `c8b6c75` fixes PHP RuntimeException namespace syntax.
 - **No server test run yet for these new commits.** Next operator action: fetch/fast-forward DEV then `bash scripts/test-btrfs-p3-isolated.sh`. Do not deploy production until test result and separate live diff audit. Feature flag remains OFF.
+
+## Update 2026-11-26 — P3 DEV regression PASS; production preflight
+
+- Operator executed P3 target suite on DEV worktree commit `c8b6c75`: **13/13 PASS, 65 assertions, 0 errors, 0 risky**, runtime PHP 8.3.6, PHPUnit 12.5.33; no production mutation.
+- This is a targeted fake/SQLite suite, **not** production web E2E or full Laravel suite.
+- Assistant added read-only production preflight script `scripts/audit-btrfs-p3-production-preflight.sh` on feature branch at `a44339d221ed986f474a7b526faf53d153f554a3`. It inspects source hashes/missing migration, version metadata, .env key **presence only**, Incus pool info and capacity without printing secrets or running migrate/Tofu/Incus changes.
+- Next operator action: fetch/fast-forward DEV worktree, run the preflight script from there, share sanitized output. **Do not deploy** before reviewing actual production code and active IaC diffs. Full Laravel CI was previously 301 PASS / 68 FAIL / 1 risky at prior commit, requiring separate triage before claiming full-suite health.
+- Rollout flag stays OFF. No direct live SSH/browser access available in this session. Staging manual pool/image PASS was operator-reported, while Laravel E2E production remains unverified.
