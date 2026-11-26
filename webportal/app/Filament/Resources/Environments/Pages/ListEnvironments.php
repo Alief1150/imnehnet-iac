@@ -7,9 +7,11 @@ use App\Filament\Resources\Environments\EnvironmentResource;
 use App\Models\LabEnvironment;
 use App\Models\User;
 use App\Services\AdminEnvironmentPairCreator;
+use App\Services\GuidedCtf\AdminStudentLabProvisioner;
 use Filament\Notifications\Notification;
 use App\Support\Lucide;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
 
 use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
@@ -26,6 +28,70 @@ class ListEnvironments extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('createStudentPair')
+                ->label('Create Lab for Student')
+                ->icon(Lucide::icon('users'))
+                ->color('info')
+                ->modalHeading('Create Student Lab')
+                ->modalDescription(
+                    'Select an active student without an assigned lab. '
+                    .'The lab belongs to the student and uses the Guided CTF lifecycle, '
+                    .'not the Admin Pair lifecycle.'
+                )
+                ->form([
+                    Select::make('student_id')
+                        ->label('Student')
+                        ->placeholder('Select a student without a lab')
+                        ->options(fn (): array => app(AdminStudentLabProvisioner::class)->eligibleStudents())
+                        ->searchable()
+                        ->native(false)
+                        ->required()
+                        ->helperText('Accounts with existing, failed, or deleting labs are excluded.'),
+                    TextInput::make('attacker_preview')
+                        ->label('Attacker · LAB-ATK')
+                        ->default(fn (): string =>
+                            config('infrastructure.default_cpu_limit', 2).' vCPU · '.
+                            config('infrastructure.ctf_attacker_memory_limit_mb', 1024).' MiB · '.
+                            config('infrastructure.attacker_image', 'images:kali'))
+                        ->disabled()->dehydrated(false),
+                    TextInput::make('victim_preview')
+                        ->label('Victim · LAB-ENV')
+                        ->default(fn (): string =>
+                            config('infrastructure.default_cpu_limit', 2).' vCPU · '.
+                            config('infrastructure.default_memory_limit_mb', 2048).' MiB · '.
+                            config('infrastructure.lab_image', 'images:ubuntu/24.04'))
+                        ->disabled()->dehydrated(false),
+                ])
+                ->visible(fn (): bool => auth()->user()?->isAdmin() === true)
+                ->modalSubmitActionLabel('Queue Student Lab')
+                ->modalCancelActionLabel('Cancel')
+                ->action(function (array $data): void {
+                    $actor = auth()->user();
+                    if (! $actor instanceof User || ! $actor->isAdmin() || ! $actor->isActive()) {
+                        Notification::make()->title('Not authorized')->danger()->send();
+                        return;
+                    }
+
+                    try {
+                        $session = app(AdminStudentLabProvisioner::class)->create(
+                            $actor,
+                            (int) ($data['student_id'] ?? 0)
+                        );
+                        Notification::make()
+                            ->title('Student lab queued')
+                            ->body('Session #'.$session->getKey().' is provisioning. '
+                                .'The student can open My Labs after it becomes READY.')
+                            ->success()
+                            ->send();
+                    } catch (\Throwable $error) {
+                        report($error);
+                        Notification::make()
+                            ->title('Could not create student lab')
+                            ->body('No successful provisioning was reported. Review the logs and student lab state.')
+                            ->danger()
+                            ->send();
+                    }
+                }),
             Action::make('createAdminPair')
                 ->label('Create Pair')
                 ->icon(Lucide::icon('plus'))
