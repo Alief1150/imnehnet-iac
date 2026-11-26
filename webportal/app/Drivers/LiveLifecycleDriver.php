@@ -209,6 +209,17 @@ final class LiveLifecycleDriver implements LifecycleDriver
         ];
 
         $pool = trim((string) ($environment->storage_pool ?? ''));
+        // Preserve the legacy UID-scoped Btrfs pilot during Start/Stop/Reset.
+        $pilotId = (int) config('infrastructure.btrfs_benchmark_user_id', 0);
+        if ($pool === '' && $pilotId > 0 && (int) $environment->user_id === $pilotId
+            && in_array((string) $environment->container_name, [
+                'attacker-user-'.$pilotId, 'victim-user-'.$pilotId,
+            ], true)) {
+            $pool = 'imnehnet-btrfs-test';
+            if ((string) $environment->container_name === 'attacker-user-'.$pilotId) {
+                $variables['container_image'] = 'imnehnet-gi-attacker-p3';
+            }
+        }
         if ($pool !== '' && $pool !== 'default') {
             $variables['storage_pool'] = $pool;
         }
