@@ -178,7 +178,7 @@ class DeleteLabSessionE2ETest extends TestCase
                 $this->teardownService(fail: true)
             );
             $this->fail('Expected an infrastructure teardown failure.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertSame('Simulated infrastructure failure', $exception->getMessage());
         }
 
@@ -199,7 +199,7 @@ class DeleteLabSessionE2ETest extends TestCase
                 $this->teardownService(liveContainer: true)
             );
             $this->fail('A live container must block quota release.');
-        } catch (\\RuntimeException $exception) {
+        } catch (\RuntimeException $exception) {
             $this->assertSame(
                 'Container exists but its OpenTofu workspace is missing.',
                 $exception->getMessage()
