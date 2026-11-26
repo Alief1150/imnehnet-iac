@@ -39,3 +39,10 @@ Lanjutkan **Golden Image P3 + pool Btrfs pada Student Portal**, bukan cleanup Ad
 ## Pertanyaan pertama untuk chat berikutnya
 
 > Apa output setelah menjalankan skrip tes terisolasi pada worktree DEV? Jika belum ada, lanjutkan audit read-only dan gunakan PR #6 serta checkpoint ini. Jangan kembali ke desain awal.
+
+## Update 2026-11-26 — DEV script guard corrected
+
+- Operator menjalankan `git fetch` + `git merge --ff-only FETCH_HEAD` di `/tmp/imnehnet-btrfs-p3-dev`; fast-forward berhasil dari `1948e31` ke `7c8d5bd`.
+- Tes belum berjalan karena guard awal mensyaratkan `git branch --show-current` bernilai nama feature, sedangkan output kosong mengindikasikan kemungkinan *detached HEAD*.
+- **Perbaikan committed** ke feature branch: `a6c1dea140c6fe0fde09ab193bd64b826707ee0a`, guard baru menerima detached HEAD jika SHA `HEAD` tepat sama dengan `origin/feature/ctf-btrfs-p3-staged-rollout` yang telah di-fetch dan file tracked bersih. Tidak mengubah production.
+- Instruksi operator: ulangi `git fetch origin feature/ctf-btrfs-p3-staged-rollout && git merge --ff-only FETCH_HEAD && bash scripts/test-btrfs-p3-isolated.sh` di worktree DEV, kirim hasil tes. Sebelum production deployment, audit diff lokal dan database terlebih dulu; feature flag tetap OFF sampai staging web E2E PASS.
