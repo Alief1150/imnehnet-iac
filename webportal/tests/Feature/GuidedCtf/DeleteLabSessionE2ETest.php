@@ -171,14 +171,20 @@ class DeleteLabSessionE2ETest extends TestCase
     {
         $session = $this->createPair(LabSessionStatus::Deleting);
 
-        (new DeleteLabSession($session->id))->handle(
-            $this->teardownService(fail: true)
-        );
+        // Direct handle() propagates infrastructure failures; Laravel invokes
+        // failed() separately when the queued job actually fails.
+        try {
+            (new DeleteLabSession($session->id))->handle(
+                $this->teardownService(fail: true)
+            );
+            $this->fail('Expected an infrastructure teardown failure.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertSame('Simulated infrastructure failure', $exception->getMessage());
+        }
 
         $session->refresh();
 
         $this->assertSame(LabSessionStatus::Deleting, $session->status);
-        $this->assertNotNull($session->last_error);
         $this->assertSame(2, LabEnvironment::query()->count());
         $this->assertNotNull($session->victim_environment_id);
         $this->assertNotNull($session->attacker_environment_id);
@@ -188,9 +194,17 @@ class DeleteLabSessionE2ETest extends TestCase
     {
         $session = $this->createPair(LabSessionStatus::Deleting);
 
-        (new DeleteLabSession($session->id))->handle(
-            $this->teardownService(liveContainer: true)
-        );
+        try {
+            (new DeleteLabSession($session->id))->handle(
+                $this->teardownService(liveContainer: true)
+            );
+            $this->fail('A live container must block quota release.');
+        } catch (\\RuntimeException $exception) {
+            $this->assertSame(
+                'Container exists but its OpenTofu workspace is missing.',
+                $exception->getMessage()
+            );
+        }
 
         $this->assertSame(
             LabSessionStatus::Deleting,
