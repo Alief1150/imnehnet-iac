@@ -208,6 +208,11 @@ final class LiveLifecycleDriver implements LifecycleDriver
             'memory_limit' => $this->memoryArgument($environment),
         ];
 
+        $pool = trim((string) ($environment->storage_pool ?? ''));
+        if ($pool !== '' && $pool !== 'default') {
+            $variables['storage_pool'] = $pool;
+        }
+
         if ($desiredRunning !== null) {
             $variables['desired_running'] = $desiredRunning;
         }
