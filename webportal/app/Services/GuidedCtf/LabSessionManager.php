@@ -116,7 +116,9 @@ class LabSessionManager
                                 // first command.
                                 'incus_remote' => rtrim((string) config('infrastructure.incus_remote', 'lab-env'), ':'),
                                 'incus_project' => 'default',
-                                'image' => (string) config($btrfsRollout ? 'infrastructure.ctf_victim_image' : 'infrastructure.lab_image', 'imnehnet-gi-victim-v1'),
+                                'image' => $btrfsRollout
+                                    ? (string) config('infrastructure.ctf_victim_image', 'imnehnet-gi-victim-v1')
+                                    : (string) config('infrastructure.lab_image', 'images:ubuntu/24.04'),
                                 'storage_pool' => $selectedPool,
                                 'internal_ip' => $pair['victim_ip'],
                                 'status' => EnvironmentStatus::Provisioning,
@@ -147,7 +149,9 @@ class LabSessionManager
                                 'container_name' => $this->attackerName($user),
                                 'incus_remote' => rtrim((string) config('infrastructure.incus_attacker_remote', 'lab-atk'), ':'),
                                 'incus_project' => 'default',
-                                'image' => (string) config($btrfsRollout ? 'infrastructure.ctf_attacker_image' : 'infrastructure.attacker_image', 'imnehnet-gi-attacker-v1'),
+                                'image' => $btrfsRollout
+                                    ? (string) config('infrastructure.ctf_attacker_image', 'imnehnet-gi-attacker-p3')
+                                    : (string) config('infrastructure.attacker_image', 'images:kali'),
                                 'storage_pool' => $selectedPool,
                                 'internal_ip' => $pair['attacker_ip'],
                                 'status' => EnvironmentStatus::Provisioning,
