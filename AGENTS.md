@@ -102,6 +102,12 @@ Do not create commits solely to manufacture GitHub contribution activity.
 
 Never commit secrets. Never commit OpenTofu state.
 
+## Cross-chat context and progress handoff
+
+At the beginning of every new IMNEHNET chat or work session, read `docs/chat-archive/README.md` and its **latest dated checkpoint**, in addition to this file and `docs/status.md`. The archive distinguishes operator-reported audit snapshots, verified runtime facts, proposed changes, and unresolved tasks; it is not a substitute for live inspection.
+
+After a meaningful milestone, append a dated handoff in `docs/chat-archive/` with evidence, test outcomes, changes/commits, next actions, risks, and rollback. Never publish secrets or raw state. Do not automatically assume the GitHub portal main branch matches the unsynchronized IAAS-MGMT working tree.
+
 ## Required source-of-truth files
 
 - `AGENTS.md`: durable project rules and architecture context.
