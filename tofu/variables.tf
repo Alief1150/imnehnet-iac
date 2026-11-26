@@ -4,8 +4,7 @@ variable "container_name" {
 }
 
 variable "container_image" {
-  type    = string
-  default = "images:ubuntu/24.04"
+  type = string
 }
 
 # Always select the storage pool explicitly. Existing workspaces created
