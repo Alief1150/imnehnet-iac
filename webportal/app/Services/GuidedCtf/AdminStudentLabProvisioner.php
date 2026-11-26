@@ -106,14 +106,20 @@ final class AdminStudentLabProvisioner
             throw $exception;
         }
 
-        app(ActivityLogService::class)->record(
-            $actor,
-            'ADMIN_ASSIGNED_STUDENT_LAB',
-            $session,
-            'completed',
-            'Administrator queued a Guided CTF lab for student #'.$studentId.'.',
-            ['requested_action' => 'admin_assign_student_lab'],
-        );
+        // The queue request succeeded. An audit-storage outage must not
+        // misreport it as a provisioning failure or tempt an admin to retry.
+        try {
+            app(ActivityLogService::class)->record(
+                $actor,
+                'ADMIN_ASSIGNED_STUDENT_LAB',
+                $session,
+                'completed',
+                'Administrator queued a Guided CTF lab for student #'.$studentId.'.',
+                ['requested_action' => 'admin_assign_student_lab'],
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+        }
 
         return $session;
     }
