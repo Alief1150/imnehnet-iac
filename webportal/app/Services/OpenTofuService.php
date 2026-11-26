@@ -500,7 +500,12 @@ class OpenTofuService
             if ($image === '') {
                 throw new RuntimeException('Cannot destroy: environment image is missing.');
             }
-            $destroyed = $this->destroy(['container_image' => $image]);
+            $destroyVariables = ['container_image' => $image];
+            $pool = trim((string) ($environment->storage_pool ?? ''));
+            if ($pool !== '' && $pool !== 'default') {
+                $destroyVariables['storage_pool'] = $pool;
+            }
+            $destroyed = $this->destroy($destroyVariables);
 
             if (! $destroyed->successful()) {
                 // IMNEHNET_TOFU_DIAGNOSTIC_V2
