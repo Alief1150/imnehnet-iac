@@ -8,7 +8,7 @@ use App\Filament\Pages\MyLabs;
 use App\Models\Course;
 use App\Models\LabSession;
 use App\Models\User;
-use App\Services\GuidedCtf\LabFirewall;
+use App\Services\TerminalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Mockery;
@@ -58,13 +58,17 @@ class MyLabsLifecycleTest extends TestCase
         ]);
     }
 
-    public function test_stop_changes_status_without_deleting_session(): void
+    public function test_stop_queues_power_change_without_deleting_session(): void
     {
         $session = $this->createLabSession();
 
-        $firewall = Mockery::mock(LabFirewall::class);
-        $firewall->shouldReceive('revoke')->once();
-        $this->app->instance(LabFirewall::class, $firewall);
+        $terminals = Mockery::mock(TerminalService::class);
+        $terminals->shouldReceive('queueOwnedLabPower')
+            ->once()
+            ->withArgs(fn (LabSession $lab, bool $start): bool =>
+                $lab->is($session) && $start === false
+            );
+        $this->app->instance(TerminalService::class, $terminals);
 
         Livewire::test(MyLabs::class)
             ->call('requestStop')
@@ -72,30 +76,31 @@ class MyLabsLifecycleTest extends TestCase
             ->call('stopLab')
             ->assertSet('showStopConfirmation', false);
 
-        $this->assertSame(
-            LabSessionStatus::Stopped,
-            $session->refresh()->status
-        );
-
+        // Status only changes after ChangePairedLabPower confirms both
+        // containers. The UI must not pretend the queued action is finished.
+        $this->assertSame(LabSessionStatus::Ready, $session->refresh()->status);
         $this->assertDatabaseHas('lab_sessions', [
             'id' => $session->id,
-            'status' => 'STOPPED',
+            'status' => 'READY',
         ], config('infrastructure.environment_connection'));
     }
 
-    public function test_resume_changes_stopped_session_to_ready(): void
+    public function test_resume_queues_power_change_without_premature_ready_status(): void
     {
         $session = $this->createLabSession(LabSessionStatus::Stopped);
 
-        $firewall = Mockery::mock(LabFirewall::class);
-        $firewall->shouldReceive('permit')->once();
-        $this->app->instance(LabFirewall::class, $firewall);
+        $terminals = Mockery::mock(TerminalService::class);
+        $terminals->shouldReceive('queueOwnedLabPower')
+            ->once()
+            ->withArgs(fn (LabSession $lab, bool $start): bool =>
+                $lab->is($session) && $start === true
+            );
+        $this->app->instance(TerminalService::class, $terminals);
 
-        Livewire::test(MyLabs::class)
-            ->call('resumeLab');
+        Livewire::test(MyLabs::class)->call('resumeLab');
 
         $this->assertSame(
-            LabSessionStatus::Ready,
+            LabSessionStatus::Stopped,
             $session->refresh()->status
         );
     }
@@ -108,9 +113,9 @@ class MyLabsLifecycleTest extends TestCase
 
         $session = $this->createLabSession(owner: $other);
 
-        $firewall = Mockery::mock(LabFirewall::class);
-        $firewall->shouldNotReceive('revoke');
-        $this->app->instance(LabFirewall::class, $firewall);
+        $terminals = Mockery::mock(TerminalService::class);
+        $terminals->shouldNotReceive('queueOwnedLabPower');
+        $this->app->instance(TerminalService::class, $terminals);
 
         Livewire::test(MyLabs::class)
             ->call('requestStop')
