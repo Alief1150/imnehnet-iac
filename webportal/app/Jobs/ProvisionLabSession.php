@@ -406,27 +406,29 @@ final class ProvisionLabSession implements ShouldQueue
             $variables['security_acls'] = $acl;
         }
 
-        // Rollout only applies to NEW student CTF pairs, never arbitrary Incus
-        // instances. The selected pool/image is passed at CREATE time only;
-        // existing instances are not migrated by this feature.
-        $isAttacker = $remote === 'lab-atk' && preg_match('/^attacker-user-[0-9]+$/D', $name) === 1;
-        $isVictim = $remote === 'lab-env' && preg_match('/^victim-user-[0-9]+$/D', $name) === 1;
-        if ((bool) config('infrastructure.ctf_btrfs_rollout_enabled', false)
-            && ($isAttacker || $isVictim)) {
-            $variables['storage_pool'] = (string) config('infrastructure.ctf_btrfs_pool', 'imnehnet-btrfs-prod');
-            $variables['container_image'] = (string) config(
-                $isAttacker ? 'infrastructure.ctf_attacker_image' : 'infrastructure.ctf_victim_image'
-            );
+        // The selection is persisted when the lab session is created, so a
+        // change to the rollout flag cannot affect queued/existing sessions.
+        $environment = LabEnvironment::query()
+            ->where('container_name', $name)
+            ->where('incus_remote', $remote)
+            ->first();
+        if ($environment === null) {
+            throw new RuntimeException('Environment record missing for '.$name);
+        }
+
+        $pool = trim((string) ($environment->storage_pool ?? ''));
+        if ($pool !== '' && $pool !== 'default') {
+            $variables['storage_pool'] = $pool;
         } else {
-            // Preserve the pre-existing single-user Btrfs/P3 pilot while rollout
-            // is disabled. Everyone else continues to use their stored image/DIR.
-            $benchmarkUserId = (int) config('infrastructure.btrfs_benchmark_user_id', 0);
-            if ($benchmarkUserId > 0 && in_array($name, [
-                'attacker-user-'.$benchmarkUserId,
-                'victim-user-'.$benchmarkUserId,
+            // Pre-rollout pilot: retain Kaneki's original Btrfs behavior.
+            // New records explicitly contain "default" and do not enter here.
+            $pilotUserId = (int) config('infrastructure.btrfs_benchmark_user_id', 0);
+            if ($pool === '' && $pilotUserId > 0 && in_array($name, [
+                'attacker-user-'.$pilotUserId,
+                'victim-user-'.$pilotUserId,
             ], true)) {
                 $variables['storage_pool'] = 'imnehnet-btrfs-test';
-                if ($name === 'attacker-user-'.$benchmarkUserId) {
+                if ($name === 'attacker-user-'.$pilotUserId) {
                     $variables['container_image'] = 'imnehnet-gi-attacker-p3';
                 }
             }
