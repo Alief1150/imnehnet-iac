@@ -98,6 +98,14 @@ class LabSessionManager
 
                     return DB::connection((string) config('infrastructure.environment_connection'))
                         ->transaction(function () use ($user, $course, $pair): LabSession {
+                            // Freeze the image and pool at session creation, not
+                            // at queue execution. Flag changes must not alter
+                            // a previously queued or provisioned environment.
+                            $btrfsRollout = (bool) config('infrastructure.ctf_btrfs_rollout_enabled', false);
+                            $selectedPool = $btrfsRollout
+                                ? (string) config('infrastructure.ctf_btrfs_pool', 'imnehnet-btrfs-prod')
+                                : 'default';
+
                             $victim = LabEnvironment::query()->create([
                                 'user_id' => $user->getKey(),
                                 'container_name' => $this->victimName($user),
@@ -108,7 +116,8 @@ class LabSessionManager
                                 // first command.
                                 'incus_remote' => rtrim((string) config('infrastructure.incus_remote', 'lab-env'), ':'),
                                 'incus_project' => 'default',
-                                'image' => (string) config('infrastructure.lab_image', 'images:ubuntu/24.04'),
+                                'image' => (string) config($btrfsRollout ? 'infrastructure.ctf_victim_image' : 'infrastructure.lab_image', 'imnehnet-gi-victim-v1'),
+                                'storage_pool' => $selectedPool,
                                 'internal_ip' => $pair['victim_ip'],
                                 'status' => EnvironmentStatus::Provisioning,
                                 'runtime_status' => RuntimeStatus::Unknown,
@@ -138,7 +147,8 @@ class LabSessionManager
                                 'container_name' => $this->attackerName($user),
                                 'incus_remote' => rtrim((string) config('infrastructure.incus_attacker_remote', 'lab-atk'), ':'),
                                 'incus_project' => 'default',
-                                'image' => (string) config('infrastructure.attacker_image', 'images:kali'),
+                                'image' => (string) config($btrfsRollout ? 'infrastructure.ctf_attacker_image' : 'infrastructure.attacker_image', 'imnehnet-gi-attacker-v1'),
+                                'storage_pool' => $selectedPool,
                                 'internal_ip' => $pair['attacker_ip'],
                                 'status' => EnvironmentStatus::Provisioning,
                                 'runtime_status' => RuntimeStatus::Unknown,
