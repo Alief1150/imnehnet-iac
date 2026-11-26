@@ -18,8 +18,21 @@ if [[ ! -f "$app/artisan" || ! -x "$app/vendor/bin/pest" ]]; then
   exit 2
 fi
 
-if [[ "$(git -C "$repo_root" branch --show-current)" != "feature/ctf-btrfs-p3-staged-rollout" ]]; then
-  echo "REFUSED: expected feature/ctf-btrfs-p3-staged-rollout branch." >&2
+# A linked worktree may legitimately use detached HEAD.
+# Require the exact local feature tip, not merely an ancestor or unrelated branch.
+feature_ref="refs/remotes/origin/feature/ctf-btrfs-p3-staged-rollout"
+if ! git -C "$repo_root" show-ref --verify --quiet "$feature_ref"; then
+  echo "REFUSED: missing locally fetched origin feature ref." >&2
+  exit 2
+fi
+head_sha="$(git -C "$repo_root" rev-parse HEAD)"
+feature_sha="$(git -C "$repo_root" rev-parse "$feature_ref")"
+if [[ "$head_sha" != "$feature_sha" ]]; then
+  echo "REFUSED: HEAD differs from local feature tip; fetch and fast-forward DEV first." >&2
+  exit 2
+fi
+if [[ -n "$(git -C "$repo_root" status --porcelain --untracked-files=no)" ]]; then
+  echo "REFUSED: tracked modifications in DEV worktree." >&2
   exit 2
 fi
 
