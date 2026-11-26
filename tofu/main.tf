@@ -21,6 +21,21 @@ resource "incus_instance" "student_lab" {
   remote   = var.incus_remote
   profiles = ["default"]
 
+  # The root device is overridden only for a non-default pool. The default
+  # profile continues to supply its original root disk for legacy containers.
+  dynamic "device" {
+    for_each = var.storage_pool == "default" ? [] : [var.storage_pool]
+
+    content {
+      name = "root"
+      type = "disk"
+      properties = {
+        path = "/"
+        pool = device.value
+      }
+    }
+  }
+
   # Start and stop are expressed as a desired state rather than as a separate
   # command, so the lifecycle is declarative: setting this to false and applying
   # converges the instance to stopped exactly as setting it to true converges it to
