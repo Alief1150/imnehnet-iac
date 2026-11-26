@@ -65,3 +65,20 @@ Root cause examined in feature branch:
 - Assistant added read-only production preflight script `scripts/audit-btrfs-p3-production-preflight.sh` on feature branch at `a44339d221ed986f474a7b526faf53d153f554a3`. It inspects source hashes/missing migration, version metadata, .env key **presence only**, Incus pool info and capacity without printing secrets or running migrate/Tofu/Incus changes.
 - Next operator action: fetch/fast-forward DEV worktree, run the preflight script from there, share sanitized output. **Do not deploy** before reviewing actual production code and active IaC diffs. Full Laravel CI was previously 301 PASS / 68 FAIL / 1 risky at prior commit, requiring separate triage before claiming full-suite health.
 - Rollout flag stays OFF. No direct live SSH/browser access available in this session. Staging manual pool/image PASS was operator-reported, while Laravel E2E production remains unverified.
+
+## Update 2026-11-26 05:57 UTC — production preflight evidence
+
+Operator ran `scripts/audit-btrfs-p3-production-preflight.sh` from DEV commit `a44339d`.
+
+**Observed:**
+- DEV worktree HEAD `a44339d`, tracked dirty count 0.
+- Live Laravel `/home/iaas/projects/webportal-iaas` HEAD `575a74a`, branch `ui/sprint-1-dashboard`, **72 modified tracked files**.
+- Active IaC `/home/iaas/imnehnet-iac` HEAD `123434f`, branch `feat/lab-provisioning`, **2 modified tracked files**.
+- All five P3 Laravel integration files differ by SHA-256 between DEV and live: `LiveLifecycleDriver.php`, `ProvisionLabSession.php`, `LabSessionManager.php`, `OpenTofuService.php`, `config/infrastructure.php`.
+- The additive migration `2026_11_26_000001_add_storage_pool_to_lab_environments.php` is **missing** in Laravel live, and migration status does not report it. Both active OpenTofu TF files differ from DEV.
+- All 4 named Btrfs .env flags were **absent** in live .env (presence check only, not actual app-config values).
+- Incus pool info lines did not appear in filtered output; **pool existence NOT verified from this particular preflight** (operator had reported it earlier).
+- IAAS-MGMT `df -h /` 884G total/100G used/748G available (12%); memory 5.8 GiB, 2.6 GiB available, swap 4.0 GiB total/1.8 GiB used. Host/device VM storage capacity is **not** established by this.
+- No production mutations made during preflight.
+
+**Decision:** No blanket file copy, git merge, or database migration yet. Need exact, controlled source diff, image/pool confirmation, DB backup strategy and rollback review before production. Assistant added `scripts/collect-btrfs-p3-selective-diff.sh` on feature branch commit `0f678dc`, which generates a **PRIVATE** report under /tmp including relevant DEV-vs-live source diffs, migration, IaC diffs and unfiltered pool inventory. Operator must inspect report for secrets and upload privately to chat, NEVER commit public. Next step: selectively reconcile changes and then test one web lab only after explicit production change approval.
