@@ -133,7 +133,13 @@ class MyLabsLifecycleTest extends TestCase
     {
         $this->createLabSession(LabSessionStatus::Stopped);
 
-        // A STOPPED session has no workspace redirect.
-        (new MyLabs())->openWorkspace();
+        // Prove that a STOPPED session cannot dispatch navigation.
+        $page = Mockery::mock(MyLabs::class)->makePartial();
+        $page->shouldNotReceive('redirect');
+        $page->openWorkspace();
+        $this->assertSame(
+            LabSessionStatus::Stopped,
+            LabSession::query()->firstOrFail()->status
+        );
     }
 }
