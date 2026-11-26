@@ -37,6 +37,14 @@ return [
     // creates attacker/victim root disks on the benchmark Btrfs pools.
     'btrfs_benchmark_user_id' => (int) env('IMNEHNET_BTRFS_BENCHMARK_USER_ID', 0),
 
+    // Opt-in for NEW Guided CTF lab pairs. Disabled by default.
+    // Enable only after both Incus remotes have a tested production pool.
+    // Existing environments and the legacy UID-scoped pilot remain untouched.
+    'ctf_btrfs_rollout_enabled' => env('IMNEHNET_CTF_BTRFS_ROLLOUT_ENABLED', false),
+    'ctf_btrfs_pool' => env('IMNEHNET_CTF_BTRFS_POOL', 'imnehnet-btrfs-prod'),
+    'ctf_attacker_image' => env('IMNEHNET_CTF_ATTACKER_IMAGE', 'imnehnet-gi-attacker-p3'),
+    'ctf_victim_image' => env('IMNEHNET_CTF_VICTIM_IMAGE', 'imnehnet-gi-victim-v1'),
+
     /*
      * OpenTofu drives the container lifecycle.
      *

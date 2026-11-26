@@ -500,7 +500,22 @@ class OpenTofuService
             if ($image === '') {
                 throw new RuntimeException('Cannot destroy: environment image is missing.');
             }
-            $destroyed = $this->destroy(['container_image' => $image]);
+            $destroyVariables = ['container_image' => $image];
+            $pool = trim((string) ($environment->storage_pool ?? ''));
+            $pilotId = (int) config('infrastructure.btrfs_benchmark_user_id', 0);
+            if ($pool === '' && $pilotId > 0 && (int) $environment->user_id === $pilotId
+                && in_array((string) $environment->container_name, [
+                    'attacker-user-'.$pilotId, 'victim-user-'.$pilotId,
+                ], true)) {
+                $pool = 'imnehnet-btrfs-test';
+                if ((string) $environment->container_name === 'attacker-user-'.$pilotId) {
+                    $destroyVariables['container_image'] = 'imnehnet-gi-attacker-p3';
+                }
+            }
+            if ($pool !== '' && $pool !== 'default') {
+                $destroyVariables['storage_pool'] = $pool;
+            }
+            $destroyed = $this->destroy($destroyVariables);
 
             if (! $destroyed->successful()) {
                 // IMNEHNET_TOFU_DIAGNOSTIC_V2

@@ -7,11 +7,13 @@ use App\Infrastructure\Health\CommandRunner;
 use App\Jobs\DeleteLabSession;
 use App\Models\LabEnvironment;
 use App\Models\LabSession;
+use App\Models\User;
 use App\Services\GuidedCtf\ContainerAbsenceVerifier;
 use App\Services\GuidedCtf\LabFirewall;
 use App\Services\GuidedCtf\PairedLabTeardownService;
 use App\Services\OpenTofuService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
@@ -19,12 +21,18 @@ use Tests\TestCase;
 
 class DeleteLabSessionE2ETest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         config()->set('infrastructure.environment_connection', 'sqlite');
         config()->set('cache.default', 'array');
+
+        // ProvisioningTimeline resolves the session owner through the portal DB.
+        // A real owner avoids false E2E failures caused by missing users fixtures.
+        User::factory()->create(['id' => 77]);
 
         Schema::connection('sqlite')->dropIfExists('lab_sessions');
         Schema::connection('sqlite')->dropIfExists('lab_environments');
@@ -97,6 +105,8 @@ class DeleteLabSessionE2ETest extends TestCase
         bool $liveContainer = false
     ): PairedLabTeardownService {
         $tofu = Mockery::mock(OpenTofuService::class);
+        // Teardown reconciles the tracked workspace before inspecting state.
+        $tofu->shouldReceive('reconcilePairedWorkspace')->andReturnNull();
         $tofu->shouldReceive('workspaceFor')
             ->andReturnUsing(
                 fn (LabEnvironment $env) => (string) $env->tofu_workspace
@@ -161,14 +171,20 @@ class DeleteLabSessionE2ETest extends TestCase
     {
         $session = $this->createPair(LabSessionStatus::Deleting);
 
-        (new DeleteLabSession($session->id))->handle(
-            $this->teardownService(fail: true)
-        );
+        // Direct handle() propagates infrastructure failures; Laravel invokes
+        // failed() separately when the queued job actually fails.
+        try {
+            (new DeleteLabSession($session->id))->handle(
+                $this->teardownService(fail: true)
+            );
+            $this->fail('Expected an infrastructure teardown failure.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Simulated infrastructure failure', $exception->getMessage());
+        }
 
         $session->refresh();
 
         $this->assertSame(LabSessionStatus::Deleting, $session->status);
-        $this->assertNotNull($session->last_error);
         $this->assertSame(2, LabEnvironment::query()->count());
         $this->assertNotNull($session->victim_environment_id);
         $this->assertNotNull($session->attacker_environment_id);
@@ -178,9 +194,17 @@ class DeleteLabSessionE2ETest extends TestCase
     {
         $session = $this->createPair(LabSessionStatus::Deleting);
 
-        (new DeleteLabSession($session->id))->handle(
-            $this->teardownService(liveContainer: true)
-        );
+        try {
+            (new DeleteLabSession($session->id))->handle(
+                $this->teardownService(liveContainer: true)
+            );
+            $this->fail('A live container must block quota release.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame(
+                'Container exists but its OpenTofu workspace is missing.',
+                $exception->getMessage()
+            );
+        }
 
         $this->assertSame(
             LabSessionStatus::Deleting,

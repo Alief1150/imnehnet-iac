@@ -84,7 +84,9 @@ final class LiveLifecycleDriver implements LifecycleDriver
                 return $selected;
             }
 
-            $destroyed = $tofu->destroy();
+            // Use the persisted image/pool for teardown as well; OpenTofu
+            // requires container_image and must not infer a new root pool.
+            $destroyed = $tofu->destroy($this->variables($environment));
 
             if (! $destroyed->successful()) {
                 return $destroyed;
@@ -104,7 +106,9 @@ final class LiveLifecycleDriver implements LifecycleDriver
                 return $selected;
             }
 
-            $destroyed = $tofu->destroy();
+            // Use the persisted image/pool for teardown as well; OpenTofu
+            // requires container_image and must not infer a new root pool.
+            $destroyed = $tofu->destroy($this->variables($environment));
 
             if (! $destroyed->successful()) {
                 return $destroyed;
@@ -207,6 +211,22 @@ final class LiveLifecycleDriver implements LifecycleDriver
             'cpu_limit' => (int) $environment->cpu_limit,
             'memory_limit' => $this->memoryArgument($environment),
         ];
+
+        $pool = trim((string) ($environment->storage_pool ?? ''));
+        // Preserve the legacy UID-scoped Btrfs pilot during Start/Stop/Reset.
+        $pilotId = (int) config('infrastructure.btrfs_benchmark_user_id', 0);
+        if ($pool === '' && $pilotId > 0 && (int) $environment->user_id === $pilotId
+            && in_array((string) $environment->container_name, [
+                'attacker-user-'.$pilotId, 'victim-user-'.$pilotId,
+            ], true)) {
+            $pool = 'imnehnet-btrfs-test';
+            if ((string) $environment->container_name === 'attacker-user-'.$pilotId) {
+                $variables['container_image'] = 'imnehnet-gi-attacker-p3';
+            }
+        }
+        if ($pool !== '' && $pool !== 'default') {
+            $variables['storage_pool'] = $pool;
+        }
 
         if ($desiredRunning !== null) {
             $variables['desired_running'] = $desiredRunning;

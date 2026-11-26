@@ -406,19 +406,31 @@ final class ProvisionLabSession implements ShouldQueue
             $variables['security_acls'] = $acl;
         }
 
-        // IMNEHNET_BTRFS_P2_V1: limit Btrfs to one server-controlled user ID.
-        // Match exact container names so only that user's Guided CTF pair is affected.
-        // DIR remains the OpenTofu default for everyone else.
-        $benchmarkUserId = (int) config('infrastructure.btrfs_benchmark_user_id', 0);
-        if ($benchmarkUserId > 0 && in_array($name, [
-            'attacker-user-'.$benchmarkUserId,
-            'victim-user-'.$benchmarkUserId,
-        ], true)) {
-            $variables['storage_pool'] = 'imnehnet-btrfs-test';
+        // The selection is persisted when the lab session is created, so a
+        // change to the rollout flag cannot affect queued/existing sessions.
+        $environment = LabEnvironment::query()
+            ->where('container_name', $name)
+            ->where('incus_remote', $remote)
+            ->first();
+        if ($environment === null) {
+            throw new RuntimeException('Environment record missing for '.$name);
+        }
 
-            // IMNEHNET_P2_PREBUILT_IMAGE_V1: Kaneki attacker only.
-            if ($name === 'attacker-user-'.$benchmarkUserId) {
-                $variables['container_image'] = 'imnehnet-gi-attacker-p3';
+        $pool = trim((string) ($environment->storage_pool ?? ''));
+        if ($pool !== '' && $pool !== 'default') {
+            $variables['storage_pool'] = $pool;
+        } else {
+            // Pre-rollout pilot: retain Kaneki's original Btrfs behavior.
+            // New records explicitly contain "default" and do not enter here.
+            $pilotUserId = (int) config('infrastructure.btrfs_benchmark_user_id', 0);
+            if ($pool === '' && $pilotUserId > 0 && in_array($name, [
+                'attacker-user-'.$pilotUserId,
+                'victim-user-'.$pilotUserId,
+            ], true)) {
+                $variables['storage_pool'] = 'imnehnet-btrfs-test';
+                if ($name === 'attacker-user-'.$pilotUserId) {
+                    $variables['container_image'] = 'imnehnet-gi-attacker-p3';
+                }
             }
         }
 

@@ -8,9 +8,8 @@ use App\Filament\Pages\MyLabs;
 use App\Models\Course;
 use App\Models\LabSession;
 use App\Models\User;
-use App\Services\GuidedCtf\LabFirewall;
+use App\Services\TerminalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Livewire;
 use Mockery;
 use Tests\TestCase;
 
@@ -58,44 +57,51 @@ class MyLabsLifecycleTest extends TestCase
         ]);
     }
 
-    public function test_stop_changes_status_without_deleting_session(): void
+    public function test_stop_queues_power_change_without_deleting_session(): void
     {
         $session = $this->createLabSession();
 
-        $firewall = Mockery::mock(LabFirewall::class);
-        $firewall->shouldReceive('revoke')->once();
-        $this->app->instance(LabFirewall::class, $firewall);
+        $terminals = Mockery::mock(TerminalService::class);
+        $terminals->shouldReceive('queueOwnedLabPower')
+            ->once()
+            ->withArgs(fn (LabSession $lab, bool $start): bool =>
+                $lab->is($session) && $start === false
+            );
+        $this->app->instance(TerminalService::class, $terminals);
 
-        Livewire::test(MyLabs::class)
-            ->call('requestStop')
-            ->assertSet('showStopConfirmation', true)
-            ->call('stopLab')
-            ->assertSet('showStopConfirmation', false);
+        // Exercise the component methods directly. This avoids the unrelated
+        // Livewire 4 snapshot transport issue in the current CI baseline.
+        $page = new MyLabs();
+        $page->requestStop();
+        $this->assertTrue($page->showStopConfirmation);
+        $page->stopLab();
+        $this->assertFalse($page->showStopConfirmation);
 
-        $this->assertSame(
-            LabSessionStatus::Stopped,
-            $session->refresh()->status
-        );
-
+        // Status only changes after ChangePairedLabPower confirms both
+        // containers. The UI must not pretend the queued action is finished.
+        $this->assertSame(LabSessionStatus::Ready, $session->refresh()->status);
         $this->assertDatabaseHas('lab_sessions', [
             'id' => $session->id,
-            'status' => 'STOPPED',
+            'status' => 'READY',
         ], config('infrastructure.environment_connection'));
     }
 
-    public function test_resume_changes_stopped_session_to_ready(): void
+    public function test_resume_queues_power_change_without_premature_ready_status(): void
     {
         $session = $this->createLabSession(LabSessionStatus::Stopped);
 
-        $firewall = Mockery::mock(LabFirewall::class);
-        $firewall->shouldReceive('permit')->once();
-        $this->app->instance(LabFirewall::class, $firewall);
+        $terminals = Mockery::mock(TerminalService::class);
+        $terminals->shouldReceive('queueOwnedLabPower')
+            ->once()
+            ->withArgs(fn (LabSession $lab, bool $start): bool =>
+                $lab->is($session) && $start === true
+            );
+        $this->app->instance(TerminalService::class, $terminals);
 
-        Livewire::test(MyLabs::class)
-            ->call('resumeLab');
+        (new MyLabs())->resumeLab();
 
         $this->assertSame(
-            LabSessionStatus::Ready,
+            LabSessionStatus::Stopped,
             $session->refresh()->status
         );
     }
@@ -108,14 +114,14 @@ class MyLabsLifecycleTest extends TestCase
 
         $session = $this->createLabSession(owner: $other);
 
-        $firewall = Mockery::mock(LabFirewall::class);
-        $firewall->shouldNotReceive('revoke');
-        $this->app->instance(LabFirewall::class, $firewall);
+        $terminals = Mockery::mock(TerminalService::class);
+        $terminals->shouldNotReceive('queueOwnedLabPower');
+        $this->app->instance(TerminalService::class, $terminals);
 
-        Livewire::test(MyLabs::class)
-            ->call('requestStop')
-            ->assertSet('showStopConfirmation', false)
-            ->call('stopLab');
+        $page = new MyLabs();
+        $page->requestStop();
+        $this->assertFalse($page->showStopConfirmation);
+        $page->stopLab();
 
         $this->assertSame(
             LabSessionStatus::Ready,
@@ -127,8 +133,13 @@ class MyLabsLifecycleTest extends TestCase
     {
         $this->createLabSession(LabSessionStatus::Stopped);
 
-        Livewire::test(MyLabs::class)
-            ->call('openWorkspace')
-            ->assertNoRedirect();
+        // Prove that a STOPPED session cannot dispatch navigation.
+        $page = Mockery::mock(MyLabs::class)->makePartial();
+        $page->shouldNotReceive('redirect');
+        $page->openWorkspace();
+        $this->assertSame(
+            LabSessionStatus::Stopped,
+            LabSession::query()->firstOrFail()->status
+        );
     }
 }

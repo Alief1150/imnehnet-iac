@@ -4,8 +4,20 @@ variable "container_name" {
 }
 
 variable "container_image" {
-  type    = string
-  default = "images:ubuntu/24.04"
+  type = string
+}
+
+# Always select the storage pool explicitly. Existing workspaces created
+# before this input was added should continue to use the default DIR pool.
+variable "storage_pool" {
+  type        = string
+  default     = "default"
+  description = "Incus storage pool for the container root disk."
+
+  validation {
+    condition     = contains(["default", "imnehnet-btrfs-test", "imnehnet-btrfs-prod"], var.storage_pool)
+    error_message = "Storage pool must be default, imnehnet-btrfs-test, or imnehnet-btrfs-prod."
+  }
 }
 
 # Which Incus remote the container is created on.
